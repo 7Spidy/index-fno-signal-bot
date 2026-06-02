@@ -50,26 +50,74 @@ def get_access_token(api_key: str, api_secret: str, user_id: str,
     return data["access_token"]
 
 
-def _extract_request_token(session: requests.Session, url: str) -> str:
-    """Follow redirects one step at a time, return request_token the moment it appears.
-    Never actually connects to the final redirect URL (which is the app's callback
-    and won't be running in GitHub Actions)."""
-    for _ in range(10):  # max 10 hops
-        r = session.get(url, allow_redirects=False)
-        # Check current URL first (in case token is already here)
-        params = parse_qs(urlparse(url).query)
-        if "request_token" in params:
-            return params["request_token"][0]
-        # Check the redirect Location header
+def _extract_request_token(session: requests.Session, login_url: str) -> str:
+    """Follow redirects and handle the connect/finish consent page.
+
+    Kite's connect/finish returns 200 HTML with an authorization form that
+    must be submitted (simulates clicking the Allow button). After submission
+    Kite issues a 302 to the app's redirect_url with request_token.
+    We capture that token from the Location header without connecting to the
+    redirect_url itself (which won't be running in GitHub Actions).
+    """
+    import re
+
+    url = login_url
+    for _ in range(15):
+        # Check current URL for token (shouldn't happen but be safe)
+        if "request_token" in url:
+            return parse_qs(urlparse(url).query)["request_token"][0]
+
+        r = session.get(url, allow_redirects=False, timeout=15)
+
+        # Token in redirect Location header — normal happy path
         location = r.headers.get("Location", "")
         if "request_token" in location:
             return parse_qs(urlparse(location).query)["request_token"][0]
-        if not location or r.status_code not in (301, 302, 303, 307, 308):
-            break
-        url = location
+
+        # Follow HTTP redirect
+        if r.status_code in (301, 302, 303, 307, 308) and location:
+            url = location if location.startswith("http") else f"https://kite.zerodha.com{location}"
+            continue
+
+        # 200 HTML — this is the connect/finish consent page.
+        # Simulate clicking "Allow" by parsing and submitting the form.
+        if r.status_code == 200 and r.text:
+            # Occasionally request_token is embedded directly in the HTML
+            m = re.search(r'request_token[="\s:]+([A-Za-z0-9]+)', r.text)
+            if m:
+                return m.group(1)
+
+            # Find the form action
+            action_m = re.search(r'<form[^>]+action=["\']([^"\']*)["\']', r.text, re.IGNORECASE)
+            action = (action_m.group(1) if action_m else "") or url
+            if not action.startswith("http"):
+                action = f"https://kite.zerodha.com{action}"
+
+            # Collect all hidden/submit input values
+            inputs: dict[str, str] = {}
+            for inp in re.finditer(r'<input([^>]*)/?>', r.text, re.IGNORECASE):
+                attrs = inp.group(1)
+                name_m = re.search(r'name=["\']([^"\']+)["\']', attrs)
+                val_m = re.search(r'value=["\']([^"\']*)["\']', attrs)
+                if name_m:
+                    inputs[name_m.group(1)] = val_m.group(1) if val_m else ""
+
+            r2 = session.post(action, data=inputs, allow_redirects=False, timeout=15)
+            loc2 = r2.headers.get("Location", "")
+            if "request_token" in loc2:
+                return parse_qs(urlparse(loc2).query)["request_token"][0]
+            if loc2:
+                url = loc2 if loc2.startswith("http") else f"https://kite.zerodha.com{loc2}"
+                continue
+
+        break
+
     raise RuntimeError(
-        f"request_token not found after following redirects. "
-        f"Last URL: {url} — check that KITE_API_KEY matches your Kite Connect app."
+        f"request_token not found after following redirects. Last URL: {url}\n"
+        "Checklist:\n"
+        "  1. KITE_API_KEY matches your kite.trade developer app\n"
+        "  2. KITE_USER_ID / KITE_PASSWORD / KITE_TOTP_SECRET are correct\n"
+        "  3. Your Kite Connect app's redirect URL is set (any URL works, e.g. http://127.0.0.1)"
     )
 
 
