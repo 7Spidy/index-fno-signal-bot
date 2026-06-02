@@ -1,0 +1,35 @@
+import os
+
+INSTRUMENTS = [
+    {"name": "NIFTY",      "strike_step": 50},
+    {"name": "BANKNIFTY",  "strike_step": 100},
+    {"name": "FINNIFTY",   "strike_step": 50},
+    {"name": "MIDCPNIFTY", "strike_step": 25},
+]
+
+MOMENTUM_RULE = "close_gt_prev_close"
+RSI_SLOPE_LOOKBACK = 3
+VWAP_CROSS_WINDOW_CANDLES = 6
+DI_THRESHOLD = 25
+REQUIRE_DI_DOMINANCE = True
+USE_ADX_FILTER = False
+ADX_MIN = 20
+COOLDOWN_CANDLES = 3
+SESSION_START_IST = "09:15"
+EVAL_WINDOW_IST = ("09:40", "14:45")
+
+
+def as_dict() -> dict:
+    return {
+        "MOMENTUM_RULE": MOMENTUM_RULE,
+        "RSI_SLOPE_LOOKBACK": RSI_SLOPE_LOOKBACK,
+        "VWAP_CROSS_WINDOW_CANDLES": VWAP_CROSS_WINDOW_CANDLES,
+        "DI_THRESHOLD": DI_THRESHOLD,
+        "REQUIRE_DI_DOMINANCE": REQUIRE_DI_DOMINANCE,
+        "USE_ADX_FILTER": USE_ADX_FILTER,
+        "ADX_MIN": ADX_MIN,
+        "COOLDOWN_CANDLES": COOLDOWN_CANDLES,
+        "SESSION_START_IST": SESSION_START_IST,
+        "EVAL_WINDOW_IST": EVAL_WINDOW_IST,
+        "INSTRUMENTS": INSTRUMENTS,
+    }

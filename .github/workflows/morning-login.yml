@@ -1,0 +1,49 @@
+name: Morning Login
+
+on:
+  schedule:
+    - cron: "35 3 * * 1-5"    # ≈09:05 IST (UTC+5:30 = UTC+3:35 before midnight offset)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write              # needed for git push to docs/
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Kite TOTP login → Redis token
+        run: python -m src.auth
+        env:
+          KITE_API_KEY:        ${{ secrets.KITE_API_KEY }}
+          KITE_API_SECRET:     ${{ secrets.KITE_API_SECRET }}
+          KITE_USER_ID:        ${{ secrets.KITE_USER_ID }}
+          KITE_PASSWORD:       ${{ secrets.KITE_PASSWORD }}
+          KITE_TOTP_SECRET:    ${{ secrets.KITE_TOTP_SECRET }}
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Cache instrument tokens
+        run: python -m src.kite_client --cache-instruments
+        env:
+          KITE_API_KEY:        ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+      - name: Reset dashboard for new day
+        run: python -m src.dashboard_writer --reset-day
+        env:
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}

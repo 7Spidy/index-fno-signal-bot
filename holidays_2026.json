@@ -1,0 +1,21 @@
+{
+  "_note": "NSE/BSE market holidays 2026. MUST verify against the official NSE circular at nseindia.com before going live. Some dates (Bakri Id, Ganesh Chaturthi, Dussehra, Diwali) are tentative and depend on lunar calendar announcements.",
+  "_source": "https://www.nseindia.com/resources/exchange-communication-holidays",
+  "2026": [
+    {"date": "2026-01-26", "description": "Republic Day"},
+    {"date": "2026-03-25", "description": "Holi"},
+    {"date": "2026-04-02", "description": "Ram Navami"},
+    {"date": "2026-04-10", "description": "Good Friday"},
+    {"date": "2026-04-14", "description": "Dr. Ambedkar Jayanti"},
+    {"date": "2026-05-01", "description": "Maharashtra Day"},
+    {"date": "2026-06-27", "description": "Bakri Id (tentative — confirm moon sighting)"},
+    {"date": "2026-08-15", "description": "Independence Day"},
+    {"date": "2026-08-21", "description": "Ganesh Chaturthi (verify exact date)"},
+    {"date": "2026-10-02", "description": "Gandhi Jayanti"},
+    {"date": "2026-10-22", "description": "Dussehra (tentative — verify exact date)"},
+    {"date": "2026-11-04", "description": "Diwali - Laxmi Pujan (tentative)"},
+    {"date": "2026-11-05", "description": "Diwali - Balipratipada (tentative)"},
+    {"date": "2026-11-24", "description": "Guru Nanak Jayanti"},
+    {"date": "2026-12-25", "description": "Christmas"}
+  ]
+}

@@ -1,0 +1,139 @@
+"""VWAP, RSI(14), DMI(14) — implemented from scratch per spec §7.
+No pandas-ta or ta-lib. Wilder smoothing throughout.
+"""
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
+
+def vwap_session(df: pd.DataFrame, session_open: datetime) -> pd.Series:
+    """Session-anchored VWAP using HLC3 typical price.
+
+    Cumulates only from session_open onward. Prior candles get NaN.
+    """
+    typical = (df["high"] + df["low"] + df["close"]) / 3.0
+    mask = df["timestamp"] >= session_open
+
+    # Zero out pre-session so cumsum starts fresh from session_open
+    tp_vol = (typical * df["volume"]).where(mask, 0.0)
+    vol = df["volume"].where(mask, 0.0)
+
+    cum_tp_vol = tp_vol.cumsum()
+    cum_vol = vol.cumsum()
+
+    vwap = cum_tp_vol / cum_vol
+    vwap = vwap.where(mask)  # NaN for pre-session rows
+    vwap.name = "vwap"
+    return vwap
+
+
+def rsi_wilder(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Wilder-smoothed RSI. Seed = simple average of first `period` changes."""
+    close = df["close"].values.astype(float)
+    n = len(close)
+    rsi = np.full(n, np.nan)
+
+    if n < period + 1:
+        return pd.Series(rsi, index=df.index, name="rsi")
+
+    deltas = np.diff(close)
+    gains = np.maximum(deltas, 0.0)
+    losses = np.maximum(-deltas, 0.0)
+
+    # Seed: simple average of first `period` gains/losses
+    avg_gain = gains[:period].mean()
+    avg_loss = losses[:period].mean()
+
+    alpha = 1.0 / period
+    for i in range(period, n - 1):
+        avg_gain = avg_gain * (1 - alpha) + gains[i] * alpha
+        avg_loss = avg_loss * (1 - alpha) + losses[i] * alpha
+        if avg_loss == 0.0:
+            rsi[i + 1] = 100.0
+        else:
+            rs = avg_gain / avg_loss
+            rsi[i + 1] = 100.0 - (100.0 / (1.0 + rs))
+
+    return pd.Series(rsi, index=df.index, name="rsi")
+
+
+def dmi_wilder(df: pd.DataFrame, period: int = 14) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Wilder-smoothed DMI: returns (+DI, -DI, ADX) as three Series."""
+    high = df["high"].values.astype(float)
+    low = df["low"].values.astype(float)
+    close = df["close"].values.astype(float)
+    n = len(close)
+
+    pdi_arr = np.full(n, np.nan)
+    ndi_arr = np.full(n, np.nan)
+    adx_arr = np.full(n, np.nan)
+
+    if n < period + 1:
+        return (
+            pd.Series(pdi_arr, index=df.index, name="pdi"),
+            pd.Series(ndi_arr, index=df.index, name="ndi"),
+            pd.Series(adx_arr, index=df.index, name="adx"),
+        )
+
+    # Raw directional movement and true range per bar
+    plus_dm = np.zeros(n)
+    minus_dm = np.zeros(n)
+    tr = np.zeros(n)
+
+    for i in range(1, n):
+        up_move = high[i] - high[i - 1]
+        down_move = low[i - 1] - low[i]
+        plus_dm[i] = up_move if (up_move > down_move and up_move > 0) else 0.0
+        minus_dm[i] = down_move if (down_move > up_move and down_move > 0) else 0.0
+        tr[i] = max(
+            high[i] - low[i],
+            abs(high[i] - close[i - 1]),
+            abs(low[i] - close[i - 1]),
+        )
+
+    # Wilder seed: sum of first `period` bars
+    atr = tr[1:period + 1].sum()
+    pdm = plus_dm[1:period + 1].sum()
+    ndm = minus_dm[1:period + 1].sum()
+
+    def _di(dm, atr_val):
+        return 100.0 * dm / atr_val if atr_val != 0 else 0.0
+
+    pdi_arr[period] = _di(pdm, atr)
+    ndi_arr[period] = _di(ndm, atr)
+
+    dx_vals = [_dx(pdi_arr[period], ndi_arr[period])]
+
+    for i in range(period + 1, n):
+        atr = atr - atr / period + tr[i]
+        pdm = pdm - pdm / period + plus_dm[i]
+        ndm = ndm - ndm / period + minus_dm[i]
+        pdi_arr[i] = _di(pdm, atr)
+        ndi_arr[i] = _di(ndm, atr)
+        dx_vals.append(_dx(pdi_arr[i], ndi_arr[i]))
+
+    # ADX = Wilder smoothing of DX over `period` bars
+    # Seed at index 2*period - 1
+    adx_start = 2 * period - 1
+    if adx_start < n:
+        adx_seed = np.mean(dx_vals[:period])
+        adx_arr[adx_start] = adx_seed
+        for j in range(period, len(dx_vals)):
+            adx_arr[adx_start + (j - period) + 1] = (
+                adx_arr[adx_start + (j - period)] * (period - 1) / period
+                + dx_vals[j] / period
+            )
+
+    return (
+        pd.Series(pdi_arr, index=df.index, name="pdi"),
+        pd.Series(ndi_arr, index=df.index, name="ndi"),
+        pd.Series(adx_arr, index=df.index, name="adx"),
+    )
+
+
+def _dx(pdi: float, ndi: float) -> float:
+    denom = pdi + ndi
+    if denom == 0:
+        return 0.0
+    return 100.0 * abs(pdi - ndi) / denom

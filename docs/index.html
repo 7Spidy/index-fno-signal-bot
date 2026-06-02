@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⬡ F&amp;O Signal Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #090c14; --surface: #0f1422; --surface2: #141929;
+  --border: #1e2840; --border2: #263050;
+  --green: #00e5a0; --green-dim: #00e5a015;
+  --red: #f87171;   --red-dim: #f8717115;
+  --amber: #f59e0b;
+  --text: #dde4f0;  --text-muted: #6b7fa3; --text-dim: #9aacc8;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--mono); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.app-name { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--green); }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.header-right { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-muted); }
+.time-ago { color: var(--text-dim); }
+.token-pill {
+  padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: .05em;
+}
+.pill-valid { background: #00e5a015; color: var(--green); border: 1px solid #00e5a030; }
+.pill-expired { background: #f8717115; color: var(--red); border: 1px solid #f8717130; }
+
+/* OFFLINE BANNER */
+.offline-banner {
+  display: none;
+  background: #f59e0b15;
+  border-bottom: 1px solid #f59e0b28;
+  color: var(--amber);
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+/* MAIN CONTENT */
+.content { padding: 16px; max-width: 680px; margin: 0 auto; }
+
+/* SIGNAL BANNERS */
+#signal-area { margin-bottom: 16px; }
+.signal-banner {
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.signal-banner-ce {
+  background: linear-gradient(135deg, #00e5a018, #00e5a008);
+  border: 2px solid var(--green);
+  animation: pulse-green 2s ease-in-out infinite;
+}
+.signal-banner-pe {
+  background: linear-gradient(135deg, #f8717118, #f8717108);
+  border: 2px solid var(--red);
+  animation: pulse-red 2s ease-in-out infinite;
+}
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.45); }
+  50%       { box-shadow: 0 0 0 16px rgba(0,229,160,0); }
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.45); }
+  50%       { box-shadow: 0 0 0 16px rgba(248,113,113,0); }
+}
+.sig-label { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 4px; }
+.signal-banner-ce .sig-label { color: var(--green); }
+.signal-banner-pe .sig-label { color: var(--red); }
+.sig-main { font-family: var(--display); font-size: 26px; font-weight: 800; color: #fff; margin: 4px 0; }
+.sig-sub { font-size: 13px; color: var(--text-dim); }
+
+/* INSTRUMENT CARDS */
+.instrument-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.card-name { font-family: var(--display); font-weight: 700; font-size: 16px; color: #fff; }
+.card-price { font-size: 13px; color: var(--green); }
+.card-meta { font-size: 10px; color: var(--text-muted); margin-bottom: 12px; letter-spacing: .03em; }
+.conditions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cond-box { border-radius: 7px; padding: 10px 12px; }
+.cond-ce { background: #00e5a00a; border: 1px solid #00e5a020; }
+.cond-pe { background: #f871710a; border: 1px solid #f8717120; }
+.cond-dir { font-size: 10px; font-weight: 600; letter-spacing: .1em; margin-bottom: 7px; }
+.cond-ce .cond-dir { color: var(--green); }
+.cond-pe .cond-dir { color: var(--red); }
+.cond-row { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-dim); padding: 2px 0; }
+.check-pass { color: var(--green); }
+.check-fail { color: #f8717160; }
+.cond-status { font-size: 10px; margin-top: 7px; font-weight: 600; letter-spacing: .05em; }
+.status-signal-ce { color: var(--green); }
+.status-signal-pe { color: var(--red); }
+.status-none { color: var(--text-muted); }
+
+/* HISTORY */
+.history-section { margin-top: 20px; }
+.section-title {
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+.history-table {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 360px;
+  overflow-y: auto;
+}
+.history-row {
+  display: grid;
+  grid-template-columns: 42px 72px 1fr 1fr 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+.history-row:last-child { border-bottom: none; }
+.history-row.row-ce-signal { border-left: 3px solid var(--green); }
+.history-row.row-pe-signal { border-left: 3px solid var(--red); }
+.history-row.row-ce-signal, .history-row.row-pe-signal { padding-left: 9px; }
+.h-time { color: var(--text-muted); }
+.h-inst { color: var(--text); font-weight: 600; }
+.h-dots { display: flex; gap: 3px; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+}
+.dot-pass { background: var(--green); }
+.dot-fail { background: var(--border2); }
+.h-sig { font-weight: 700; font-size: 9px; }
+.sig-ce { color: var(--green); }
+.sig-pe { color: var(--red); }
+.sig-none { color: var(--border2); }
+
+/* EMPTY STATES */
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <span class="live-dot"></span>
+    <span class="app-name">⬡ F&amp;O Signal Bot</span>
+  </div>
+  <div class="header-right">
+    <span class="time-ago" id="time-ago">Loading…</span>
+    <span class="token-pill pill-expired" id="token-pill">⚫ –</span>
+  </div>
+</div>
+
+<!-- OFFLINE BANNER -->
+<div class="offline-banner" id="offline-banner">Dashboard offline — retrying…</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- SIGNAL BANNERS -->
+  <div id="signal-area" style="display:none"></div>
+
+  <!-- INSTRUMENT CARDS -->
+  <div id="instrument-area">
+    <div class="empty-state">Loading instruments…</div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section">
+    <div class="section-title">Today's Log</div>
+    <div class="history-table" id="history-table">
+      <div class="empty-state">No history yet</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25'];
+const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25'];
+
+let lastFetchTime = null;
+let lastRunISO = null;
+
+async function fetchData() {
+  try {
+    const res = await fetch(`./dashboard.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    lastFetchTime = Date.now();
+    document.getElementById('offline-banner').style.display = 'none';
+    render(data);
+  } catch (e) {
+    document.getElementById('offline-banner').style.display = 'block';
+    console.error('Fetch failed:', e);
+  }
+}
+
+function render(data) {
+  updateHeader(data);
+  renderSignalBanners(data.active_signals || []);
+  renderInstruments(data.instruments || []);
+  renderHistory(data.history || []);
+}
+
+function updateHeader(data) {
+  lastRunISO = data.last_run;
+  updateTimeAgo();
+
+  const pill = document.getElementById('token-pill');
+  if (data.token_valid) {
+    pill.textContent = '🟢 Valid';
+    pill.className = 'token-pill pill-valid';
+  } else {
+    pill.textContent = '🔴 Refresh';
+    pill.className = 'token-pill pill-expired';
+  }
+}
+
+function updateTimeAgo() {
+  const el = document.getElementById('time-ago');
+  if (!lastRunISO) { el.textContent = 'No data'; return; }
+  try {
+    const then = new Date(lastRunISO);
+    const diffMs = Date.now() - then.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const timeStr = then.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+    el.textContent = diffMin < 1 ? `${timeStr} · just now` : `${timeStr} · ${diffMin}m ago`;
+  } catch { el.textContent = 'Unknown'; }
+}
+
+function renderSignalBanners(signals) {
+  const area = document.getElementById('signal-area');
+  if (!signals || signals.length === 0) {
+    area.style.display = 'none';
+    area.innerHTML = '';
+    return;
+  }
+  area.style.display = 'block';
+  area.innerHTML = signals.map(s => {
+    const dir = (s.direction || '').toUpperCase();
+    const cls = dir === 'CE' ? 'signal-banner-ce' : 'signal-banner-pe';
+    const emoji = dir === 'CE' ? '🟢' : '🔴';
+    const strike = s.atm_strike ? `${Number(s.atm_strike).toLocaleString('en-IN')} ${dir}` : dir;
+    return `
+      <div class="signal-banner ${cls}">
+        <div class="sig-label">${emoji} ${dir} Signal</div>
+        <div class="sig-main">${escHtml(s.instrument || '')}</div>
+        <div class="sig-sub">Suggested: ${strike}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderInstruments(instruments) {
+  const area = document.getElementById('instrument-area');
+  if (!instruments || instruments.length === 0) {
+    area.innerHTML = '<div class="empty-state">Waiting for first run…</div>';
+    return;
+  }
+  area.innerHTML = instruments.map(inst => buildInstrumentCard(inst)).join('');
+}
+
+function buildInstrumentCard(inst) {
+  const price = inst.futures_price;
+  const priceStr = price ? Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–';
+  const vwap = inst.vwap ? Number(inst.vwap).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '–';
+  const rsi = inst.rsi ? Number(inst.rsi).toFixed(1) : '–';
+  const pdi = inst.pdi ? Number(inst.pdi).toFixed(1) : '–';
+  const mdi = inst.mdi ? Number(inst.mdi).toFixed(1) : '–';
+
+  const priceArrow = inst.ce?.c1 ? ' ↑' : (inst.pe?.c1 ? ' ↓' : '');
+  const priceColor = inst.ce?.signal ? 'var(--green)' : (inst.pe?.signal ? 'var(--red)' : 'var(--green)');
+
+  const ceConds = buildCondRows(inst.ce, CE_LABELS);
+  const peConds = buildCondRows(inst.pe, PE_LABELS);
+  const ceStatus = inst.ce?.signal
+    ? '<div class="cond-status status-signal-ce">● SIGNAL</div>'
+    : '<div class="cond-status status-none">── no signal</div>';
+  const peStatus = inst.pe?.signal
+    ? '<div class="cond-status status-signal-pe">● SIGNAL</div>'
+    : '<div class="cond-status status-none">── no signal</div>';
+
+  return `
+    <div class="instrument-card">
+      <div class="card-head">
+        <span class="card-name">${escHtml(inst.name || '')}</span>
+        <span class="card-price" style="color:${priceColor}">${priceStr}${priceArrow}</span>
+      </div>
+      <div class="card-meta">VWAP ${vwap} · RSI ${rsi} · +DI ${pdi} / -DI ${mdi}</div>
+      <div class="conditions-grid">
+        <div class="cond-box cond-ce">
+          <div class="cond-dir">🟢 CE</div>
+          ${ceConds}
+          ${ceStatus}
+        </div>
+        <div class="cond-box cond-pe">
+          <div class="cond-dir">🔴 PE</div>
+          ${peConds}
+          ${peStatus}
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildCondRows(side, labels) {
+  if (!side) return labels.map(l => condRow(false, l)).join('');
+  const keys = ['c1', 'c2', 'c3', 'c4'];
+  return keys.map((k, i) => condRow(!!side[k], labels[i])).join('');
+}
+
+function condRow(pass, label) {
+  const icon = pass
+    ? '<span class="check-pass">✓</span>'
+    : '<span class="check-fail">✗</span>';
+  return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
+}
+
+function renderHistory(history) {
+  const table = document.getElementById('history-table');
+  if (!history || history.length === 0) {
+    table.innerHTML = '<div class="empty-state">No history yet today</div>';
+    return;
+  }
+  table.innerHTML = history.map(row => {
+    const rowCls = row.ce_signal ? 'row-ce-signal' : (row.pe_signal ? 'row-pe-signal' : '');
+    const ceDots = buildDots(row.ce_conditions || []);
+    const peDots = buildDots(row.pe_conditions || []);
+    let sigSpan;
+    if (row.ce_signal) sigSpan = '<span class="h-sig sig-ce">CE✓</span>';
+    else if (row.pe_signal) sigSpan = '<span class="h-sig sig-pe">PE✓</span>';
+    else sigSpan = '<span class="h-sig sig-none">──</span>';
+    return `
+      <div class="history-row ${rowCls}">
+        <span class="h-time">${escHtml(row.time || '')}</span>
+        <span class="h-inst">${escHtml(row.instrument || '')}</span>
+        <span class="h-dots">${ceDots}</span>
+        <span class="h-dots">${peDots}</span>
+        ${sigSpan}
+      </div>`;
+  }).join('');
+}
+
+function buildDots(conds) {
+  return (conds || [false, false, false, false]).map(v =>
+    `<span class="dot ${v ? 'dot-pass' : 'dot-fail'}"></span>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Poll every 5 minutes
+setInterval(fetchData, 5 * 60 * 1000);
+// Update "X min ago" counter every 30 seconds
+setInterval(updateTimeAgo, 30 * 1000);
+// Load immediately
+fetchData();
+</script>
+</body>
+</html>

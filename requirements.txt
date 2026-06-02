@@ -1,0 +1,7 @@
+kiteconnect
+pyotp
+pandas
+numpy
+requests
+python-dateutil
+python-dotenv

@@ -1,0 +1,67 @@
+{
+  "date": "2026-06-02",
+  "last_run": null,
+  "token_valid": false,
+  "token_refreshed_at": null,
+  "instruments": [
+    {
+      "name": "NIFTY",
+      "symbol": "NIFTY26JUNFUT",
+      "futures_price": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "mdi": null,
+      "adx": null,
+      "atm_strike": null,
+      "strike_step": 50,
+      "ce": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false},
+      "pe": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false}
+    },
+    {
+      "name": "BANKNIFTY",
+      "symbol": "BANKNIFTY26JUNFUT",
+      "futures_price": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "mdi": null,
+      "adx": null,
+      "atm_strike": null,
+      "strike_step": 100,
+      "ce": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false},
+      "pe": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false}
+    },
+    {
+      "name": "FINNIFTY",
+      "symbol": "FINNIFTY26JUNFUT",
+      "futures_price": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "mdi": null,
+      "adx": null,
+      "atm_strike": null,
+      "strike_step": 50,
+      "ce": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false},
+      "pe": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false}
+    },
+    {
+      "name": "MIDCPNIFTY",
+      "symbol": "MIDCPNIFTY26JUNFUT",
+      "futures_price": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "mdi": null,
+      "adx": null,
+      "atm_strike": null,
+      "strike_step": 25,
+      "ce": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false},
+      "pe": {"c1": false, "c2": false, "c3": false, "c4": false, "signal": false}
+    }
+  ],
+  "active_signals": [],
+  "history": [],
+  "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
+}
