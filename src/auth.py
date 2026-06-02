@@ -99,7 +99,7 @@ def _extract_request_token(session: requests.Session, login_url: str) -> str:
             return parse_qs(urlparse(e.url).query)["request_token"][0]
         raise RuntimeError(f"Intercepted non-Zerodha redirect but no request_token: {e.url}")
 
-    # ── Strategy 2: connect/finish returned 200 HTML ──
+    # ── Strategy 2: authorize/finish returned 200 HTML ──
     # Print the first 1500 chars for debugging, then try to handle it.
     print(f"[auth-debug] Landed on HTML page: {finish_url}")
     print(f"[auth-debug] Page preview (first 1500 chars):\n{finish_html[:1500]}")
@@ -116,21 +116,24 @@ def _extract_request_token(session: requests.Session, login_url: str) -> str:
         print(f"[auth-debug] Found request_token in JS redirect")
         return m.group(1)
 
-    # 2c. Extract api_key + sess_id from URL and POST directly to /connect/finish
+    # 2c. POST to the authorize endpoint (same path as current URL, no query params)
+    # The URL may be /connect/authorize or /connect/finish depending on Kite's version.
     parsed = urlparse(finish_url)
     url_params = parse_qs(parsed.query)
     api_key_val = url_params.get("api_key", [""])[0]
     sess_id_val = url_params.get("sess_id", [""])[0]
+    # POST target: same scheme+host+path, drop query string
+    authorize_endpoint = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
     if api_key_val and sess_id_val:
-        print(f"[auth-debug] Trying direct POST to /connect/finish with sess_id={sess_id_val[:8]}...")
+        print(f"[auth-debug] Trying POST to {authorize_endpoint} with sess_id={sess_id_val[:8]}...")
         for post_data in [
             {"api_key": api_key_val, "sess_id": sess_id_val, "action": "allow"},
             {"api_key": api_key_val, "sess_id": sess_id_val},
         ]:
             try:
                 r2 = session.post(
-                    "https://kite.zerodha.com/connect/finish",
+                    authorize_endpoint,
                     data=post_data,
                     allow_redirects=False,
                     timeout=15,
