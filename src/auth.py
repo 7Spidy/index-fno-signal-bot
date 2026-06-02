@@ -50,74 +50,132 @@ def get_access_token(api_key: str, api_secret: str, user_id: str,
     return data["access_token"]
 
 
-def _extract_request_token(session: requests.Session, login_url: str) -> str:
-    """Follow redirects and handle the connect/finish consent page.
+class _TokenCaptured(Exception):
+    def __init__(self, url: str):
+        self.url = url
 
-    Kite's connect/finish returns 200 HTML with an authorization form that
-    must be submitted (simulates clicking the Allow button). After submission
-    Kite issues a 302 to the app's redirect_url with request_token.
-    We capture that token from the Location header without connecting to the
-    redirect_url itself (which won't be running in GitHub Actions).
+
+class _InterceptAdapter(requests.adapters.HTTPAdapter):
+    """Let Zerodha requests through; intercept everything else.
+
+    When Kite issues a 302 to the app's redirect_url (e.g. http://127.0.0.1),
+    requests will call send() on this adapter before making the TCP connection.
+    We raise _TokenCaptured with that URL instead of actually connecting,
+    so the caller can extract request_token without needing a live server.
     """
+    def send(self, request, **kwargs):
+        if "zerodha.com" not in request.url:
+            raise _TokenCaptured(request.url)
+        return super().send(request, **kwargs)
+
+
+def _extract_request_token(session: requests.Session, login_url: str) -> str:
     import re
 
-    url = login_url
-    for _ in range(15):
-        # Check current URL for token (shouldn't happen but be safe)
-        if "request_token" in url:
-            return parse_qs(urlparse(url).query)["request_token"][0]
+    # ── Strategy 1: custom adapter intercepts the redirect to redirect_url ──
+    # Mount on both http:// and https:// so we catch any redirect_url scheme.
+    # Zerodha URLs pass through to the real connection; everything else is
+    # intercepted before a TCP connection is attempted.
+    intercept = _InterceptAdapter()
+    session.mount("http://", intercept)
+    session.mount("https://", intercept)
 
-        r = session.get(url, allow_redirects=False, timeout=15)
+    try:
+        r = session.get(login_url, allow_redirects=True, timeout=20)
+        # If we land here, redirect_url was actually reachable (very unlikely)
+        if "request_token" in r.url:
+            return parse_qs(urlparse(r.url).query)["request_token"][0]
+        for h in r.history:
+            loc = h.headers.get("Location", "")
+            if "request_token" in loc:
+                return parse_qs(urlparse(loc).query)["request_token"][0]
+        # We landed on connect/finish HTML — fall through to strategy 2
+        finish_html = r.text
+        finish_url = r.url
 
-        # Token in redirect Location header — normal happy path
-        location = r.headers.get("Location", "")
-        if "request_token" in location:
-            return parse_qs(urlparse(location).query)["request_token"][0]
+    except _TokenCaptured as e:
+        # Happy path: intercepted redirect to redirect_url containing request_token
+        if "request_token" in e.url:
+            return parse_qs(urlparse(e.url).query)["request_token"][0]
+        raise RuntimeError(f"Intercepted non-Zerodha redirect but no request_token: {e.url}")
 
-        # Follow HTTP redirect
-        if r.status_code in (301, 302, 303, 307, 308) and location:
-            url = location if location.startswith("http") else f"https://kite.zerodha.com{location}"
-            continue
+    # ── Strategy 2: connect/finish returned 200 HTML ──
+    # Print the first 1500 chars for debugging, then try to handle it.
+    print(f"[auth-debug] Landed on HTML page: {finish_url}")
+    print(f"[auth-debug] Page preview (first 1500 chars):\n{finish_html[:1500]}")
 
-        # 200 HTML — this is the connect/finish consent page.
-        # Simulate clicking "Allow" by parsing and submitting the form.
-        if r.status_code == 200 and r.text:
-            # Occasionally request_token is embedded directly in the HTML
-            m = re.search(r'request_token[="\s:]+([A-Za-z0-9]+)', r.text)
-            if m:
-                return m.group(1)
+    # 2a. request_token anywhere in the body
+    m = re.search(r'request_token[=:"\s]+([A-Za-z0-9]{20,})', finish_html)
+    if m:
+        print(f"[auth-debug] Found request_token in HTML body")
+        return m.group(1)
 
-            # Find the form action
-            action_m = re.search(r'<form[^>]+action=["\']([^"\']*)["\']', r.text, re.IGNORECASE)
-            action = (action_m.group(1) if action_m else "") or url
-            if not action.startswith("http"):
-                action = f"https://kite.zerodha.com{action}"
+    # 2b. JavaScript window.location or meta refresh containing request_token
+    m = re.search(r'(?:window\.location|location\.href|content=["\']0;url=)[^"\']*request_token=([A-Za-z0-9]+)', finish_html)
+    if m:
+        print(f"[auth-debug] Found request_token in JS redirect")
+        return m.group(1)
 
-            # Collect all hidden/submit input values
-            inputs: dict[str, str] = {}
-            for inp in re.finditer(r'<input([^>]*)/?>', r.text, re.IGNORECASE):
-                attrs = inp.group(1)
-                name_m = re.search(r'name=["\']([^"\']+)["\']', attrs)
-                val_m = re.search(r'value=["\']([^"\']*)["\']', attrs)
-                if name_m:
-                    inputs[name_m.group(1)] = val_m.group(1) if val_m else ""
+    # 2c. Extract api_key + sess_id from URL and POST directly to /connect/finish
+    parsed = urlparse(finish_url)
+    url_params = parse_qs(parsed.query)
+    api_key_val = url_params.get("api_key", [""])[0]
+    sess_id_val = url_params.get("sess_id", [""])[0]
 
-            r2 = session.post(action, data=inputs, allow_redirects=False, timeout=15)
-            loc2 = r2.headers.get("Location", "")
-            if "request_token" in loc2:
-                return parse_qs(urlparse(loc2).query)["request_token"][0]
-            if loc2:
-                url = loc2 if loc2.startswith("http") else f"https://kite.zerodha.com{loc2}"
-                continue
+    if api_key_val and sess_id_val:
+        print(f"[auth-debug] Trying direct POST to /connect/finish with sess_id={sess_id_val[:8]}...")
+        for post_data in [
+            {"api_key": api_key_val, "sess_id": sess_id_val, "action": "allow"},
+            {"api_key": api_key_val, "sess_id": sess_id_val},
+        ]:
+            try:
+                r2 = session.post(
+                    "https://kite.zerodha.com/connect/finish",
+                    data=post_data,
+                    allow_redirects=False,
+                    timeout=15,
+                )
+                print(f"[auth-debug] POST status={r2.status_code} location={r2.headers.get('Location','')[:120]}")
+                loc2 = r2.headers.get("Location", "")
+                if "request_token" in loc2:
+                    return parse_qs(urlparse(loc2).query)["request_token"][0]
+            except _TokenCaptured as e:
+                if "request_token" in e.url:
+                    return parse_qs(urlparse(e.url).query)["request_token"][0]
+            except Exception as ex:
+                print(f"[auth-debug] POST attempt failed: {ex}")
 
-        break
+    # 2d. Parse and submit any HTML form found
+    action_m = re.search(r'<form[^>]+action=["\']([^"\']*)["\']', finish_html, re.IGNORECASE)
+    if action_m:
+        action = action_m.group(1) or finish_url
+        if not action.startswith("http"):
+            action = f"https://kite.zerodha.com{action}"
+        inputs: dict[str, str] = {}
+        for inp in re.finditer(r'<input([^>]*)/?>', finish_html, re.IGNORECASE):
+            attrs = inp.group(1)
+            n = re.search(r'name=["\']([^"\']+)["\']', attrs)
+            v = re.search(r'value=["\']([^"\']*)["\']', attrs)
+            if n:
+                inputs[n.group(1)] = v.group(1) if v else ""
+        print(f"[auth-debug] Submitting form: action={action} inputs={list(inputs.keys())}")
+        try:
+            r3 = session.post(action, data=inputs, allow_redirects=False, timeout=15)
+            loc3 = r3.headers.get("Location", "")
+            print(f"[auth-debug] Form POST status={r3.status_code} location={loc3[:120]}")
+            if "request_token" in loc3:
+                return parse_qs(urlparse(loc3).query)["request_token"][0]
+        except _TokenCaptured as e:
+            if "request_token" in e.url:
+                return parse_qs(urlparse(e.url).query)["request_token"][0]
 
     raise RuntimeError(
-        f"request_token not found after following redirects. Last URL: {url}\n"
+        f"request_token not found. Last URL: {finish_url}\n"
+        "See [auth-debug] lines above for the page content.\n"
         "Checklist:\n"
         "  1. KITE_API_KEY matches your kite.trade developer app\n"
-        "  2. KITE_USER_ID / KITE_PASSWORD / KITE_TOTP_SECRET are correct\n"
-        "  3. Your Kite Connect app's redirect URL is set (any URL works, e.g. http://127.0.0.1)"
+        "  2. Kite Connect app redirect URL must be set (e.g. http://127.0.0.1)\n"
+        "  3. KITE_TOTP_SECRET must be the base32 seed, not a 6-digit OTP"
     )
 
 
