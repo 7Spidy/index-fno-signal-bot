@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Signal Bot — Troubleshooting Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #090c14; --surface: #0f1422; --surface2: #141929;
+  --border: #1e2840; --border2: #263050;
+  --green: #00e5a0; --green-dim: #00e5a015;
+  --red: #f87171;   --red-dim: #f8717115;
+  --amber: #f59e0b; --amber-dim: #f59e0b15;
+  --blue: #60a5fa;  --blue-dim: #60a5fa12;
+  --text: #dde4f0;  --text-muted: #6b7fa3; --text-dim: #9aacc8;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--mono); background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.7; }
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+
+/* HERO */
+.hero { padding: 40px 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
+.hero-tag { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber); margin-bottom: 12px; }
+.hero h1 { font-family: var(--display); font-size: clamp(22px, 4vw, 36px); font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 10px; }
+.hero h1 span { color: var(--amber); }
+.hero p { color: var(--text-dim); font-size: 13px; max-width: 560px; }
+
+/* TOC */
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 40px; }
+.toc-title { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.toc a { display: block; font-size: 12px; color: var(--text-dim); text-decoration: none; padding: 3px 0; }
+.toc a:hover { color: var(--green); }
+.toc a::before { content: '→ '; color: var(--border2); }
+
+/* SECTIONS */
+.section { margin-bottom: 48px; }
+.section-label { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.section h2 { font-family: var(--display); font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.section h3 { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--text); margin: 20px 0 8px; }
+p { color: var(--text-dim); margin-bottom: 10px; font-size: 13px; }
+
+/* ISSUE CARDS */
+.issue { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+.issue-head { padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--border); }
+.issue-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+.issue-title { font-family: var(--display); font-weight: 700; font-size: 13px; color: #fff; }
+.issue-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.issue-body { padding: 14px 16px; }
+.issue-body p { margin-bottom: 8px; }
+.issue-body p:last-child { margin-bottom: 0; }
+
+/* ERROR BLOCK */
+.err { background: #0d1117; border: 1px solid var(--border); border-left: 3px solid var(--red); border-radius: 4px; padding: 10px 14px; margin: 10px 0; font-size: 11.5px; color: #f87171; white-space: pre-wrap; word-break: break-all; }
+
+/* FIX BLOCK */
+.fix { background: var(--green-dim); border: 1px solid #00e5a025; border-radius: 4px; padding: 10px 14px; margin: 10px 0; font-size: 12px; color: var(--green); }
+.fix strong { display: block; margin-bottom: 4px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #00e5a080; }
+
+/* CODE */
+pre { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 12px 14px; font-size: 11.5px; color: #c9d1d9; overflow-x: auto; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+code { background: #1a2035; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: var(--green); }
+
+/* CHECKLIST */
+.checklist { list-style: none; }
+.checklist li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--text-dim); }
+.checklist li:last-child { border-bottom: none; }
+.check-num { flex-shrink: 0; font-size: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 1px 6px; border-radius: 3px; margin-top: 2px; min-width: 26px; text-align: center; }
+
+/* ALERT */
+.alert { border-radius: 6px; padding: 12px 14px; margin: 12px 0; font-size: 12.5px; display: flex; gap: 10px; }
+.alert-amber { background: var(--amber-dim); border: 1px solid #f59e0b28; color: #fcd34d; }
+.alert-blue  { background: var(--blue-dim);  border: 1px solid #60a5fa28; color: var(--blue); }
+.alert-green { background: var(--green-dim); border: 1px solid #00e5a028; color: var(--green); }
+.alert-icon { flex-shrink: 0; }
+
+/* TABLE */
+.tw { overflow-x: auto; margin: 10px 0; border-radius: 6px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--text-muted); padding: 8px 12px; background: var(--surface2); text-align: left; border-bottom: 1px solid var(--border); }
+td { padding: 8px 12px; font-size: 11.5px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+
+/* FOOTER */
+footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <div class="hero-tag">NIFTY Signal Bot · Troubleshooting Reference</div>
+  <h1>If Something <span>Breaks</span></h1>
+  <p>A complete record of every issue encountered during setup, how each was diagnosed, and exactly what fixed it. Built from the actual setup session on 2 Jun 2026.</p>
+</div>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#morning-checklist">§1 — Morning health check (do this first)</a>
+  <a href="#auth-issues">§2 — Morning Login failures (auth.py)</a>
+  <a href="#signal-issues">§3 — Signal evaluation failures (main.py)</a>
+  <a href="#dashboard-issues">§4 — Dashboard not updating</a>
+  <a href="#discord-issues">§5 — Discord alerts not arriving</a>
+  <a href="#redis-issues">§6 — Upstash Redis issues</a>
+  <a href="#kite-issues">§7 — Kite Connect configuration</a>
+  <a href="#known-errors">§8 — Full error log from initial setup</a>
+  <a href="#secrets-ref">§9 — Secrets reference</a>
+  <a href="#cron-ref">§10 — Cron schedule reference</a>
+</nav>
+
+
+<!-- §1 MORNING CHECKLIST -->
+<div class="section" id="morning-checklist">
+  <div class="section-label">Section 01</div>
+  <h2>Morning health check (09:05–09:45 IST)</h2>
+  <p>Run through this in order. Fix the first thing that fails before checking the next.</p>
+  <ul class="checklist">
+    <li><span class="check-num">1</span><div>
+      <strong style="color:var(--text)">Morning Login ran green</strong><br/>
+      Actions tab → Morning Login → latest run has a ✓. Should complete by 09:10 IST.
+      If red, see §2.
+    </div></li>
+    <li><span class="check-num">2</span><div>
+      <strong style="color:var(--text)">Token is in Upstash Redis</strong><br/>
+      Upstash console → your DB → browse keys → <code>kite:access_token</code> exists and is not expired.
+      If missing, Morning Login failed silently — re-trigger via workflow_dispatch.
+    </div></li>
+    <li><span class="check-num">3</span><div>
+      <strong style="color:var(--text)">Instrument tokens are cached</strong><br/>
+      Upstash: <code>kite:instrument_tokens</code> key exists. Contains JSON with NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY tokens.
+      If missing, run Morning Login again (it caches instruments in the second step).
+    </div></li>
+    <li><span class="check-num">4</span><div>
+      <strong style="color:var(--text)">Dashboard shows 🟢 Valid (~09:45 IST)</strong><br/>
+      Open GitHub Pages URL. After the first signal.yml run at ~09:40 IST you should see live prices and indicator values in each instrument card. If still showing dashes (–), see §4.
+    </div></li>
+    <li><span class="check-num">5</span><div>
+      <strong style="color:var(--text)">Signal.yml runs every 5 min</strong><br/>
+      Actions → Signal Evaluation → runs should be queuing up every 5 minutes between 09:30–15:30 IST. Each run should complete in under 60 seconds.
+    </div></li>
+  </ul>
+</div>
+
+
+<!-- §2 AUTH ISSUES -->
+<div class="section" id="auth-issues">
+  <div class="section-label">Section 02</div>
+  <h2>Morning Login failures</h2>
+
+  <div class="alert alert-amber">
+    <span class="alert-icon">⚠</span>
+    <div>All of these errors were encountered and solved during the initial setup session. The fixes are already in the code. This section documents the progression in case the same errors recur.</div>
+  </div>
+
+  <!-- Error 1 -->
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">KeyError: 'request_token'</div>
+        <div class="issue-subtitle">First error encountered. auth.py line ~46.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <div class="err">[auth] ✗ Login failed: 'request_token'</div>
+      <p><strong style="color:var(--text)">Cause:</strong> The original code used <code>allow_redirects=True</code> which made <code>requests</code> try to connect to your app's redirect URL (e.g. <code>https://127.0.0.1</code>) which isn't running in GitHub Actions. The connection failed before <code>request_token</code> could be captured.</p>
+      <div class="fix"><strong>Fix applied</strong>Replaced with a custom <code>_InterceptAdapter</code> that intercepts redirects to non-Zerodha URLs before making a TCP connection, extracting <code>request_token</code> from the URL without needing the redirect destination to be reachable.</div>
+    </div>
+  </div>
+
+  <!-- Error 2 -->
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">"The user is not enabled for the app"</div>
+        <div class="issue-subtitle">JSON error from /connect/finish endpoint.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <div class="err">{"status":"error","message":"The user is not enabled for the app.","data":null,"error_type":"InputException"}</div>
+      <p><strong style="color:var(--text)">Cause:</strong> The <strong>Zerodha Client ID</strong> field in the Kite Connect developer app settings was set incorrectly. This field must exactly match the Zerodha user ID used for login.</p>
+      <div class="fix"><strong>Fix applied</strong>Updated the Zerodha Client ID field in kite.trade developer console to match the actual login user ID. The KITE_USER_ID GitHub secret must also match exactly (case-sensitive, no spaces).</div>
+      <h3>If this error returns</h3>
+      <p>1. Go to <strong>kite.trade/developers</strong> → open your app → check <strong>Zerodha Client ID</strong> field.<br/>
+      2. Compare to your actual Zerodha login ID (visible at kite.zerodha.com → profile).<br/>
+      3. Both the app field and <code>KITE_USER_ID</code> GitHub secret must be identical.</p>
+    </div>
+  </div>
+
+  <!-- Error 3 -->
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">request_token not found — stuck on /connect/authorize (POST 405)</div>
+        <div class="issue-subtitle">React SPA consent page. Required one-time manual browser action.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <div class="err">[auth-debug] Landed on HTML page: https://kite.zerodha.com/connect/authorize?...
+[auth-debug] POST status=405 location=</div>
+      <p><strong style="color:var(--text)">Cause:</strong> <code>/connect/authorize</code> is Kite's OAuth consent screen — a React SPA. It requires a real browser click (the "Allow Access" button) the very first time an app is authorized by a user. Python's <code>requests</code> library cannot execute JavaScript, so it can't interact with the React app.</p>
+      <p>This is a <strong>one-time setup step only</strong>. Once authorized, Kite remembers the consent and subsequent daily logins receive a direct server-side redirect (no consent page) that the code handles automatically.</p>
+      <div class="fix"><strong>Fix applied (one-time, already done)</strong>Manually opened the authorization URL in a browser and clicked "Allow Access". This only needs to be done once per app+user combination.</div>
+      <h3>If this error returns (it shouldn't)</h3>
+      <p>This would only happen if the app was deleted and recreated (new API key). If so:</p>
+      <p>1. Open in a browser: <code>https://kite.zerodha.com/connect/login?v=3&amp;api_key=YOUR_API_KEY</code><br/>
+      2. Log in with Zerodha credentials<br/>
+      3. Click <strong>Allow Access</strong> on the consent page<br/>
+      4. Browser will redirect to <code>https://127.0.0.1/?request_token=...</code> — this won't load, that's fine, ignore it<br/>
+      5. Trigger Morning Login via workflow_dispatch again</p>
+    </div>
+  </div>
+
+  <!-- Error 4 — TOTP -->
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">TOTP / 2FA failure</div>
+        <div class="issue-subtitle">If KITE_TOTP_SECRET is wrong or expired.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <div class="err">[auth] ✗ Login failed: 403 Client Error or "Invalid TOTP"</div>
+      <p><strong style="color:var(--text)">Cause:</strong> <code>KITE_TOTP_SECRET</code> must be the <strong>base32 seed</strong> from your authenticator app setup — the string shown when you first scanned the QR code (looks like <code>JBSWY3DPEHPK3PXP</code>). It is NOT the 6-digit rotating OTP.</p>
+      <div class="fix"><strong>Fix</strong>Go to Zerodha profile → Security → 2FA → re-setup TOTP → save the base32 secret shown → update KITE_TOTP_SECRET GitHub secret.</div>
+      <p><strong style="color:var(--text)">Also check:</strong> GitHub Actions server time must be accurate for TOTP to work. It usually is — if TOTP works locally but fails in Actions, the server clock may have drifted (very rare).</p>
+    </div>
+  </div>
+
+  <!-- General auth debug -->
+  <h3>General Morning Login debug steps</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Symptom</th><th>Check</th></tr></thead>
+    <tbody>
+      <tr><td>Run fails immediately</td><td>Check that all 5 KITE_* secrets are set in GitHub. Missing secrets cause <code>KeyError</code> on startup.</td></tr>
+      <tr><td>TOTP step fails</td><td><code>KITE_TOTP_SECRET</code> must be the base32 seed, not the 6-digit OTP.</td></tr>
+      <tr><td>"The user is not enabled"</td><td>Zerodha Client ID in kite.trade app settings must match <code>KITE_USER_ID</code> secret exactly.</td></tr>
+      <tr><td>"Invalid API key"</td><td><code>KITE_API_KEY</code> doesn't match the API key shown in kite.trade developer console.</td></tr>
+      <tr><td>Consent page appears again</td><td>Re-authorize in browser: <code>https://kite.zerodha.com/connect/login?v=3&amp;api_key=YOUR_KEY</code></td></tr>
+      <tr><td>Redis write fails</td><td>Check <code>UPSTASH_REDIS_REST_URL</code> and <code>UPSTASH_REDIS_REST_TOKEN</code> are correct. Try the REST endpoint in your browser.</td></tr>
+      <tr><td>Subscription expired</td><td>kite.trade → your app → Expiry date. Renew if within 7 days of expiry.</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+
+<!-- §3 SIGNAL ISSUES -->
+<div class="section" id="signal-issues">
+  <div class="section-label">Section 03</div>
+  <h2>Signal evaluation failures</h2>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">⚪</span>
+      <div>
+        <div class="issue-title">"Outside trading window — exiting"</div>
+        <div class="issue-subtitle">Normal behaviour — not an error.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>This is expected. The script runs from ~09:30 IST but only evaluates signals between <strong>09:40–14:45 IST</strong>. Runs before 09:40 and after 14:45 exit immediately with this message. Check also that today is a trading day (not a holiday or weekend).</p>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">"No access token in Redis. Run morning-login.yml."</div>
+        <div class="issue-subtitle">Morning Login didn't run or failed.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The <code>kite:access_token</code> key is missing or expired (12h TTL). This means Morning Login failed this morning or didn't run.</p>
+      <div class="fix"><strong>Fix</strong>1. Check Actions → Morning Login for today's run.<br/>2. If it failed, fix the error (see §2) and re-trigger via workflow_dispatch.<br/>3. If it didn't run (missed the cron), trigger manually.</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">"ERROR processing NIFTY: ..."</div>
+        <div class="issue-subtitle">Per-instrument error. Other instruments continue.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The main loop catches per-instrument errors and continues. Common causes:</p>
+      <ul style="color:var(--text-dim); padding-left:18px; margin:8px 0;">
+        <li style="margin-bottom:4px">Kite API rate limit — too many requests (unlikely with 4 instruments)</li>
+        <li style="margin-bottom:4px">Instrument token expired (futures rolled over to next month) — Morning Login resolves this daily</li>
+        <li style="margin-bottom:4px">Market not open yet — candles return empty before 09:15 IST</li>
+        <li>Kite API downtime — check <a href="https://status.zerodha.com" style="color:var(--blue)">status.zerodha.com</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">Signals firing too often / not at all</div>
+        <div class="issue-subtitle">Indicator calibration. Not an error.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The dashboard shows which conditions (C1–C4) pass and fail for each instrument on every tick. If all 4 are passing very frequently, consider tightening the config:</p>
+      <pre>DI_THRESHOLD = 25          # increase to 28-30 for stricter DMI
+RSI_SLOPE_LOOKBACK = 3     # increase to 4-5 for stricter RSI
+VWAP_CROSS_WINDOW_CANDLES = 6  # decrease to 3-4 for tighter cross window
+COOLDOWN_CANDLES = 3       # increase to prevent rapid re-firing</pre>
+      <p>Edit <code>src/config.py</code>, commit, push. Changes take effect on the next run.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- §4 DASHBOARD ISSUES -->
+<div class="section" id="dashboard-issues">
+  <div class="section-label">Section 04</div>
+  <h2>Dashboard not updating</h2>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">Dashboard shows stale data or dashes (–)</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <h3>Check 1: Has signal.yml run today?</h3>
+      <p>Actions → Signal Evaluation → look for runs today during market hours. If no runs, the cron may not have triggered yet or there were failures.</p>
+      <h3>Check 2: Is GitHub Pages enabled?</h3>
+      <p>Repo Settings → Pages → Source must be set to <strong>main branch, /docs folder</strong>. The URL will be <code>https://7spidy.github.io/index-fno-signal-bot</code>.</p>
+      <h3>Check 3: Browser cache</h3>
+      <p>GitHub Pages CDN caches aggressively. The dashboard already uses <code>?t=Date.now()</code> to bust cache on the JSON fetch, but try a hard refresh (<kbd>Ctrl+Shift+R</kbd>) on the dashboard page itself.</p>
+      <h3>Check 4: dashboard.json was committed</h3>
+      <p>Repo → code tab → <code>docs/dashboard.json</code> → check the "last committed" timestamp. If it's old, the git push from <code>dashboard_writer.py</code> may have failed. Check the signal.yml run logs for git errors.</p>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">"Dashboard offline — retrying" banner</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The browser couldn't fetch <code>dashboard.json</code>. Possible causes:</p>
+      <ul style="color:var(--text-dim); padding-left:18px; margin:8px 0;">
+        <li style="margin-bottom:4px">GitHub Pages not enabled (see Check 2 above)</li>
+        <li style="margin-bottom:4px">You're opening <code>docs/index.html</code> as a local file (<code>file://</code>) — it must be served from GitHub Pages or a local HTTP server</li>
+        <li>GitHub Pages deployment still in progress (can take 1-2 minutes after a push)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- §5 DISCORD ISSUES -->
+<div class="section" id="discord-issues">
+  <div class="section-label">Section 05</div>
+  <h2>Discord alerts not arriving</h2>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">⚪</span>
+      <div>
+        <div class="issue-title">No Discord messages all day</div>
+        <div class="issue-subtitle">This is normal if no signals fired.</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>Discord only fires when ALL 4 conditions pass simultaneously for CE or PE. Check the dashboard history log — if all dots are mostly dim (grey), conditions just haven't aligned. This is expected behaviour, not an error.</p>
+      <div class="alert alert-blue">
+        <span class="alert-icon">ℹ</span>
+        <div>The dashboard updates silently every 5 minutes whether or not a signal fires. Silence on Discord = no signal. Check the dashboard to confirm the bot is running.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">Signal showed on dashboard but no Discord message</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>Check signal.yml run logs for <code>[notifier]</code> lines. Possible causes:</p>
+      <ul style="color:var(--text-dim); padding-left:18px; margin:8px 0;">
+        <li style="margin-bottom:4px"><code>DISCORD_WEBHOOK_URL</code> secret is missing or incorrect — check GitHub Secrets</li>
+        <li style="margin-bottom:4px">The webhook was deleted in Discord — recreate it: channel → Edit → Integrations → Webhooks → New Webhook</li>
+        <li style="margin-bottom:4px">Discord API was temporarily down</li>
+        <li>The signal was dedup-suppressed (same candle timestamp fired twice within the 5-min window)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- §6 REDIS ISSUES -->
+<div class="section" id="redis-issues">
+  <div class="section-label">Section 06</div>
+  <h2>Upstash Redis issues</h2>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🔴</span>
+      <div>
+        <div class="issue-title">Redis operations failing silently</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p><code>src/state.py</code> never raises — all errors are printed and return <code>None</code>/<code>False</code>. Check signal.yml logs for lines like <code>[state] redis_get(...) error:</code>.</p>
+      <h3>Verify your Upstash connection manually</h3>
+      <p>Open this URL in your browser (replace values):</p>
+      <pre>https://YOUR_UPSTASH_URL/get/kite:access_token
+Authorization: Bearer YOUR_TOKEN</pre>
+      <p>Or use curl:</p>
+      <pre>curl https://YOUR_UPSTASH_URL/get/kite:access_token \
+  -H "Authorization: Bearer YOUR_TOKEN"</pre>
+      <p>If you get a JSON response, the connection is fine. If you get 401, the token is wrong.</p>
+      <h3>Key TTLs</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Key</th><th>TTL</th><th>Set by</th></tr></thead>
+        <tbody>
+          <tr><td><code>kite:access_token</code></td><td>12 hours</td><td>morning-login.yml</td></tr>
+          <tr><td><code>kite:token_refreshed_at</code></td><td>no TTL</td><td>morning-login.yml</td></tr>
+          <tr><td><code>kite:instrument_tokens</code></td><td>24 hours</td><td>morning-login.yml</td></tr>
+          <tr><td><code>fired:{name}:{dir}:{ts}</code></td><td>24 hours</td><td>main.py (dedup)</td></tr>
+          <tr><td><code>cooldown:{name}:{dir}</code></td><td>no TTL</td><td>main.py (cooldown)</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- §7 KITE ISSUES -->
+<div class="section" id="kite-issues">
+  <div class="section-label">Section 07</div>
+  <h2>Kite Connect configuration</h2>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">Monthly futures rollover (last Thursday of each month)</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>Nifty futures expire on the last Thursday of each month. Morning Login re-resolves instrument tokens daily (<code>resolve_futures_tokens()</code> always picks the nearest-expiry contract), so this is handled automatically. No action needed.</p>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">Kite Connect subscription renewal (every 3 months)</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The app expires on <strong>03 Jul 2026</strong> (visible in kite.trade developer console). Renew before it expires — the morning login will start failing with "subscription expired" type errors if it lapses.</p>
+      <div class="alert alert-amber">
+        <span class="alert-icon">⚠</span>
+        <div>Set a calendar reminder for <strong>27 Jun 2026</strong> to renew the Kite Connect subscription at kite.trade before it expires on 03 Jul 2026.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head">
+      <span class="issue-icon">🟡</span>
+      <div>
+        <div class="issue-title">NSE holidays not in holidays_2026.json</div>
+      </div>
+    </div>
+    <div class="issue-body">
+      <p>The bot uses <code>holidays_2026.json</code> to skip NSE holidays. Some dates are marked as tentative (Bakri Id, Dussehra, Diwali depend on lunar calendar). Verify the list against the official NSE holiday circular before those dates at <a href="https://www.nseindia.com/resources/exchange-communication-holidays" style="color:var(--blue)">nseindia.com</a>.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- §8 KNOWN ERRORS LOG -->
+<div class="section" id="known-errors">
+  <div class="section-label">Section 08</div>
+  <h2>Full error log from initial setup (2 Jun 2026)</h2>
+  <p>Every error that occurred during the initial build and setup, in chronological order.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Error</th><th>Root cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><code>KeyError: 'request_token'</code></td>
+        <td><code>allow_redirects=True</code> tried to connect to <code>https://127.0.0.1</code> which isn't running in Actions</td>
+        <td>Custom <code>_InterceptAdapter</code> that captures redirect URL before TCP connection</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><code>request_token not found. Last URL: /connect/finish</code></td>
+        <td>After fixing redirect, the loop exited when <code>/connect/finish</code> returned 200 HTML instead of a redirect. Loop broke on non-redirect status code.</td>
+        <td>Added HTML parsing: detect 200 response, parse page, attempt form submission to authorize endpoint</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><code>"The user is not enabled for the app."</code> (JSON from Kite)</td>
+        <td>Zerodha Client ID in kite.trade app settings was incorrect — didn't match the Zerodha user ID being used to log in</td>
+        <td>Updated Zerodha Client ID field in developer console to match actual login user ID</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><code>POST status=400</code> on <code>/connect/finish</code></td>
+        <td>After fixing Client ID, the endpoint changed to <code>/connect/authorize</code> but code was hardcoded to POST to <code>/connect/finish</code></td>
+        <td>Made POST target dynamic — extracts the base URL from whatever page is returned, posts there</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><code>POST status=405</code> on <code>/connect/authorize</code></td>
+        <td><code>/connect/authorize</code> is a React SPA — POST is not allowed. The "Allow" button works via JavaScript which <code>requests</code> can't execute.</td>
+        <td>One-time manual browser authorization: user visits login URL, clicks Allow. Kite remembers consent. Subsequent daily logins skip the React page entirely.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</div>
+
+
+<!-- §9 SECRETS REFERENCE -->
+<div class="section" id="secrets-ref">
+  <div class="section-label">Section 09</div>
+  <h2>Secrets reference</h2>
+  <p>GitHub repo → Settings → Secrets and variables → Actions. All 8 required secrets must be present.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Secret name</th><th>Where to find it</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>KITE_API_KEY</code></td><td>kite.trade developer console → your app → API Key field</td><td>Shown as <code>cxxr8sdjgae37463</code> for this app</td></tr>
+      <tr><td><code>KITE_API_SECRET</code></td><td>kite.trade → your app → Show API Secret button</td><td>Regenerating this invalidates all existing sessions</td></tr>
+      <tr><td><code>KITE_USER_ID</code></td><td>Your Zerodha login ID — visible at kite.zerodha.com profile</td><td>Must match the <strong>Zerodha Client ID</strong> field in the app</td></tr>
+      <tr><td><code>KITE_PASSWORD</code></td><td>Your Zerodha login password</td><td>If you change your Zerodha password, update this secret</td></tr>
+      <tr><td><code>KITE_TOTP_SECRET</code></td><td>Base32 seed from your authenticator app setup</td><td>NOT the 6-digit OTP. Looks like <code>JBSWY3DPEHPK3PXP</code>. Found during 2FA setup QR scan.</td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_URL</code></td><td>Upstash console → your database → REST API section</td><td>Starts with <code>https://</code></td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_TOKEN</code></td><td>Upstash console → your database → REST API section</td><td>Long alphanumeric token</td></tr>
+      <tr><td><code>DISCORD_WEBHOOK_URL</code></td><td>Discord → channel settings → Integrations → Webhooks</td><td>Starts with <code>https://discord.com/api/webhooks/</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="alert alert-blue" style="margin-top:12px">
+    <span class="alert-icon">ℹ</span>
+    <div><code>GITHUB_TOKEN</code> is NOT a secret you add — it is automatically injected by GitHub Actions for git push. Do not add it manually.</div>
+  </div>
+</div>
+
+
+<!-- §10 CRON REFERENCE -->
+<div class="section" id="cron-ref">
+  <div class="section-label">Section 10</div>
+  <h2>Cron schedule reference</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Workflow</th><th>Cron (UTC)</th><th>IST equivalent</th><th>Days</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>morning-login.yml</code></td>
+        <td><code>35 3 * * 1-5</code></td>
+        <td>~09:05 IST</td>
+        <td>Mon–Fri</td>
+      </tr>
+      <tr>
+        <td><code>signal.yml</code></td>
+        <td><code>*/5 4-9 * * 1-5</code></td>
+        <td>~09:30–15:29 IST (code gates 09:40–14:45)</td>
+        <td>Mon–Fri</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="alert alert-amber" style="margin-top:12px">
+    <span class="alert-icon">⚠</span>
+    <div>GitHub Actions cron jobs can be delayed by up to 15 minutes during high load periods. Morning Login running at 09:08 instead of 09:05 is normal. Signal runs at :07 instead of :05 is normal.</div>
+  </div>
+  <h3>GitHub Actions cron note</h3>
+  <p>GitHub <strong>disables scheduled workflows</strong> on repos with no activity for 60 days. If the bot stops running after a period of inactivity, go to Actions → Morning Login → click <strong>Enable workflow</strong>. Alternatively, re-trigger manually via workflow_dispatch to wake it up.</p>
+</div>
+
+
+<footer>
+  NIFTY Signal Bot · Troubleshooting Guide · Built 2 Jun 2026 · Alert only — no auto-execution
+</footer>
+
+</div>
+</body>
+</html>
