@@ -102,9 +102,10 @@ def main() -> None:
             result["strike_step"] = inst["strike_step"]
             results.append(result)
 
+            _rsi = result.get('rsi')
             print(
                 f"[main] {name}: CE={result['ce']['signal']} PE={result['pe']['signal']} "
-                f"price={result.get('futures_price')} rsi={result.get('rsi'):.1f if result.get('rsi') else 'n/a'}"
+                f"price={result.get('futures_price')} rsi={f'{_rsi:.1f}' if _rsi is not None else 'n/a'}"
             )
 
             # Signal + dedup + cooldown

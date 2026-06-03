@@ -95,8 +95,8 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     atm_strike = round(price / strike_step) * strike_step
 
     return {
-        "ce": {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
-        "pe": {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
+        "ce": {"c1": bool(ce_c1), "c2": bool(ce_c2), "c3": bool(ce_c3), "c4": bool(ce_c4), "signal": bool(ce_signal)},
+        "pe": {"c1": bool(pe_c1), "c2": bool(pe_c2), "c3": bool(pe_c3), "c4": bool(pe_c4), "signal": bool(pe_signal)},
         "futures_price": price,
         "vwap": float(v0) if pd.notna(v0) else None,
         "rsi": float(r0) if pd.notna(r0) else None,
