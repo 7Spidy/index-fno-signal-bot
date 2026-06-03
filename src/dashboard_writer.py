@@ -61,6 +61,9 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
         )
     ]
 
+    def _safe_round(val):
+        return round(val, 2) if val is not None else None
+
     new_rows = [
         {
             "time": now.strftime("%H:%M"),
@@ -69,10 +72,10 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
             "pe_conditions": [r["pe"][k] for k in ["c1", "c2", "c3", "c4"]],
             "ce_signal": r["ce"]["signal"],
             "pe_signal": r["pe"]["signal"],
-            "rsi": r.get("rsi"),
-            "pdi": r.get("pdi"),
-            "mdi": r.get("mdi"),
-            "price": r.get("futures_price"),
+            "rsi": _safe_round(r.get("rsi")),
+            "pdi": _safe_round(r.get("pdi")),
+            "mdi": _safe_round(r.get("mdi")),
+            "price": _safe_round(r.get("futures_price")),
         }
         for r in instruments_results
     ]

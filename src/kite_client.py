@@ -62,11 +62,14 @@ def resolve_futures_tokens(kite: KiteConnect | None = None) -> dict:
 
 def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
     kite = get_kite()
-    prior_session_start = today_open - timedelta(hours=3)
+    # Go back 2 calendar days at 09:00 to capture the full prior session for Wilder warm-up
+    from_date = (today_open - timedelta(days=2)).replace(
+        hour=9, minute=0, second=0, microsecond=0
+    )
 
     data = kite.historical_data(
         instrument_token=instrument_token,
-        from_date=prior_session_start,
+        from_date=from_date,
         to_date=datetime.now(IST),
         interval="5minute",
         continuous=False,

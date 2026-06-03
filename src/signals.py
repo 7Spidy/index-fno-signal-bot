@@ -15,6 +15,10 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     if len(df) < 4:
         return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
 
+    if rsi.dropna().shape[0] < 15 or pdi.dropna().shape[0] < 15 or ndi.dropna().shape[0] < 15:
+        print("[signals] Insufficient non-null indicator values — skipping evaluation")
+        return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
+
     idx0 = len(df) - 2  # latest closed candle index
     idx1 = len(df) - 3  # prior candle index
 
