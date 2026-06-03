@@ -1,8 +1,8 @@
 {
-  "date": "2026-06-02",
+  "date": "2026-06-03",
   "last_run": null,
   "token_valid": true,
-  "token_refreshed_at": "2026-06-02T21:19:18.086672+05:30",
+  "token_refreshed_at": "2026-06-03T09:49:33.873683+05:30",
   "instruments": [
     {
       "name": "NIFTY",
