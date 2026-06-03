@@ -2,7 +2,7 @@
   "date": "2026-06-03",
   "last_run": "2026-06-03T14:28:16.199102+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-06-03T14:04:37.210832+05:30",
+  "token_refreshed_at": "2026-06-03T20:34:18.668227+05:30",
   "instruments": [
     {
       "ce": {
@@ -110,95 +110,6 @@
     }
   ],
   "active_signals": [],
-  "history": [
-    {
-      "time": "14:28",
-      "instrument": "NIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 75.18,
-      "pdi": 41.24,
-      "mdi": 9.56,
-      "price": 23552.1
-    },
-    {
-      "time": "14:28",
-      "instrument": "BANKNIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 74.12,
-      "pdi": 32.45,
-      "mdi": 10.53,
-      "price": 54440.0
-    },
-    {
-      "time": "14:28",
-      "instrument": "FINNIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 74.5,
-      "pdi": 67.09,
-      "mdi": 18.94,
-      "price": 25131.6
-    },
-    {
-      "time": "14:28",
-      "instrument": "MIDCPNIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 75.27,
-      "pdi": 40.73,
-      "mdi": 12.96,
-      "price": 14309.2
-    }
-  ],
+  "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
