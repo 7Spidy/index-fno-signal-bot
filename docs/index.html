@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>⬡ F&amp;O Signal Bot</title>
+<title>Avi's Stock Market Bot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -100,6 +100,7 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .signal-banner-pe .sig-label { color: var(--red); }
 .sig-main { font-family: var(--display); font-size: 26px; font-weight: 800; color: #fff; margin: 4px 0; }
 .sig-sub { font-size: 13px; color: var(--text-dim); }
+.sig-levels { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 6px; letter-spacing: .02em; }
 
 /* INSTRUMENT CARDS */
 .instrument-card {
@@ -168,6 +169,16 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .sig-pe { color: var(--red); }
 .sig-none { color: var(--border2); }
 
+/* FOOTER */
+.site-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding-top: 24px;
+  padding-bottom: 8px;
+}
+
 /* EMPTY STATES */
 .empty-state {
   text-align: center;
@@ -183,7 +194,7 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 <div class="header">
   <div class="header-left">
     <span class="live-dot"></span>
-    <span class="app-name">⬡ F&amp;O Signal Bot</span>
+    <span class="app-name">⬡ Avi's Stock Market Bot</span>
   </div>
   <div class="header-right">
     <span class="time-ago" id="time-ago">Loading…</span>
@@ -213,11 +224,14 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
     </div>
   </div>
 
+  <!-- FOOTER -->
+  <div class="site-footer">Made with ❤️ by Avi</div>
+
 </div>
 
 <script>
-const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25'];
-const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25'];
+const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25 ↑'];
+const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25 ↑'];
 
 let lastFetchTime = null;
 let lastRunISO = null;
@@ -282,11 +296,17 @@ function renderSignalBanners(signals) {
     const cls = dir === 'CE' ? 'signal-banner-ce' : 'signal-banner-pe';
     const emoji = dir === 'CE' ? '🟢' : '🔴';
     const strike = s.atm_strike ? `${Number(s.atm_strike).toLocaleString('en-IN')} ${dir}` : dir;
+    const fmt = v => (v !== null && v !== undefined) ? Number(v).toLocaleString('en-IN', { maximumFractionDigits: 1 }) : '–';
+    const slStr = fmt(s.sl);
+    const tgtStr = fmt(s.target);
+    const convStr = s.conviction ? `${escHtml(s.conviction)}${s.rr ? ` (1:${s.rr})` : ''}` : '–';
+    const levels = `SL ${slStr}  ·  Target ${tgtStr}  ·  ${convStr}`;
     return `
       <div class="signal-banner ${cls}">
         <div class="sig-label">${emoji} ${dir} Signal</div>
         <div class="sig-main">${escHtml(s.instrument || '')}</div>
         <div class="sig-sub">Suggested: ${strike}</div>
+        <div class="sig-levels">${levels}</div>
       </div>`;
   }).join('');
 }

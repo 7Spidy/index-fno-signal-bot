@@ -39,6 +39,10 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     vwap_val = result.get("vwap")
     rsi_val = result.get("rsi")
     candle_time = result.get("candle_time", "")
+    sl = result.get("sl")
+    target = result.get("target")
+    conviction = result.get("conviction")
+    rr = result.get("rr")
 
     vwap_delta_str = ""
     if vwap_val:
@@ -73,6 +77,22 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
                 "inline": False,
             },
             {
+                "name": "Stop Loss (futures)",
+                "value": f"`{sl:,.1f}`" if sl is not None else "n/a",
+                "inline": True,
+            },
+            {
+                "name": "Target (futures)",
+                "value": (f"`{target:,.1f}`  (1:{rr})" if target is not None and rr is not None
+                          else (f"`{target:,.1f}`" if target is not None else "n/a")),
+                "inline": True,
+            },
+            {
+                "name": "Conviction",
+                "value": f"`{conviction}`" if conviction else "n/a",
+                "inline": True,
+            },
+            {
                 "name": "Candle (IST) | RSI(14)",
                 "value": f"`{candle_ist}` | `{rsi_val:.1f}`" if rsi_val else f"`{candle_ist}` | n/a",
                 "inline": False,
@@ -93,7 +113,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
                 "inline": False,
             },
         ],
-        "footer": {"text": "Alert only · verify before trading"},
+        "footer": {"text": "Alert only · SL/Target are futures levels · verify before trading"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

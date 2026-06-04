@@ -35,6 +35,7 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     vwap_window = cfg.get("VWAP_CROSS_WINDOW_CANDLES", 6)
     di_threshold = cfg.get("DI_THRESHOLD", 25)
     require_dominance = cfg.get("REQUIRE_DI_DOMINANCE", True)
+    di_trend_check = cfg.get("DI_TREND_CHECK", True)
     use_adx = cfg.get("USE_ADX_FILTER", False)
 
     # C1 — Momentum
@@ -75,12 +76,26 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
             ce_c3 = all(rsi_vals[i] > rsi_vals[i + 1] for i in range(rsi_lookback - 1))
             pe_c3 = all(rsi_vals[i] < rsi_vals[i + 1] for i in range(rsi_lookback - 1))
 
-    # C4 — DI threshold and dominance
+    # C4 — DI threshold, dominance, and (optionally) the dominant DI rising
     ce_c4 = False
     pe_c4 = False
     if pd.notna(p0) and pd.notna(n0):
-        ce_c4 = p0 > di_threshold and (p0 > n0 if require_dominance else True)
-        pe_c4 = n0 > di_threshold and (n0 > p0 if require_dominance else True)
+        pdi_now, ndi_now = p0, n0
+        ce_c4 = bool(pdi_now > di_threshold and (pdi_now > ndi_now if require_dominance else True))
+        pe_c4 = bool(ndi_now > di_threshold and (ndi_now > pdi_now if require_dominance else True))
+
+        if di_trend_check:
+            # Need prior closed candle DI values; fail-safe to False if unavailable
+            pdi_rising = False
+            ndi_rising = False
+            if pdi.dropna().shape[0] >= 3 and ndi.dropna().shape[0] >= 3 and idx1 >= 0:
+                pdi_prev = pdi.iloc[idx1]
+                ndi_prev = ndi.iloc[idx1]
+                if pd.notna(pdi_prev) and pd.notna(ndi_prev):
+                    pdi_rising = bool(pdi_now > pdi_prev)   # +DI rising
+                    ndi_rising = bool(ndi_now > ndi_prev)   # -DI rising
+            ce_c4 = ce_c4 and pdi_rising
+            pe_c4 = pe_c4 and ndi_rising
 
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
@@ -94,6 +109,33 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     price = float(c0["close"])
     atm_strike = round(price / strike_step) * strike_step
 
+    # Stop Loss / Target / Conviction — futures price levels (no option premium data)
+    sl = target = conviction = None
+    rr = None
+    direction = "CE" if ce_signal else ("PE" if pe_signal else None)
+    if direction is not None and pd.notna(p0) and pd.notna(n0):
+        min_risk = cfg.get("MIN_RISK", 10)
+        strong_spread = cfg.get("CONVICTION_STRONG_SPREAD", 18)
+        moderate_spread = cfg.get("CONVICTION_MODERATE_SPREAD", 10)
+
+        entry = float(c0["close"])
+        spread = (p0 - n0) if direction == "CE" else (n0 - p0)
+        if spread >= strong_spread:
+            conviction, rr = "Strong", 3.0
+        elif spread >= moderate_spread:
+            conviction, rr = "Moderate", 2.0
+        else:
+            conviction, rr = "Building", 1.5
+
+        if direction == "CE":
+            sl = round(float(c0["low"]), 1)
+            risk = max(entry - sl, min_risk)
+            target = round(entry + rr * risk, 1)
+        else:  # PE
+            sl = round(float(c0["high"]), 1)
+            risk = max(sl - entry, min_risk)
+            target = round(entry - rr * risk, 1)
+
     return {
         "ce": {"c1": bool(ce_c1), "c2": bool(ce_c2), "c3": bool(ce_c3), "c4": bool(ce_c4), "signal": bool(ce_signal)},
         "pe": {"c1": bool(pe_c1), "c2": bool(pe_c2), "c3": bool(pe_c3), "c4": bool(pe_c4), "signal": bool(pe_signal)},
@@ -103,6 +145,10 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
         "pdi": float(p0) if pd.notna(p0) else None,
         "mdi": float(n0) if pd.notna(n0) else None,
         "atm_strike": int(atm_strike),
+        "sl": sl,
+        "target": target,
+        "conviction": conviction,
+        "rr": rr,
         "candle_time": c0["timestamp"].isoformat() if hasattr(c0["timestamp"], "isoformat") else str(c0["timestamp"]),
     }
 
@@ -118,5 +164,9 @@ def _empty_result(df, vwap, rsi, pdi, ndi, strike_step):
         "pdi": None,
         "mdi": None,
         "atm_strike": None,
+        "sl": None,
+        "target": None,
+        "conviction": None,
+        "rr": None,
         "candle_time": None,
     }

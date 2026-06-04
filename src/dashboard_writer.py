@@ -53,6 +53,10 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
             "instrument": r["name"],
             "direction": d,
             "atm_strike": r.get("atm_strike"),
+            "sl": r.get("sl"),
+            "target": r.get("target"),
+            "conviction": r.get("conviction"),
+            "rr": r.get("rr"),
         }
         for r in instruments_results
         for d in (
