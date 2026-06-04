@@ -1,6 +1,6 @@
 {
   "date": "2026-06-04",
-  "last_run": "2026-06-04T09:45:46.379921+05:30",
+  "last_run": "2026-06-04T09:50:51.674449+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-04T09:05:40.567979+05:30",
   "instruments": [
@@ -8,7 +8,7 @@
       "ce": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
@@ -19,13 +19,13 @@
         "c4": true,
         "signal": false
       },
-      "futures_price": 23426.7,
-      "vwap": 23400.507184472717,
-      "rsi": 41.503556811409275,
-      "pdi": 16.14747051503476,
-      "mdi": 33.05388630072899,
+      "futures_price": 23450.0,
+      "vwap": 23404.52607448964,
+      "rsi": 47.29938406849752,
+      "pdi": 20.02067801186771,
+      "mdi": 31.10671749068456,
       "atm_strike": 23450,
-      "candle_time": "2026-06-04T09:40:00+05:30",
+      "candle_time": "2026-06-04T09:45:00+05:30",
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
       "strike_step": 50
@@ -34,9 +34,9 @@
       "ce": {
         "c1": true,
         "c2": true,
-        "c3": false,
-        "c4": false,
-        "signal": false
+        "c3": true,
+        "c4": true,
+        "signal": true
       },
       "pe": {
         "c1": false,
@@ -45,39 +45,39 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 54307.2,
-      "vwap": 54266.3638992152,
-      "rsi": 49.35445894043099,
-      "pdi": 19.709603475368574,
-      "mdi": 22.346359945754905,
-      "atm_strike": 54300,
-      "candle_time": "2026-06-04T09:40:00+05:30",
+      "futures_price": 54476.0,
+      "vwap": 54284.17129196549,
+      "rsi": 58.60300645169592,
+      "pdi": 26.292201379956996,
+      "mdi": 20.228686875228142,
+      "atm_strike": 54500,
+      "candle_time": "2026-06-04T09:45:00+05:30",
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
       "strike_step": 100
     },
     {
       "ce": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": true,
         "c2": true,
         "c3": false,
         "c4": true,
         "signal": false
       },
-      "futures_price": 24980.0,
-      "vwap": 25005.674166666668,
-      "rsi": 42.11315099886259,
-      "pdi": 26.920279720011386,
-      "mdi": 32.44598670468268,
-      "atm_strike": 25000,
-      "candle_time": "2026-06-04T09:40:00+05:30",
+      "pe": {
+        "c1": false,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 25102.3,
+      "vwap": 25012.960144927536,
+      "rsi": 56.086444028277256,
+      "pdi": 35.42566435578956,
+      "mdi": 26.761819789785175,
+      "atm_strike": 25100,
+      "candle_time": "2026-06-04T09:45:00+05:30",
       "name": "FINNIFTY",
       "symbol": "FINNIFTY26JUNFUT",
       "strike_step": 50
@@ -86,7 +86,7 @@
       "ce": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
@@ -97,20 +97,114 @@
         "c4": true,
         "signal": false
       },
-      "futures_price": 14296.0,
-      "vwap": 14266.774584717608,
-      "rsi": 58.95171400840225,
-      "pdi": 21.05045810289191,
-      "mdi": 32.113960267877715,
-      "atm_strike": 14300,
-      "candle_time": "2026-06-04T09:40:00+05:30",
+      "futures_price": 14333.45,
+      "vwap": 14270.930419222905,
+      "rsi": 67.78908805737817,
+      "pdi": 25.247206446602306,
+      "mdi": 29.623511306854052,
+      "atm_strike": 14325,
+      "candle_time": "2026-06-04T09:45:00+05:30",
       "name": "MIDCPNIFTY",
       "symbol": "MIDCPNIFTY26JUNFUT",
       "strike_step": 25
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "CE",
+      "atm_strike": 54500
+    }
+  ],
   "history": [
+    {
+      "time": "09:50",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 47.3,
+      "pdi": 20.02,
+      "mdi": 31.11,
+      "price": 23450.0
+    },
+    {
+      "time": "09:50",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": true,
+      "pe_signal": false,
+      "rsi": 58.6,
+      "pdi": 26.29,
+      "mdi": 20.23,
+      "price": 54476.0
+    },
+    {
+      "time": "09:50",
+      "instrument": "FINNIFTY",
+      "ce_conditions": [
+        true,
+        true,
+        false,
+        true
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 56.09,
+      "pdi": 35.43,
+      "mdi": 26.76,
+      "price": 25102.3
+    },
+    {
+      "time": "09:50",
+      "instrument": "MIDCPNIFTY",
+      "ce_conditions": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 67.79,
+      "pdi": 25.25,
+      "mdi": 29.62,
+      "price": 14333.45
+    },
     {
       "time": "09:45",
       "instrument": "NIFTY",
