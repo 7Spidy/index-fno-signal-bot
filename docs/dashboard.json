@@ -1,35 +1,35 @@
 {
   "date": "2026-06-05",
-  "last_run": "2026-06-05T09:55:42.832118+05:30",
+  "last_run": "2026-06-05T10:00:58.928629+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-05T09:05:37.957870+05:30",
   "instruments": [
     {
       "ce": {
-        "c1": true,
-        "c2": true,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 23534.5,
-      "vwap": 23529.09697408659,
-      "rsi": 60.10003666727322,
-      "pdi": 22.091057503208273,
-      "mdi": 10.00337210989743,
-      "atm_strike": 23550,
+      "pe": {
+        "c1": true,
+        "c2": true,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 23514.0,
+      "vwap": 23528.60808562136,
+      "rsi": 53.51152830986151,
+      "pdi": 20.84404906874149,
+      "mdi": 9.438696136719585,
+      "atm_strike": 23500,
       "sl": null,
       "target": null,
       "conviction": null,
       "rr": null,
-      "candle_time": "2026-06-05T09:50:00+05:30",
+      "candle_time": "2026-06-05T09:55:00+05:30",
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
       "strike_step": 50
@@ -37,10 +37,10 @@
     {
       "ce": {
         "c1": true,
-        "c2": true,
+        "c2": false,
         "c3": true,
         "c4": true,
-        "signal": true
+        "signal": false
       },
       "pe": {
         "c1": false,
@@ -49,17 +49,17 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 54814.2,
-      "vwap": 54714.85565962999,
-      "rsi": 69.90959895965224,
-      "pdi": 31.0992796693283,
-      "mdi": 9.978243513320438,
+      "futures_price": 54834.8,
+      "vwap": 54735.95807583999,
+      "rsi": 71.1784348927323,
+      "pdi": 31.36067265320103,
+      "mdi": 9.37184987143942,
       "atm_strike": 54800,
-      "sl": 54732.0,
-      "target": 55060.8,
-      "conviction": "Strong",
-      "rr": 3.0,
-      "candle_time": "2026-06-05T09:50:00+05:30",
+      "sl": null,
+      "target": null,
+      "conviction": null,
+      "rr": null,
+      "candle_time": "2026-06-05T09:55:00+05:30",
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
       "strike_step": 100
@@ -75,21 +75,21 @@
       "pe": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
-      "futures_price": 25324.8,
-      "vwap": 25258.30162601626,
-      "rsi": 70.41665651556957,
-      "pdi": 47.68383420357929,
-      "mdi": 22.12623683574248,
+      "futures_price": 25310.1,
+      "vwap": 25259.65158730159,
+      "rsi": 66.55438857650412,
+      "pdi": 45.760499757055136,
+      "mdi": 21.233771827655094,
       "atm_strike": 25300,
       "sl": null,
       "target": null,
       "conviction": null,
       "rr": null,
-      "candle_time": "2026-06-05T09:50:00+05:30",
+      "candle_time": "2026-06-05T09:55:00+05:30",
       "name": "FINNIFTY",
       "symbol": "FINNIFTY26JUNFUT",
       "strike_step": 50
@@ -98,7 +98,7 @@
       "ce": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
@@ -106,37 +106,115 @@
         "c1": false,
         "c2": true,
         "c3": false,
-        "c4": true,
+        "c4": false,
         "signal": false
       },
-      "futures_price": 14310.0,
-      "vwap": 14326.621827651516,
-      "rsi": 46.20346293056984,
-      "pdi": 22.897473396868893,
-      "mdi": 26.004721076994812,
-      "atm_strike": 14300,
+      "futures_price": 14314.7,
+      "vwap": 14326.457422969188,
+      "rsi": 47.65128571389747,
+      "pdi": 25.141947399894736,
+      "mdi": 25.247717085236097,
+      "atm_strike": 14325,
       "sl": null,
       "target": null,
       "conviction": null,
       "rr": null,
-      "candle_time": "2026-06-05T09:50:00+05:30",
+      "candle_time": "2026-06-05T09:55:00+05:30",
       "name": "MIDCPNIFTY",
       "symbol": "MIDCPNIFTY26JUNFUT",
       "strike_step": 25
     }
   ],
-  "active_signals": [
-    {
-      "instrument": "BANKNIFTY",
-      "direction": "CE",
-      "atm_strike": 54800,
-      "sl": 54732.0,
-      "target": 55060.8,
-      "conviction": "Strong",
-      "rr": 3.0
-    }
-  ],
+  "active_signals": [],
   "history": [
+    {
+      "time": "10:00",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        true,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 53.51,
+      "pdi": 20.84,
+      "mdi": 9.44,
+      "price": 23514.0
+    },
+    {
+      "time": "10:00",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        true,
+        false,
+        true,
+        true
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 71.18,
+      "pdi": 31.36,
+      "mdi": 9.37,
+      "price": 54834.8
+    },
+    {
+      "time": "10:00",
+      "instrument": "FINNIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 66.55,
+      "pdi": 45.76,
+      "mdi": 21.23,
+      "price": 25310.1
+    },
+    {
+      "time": "10:00",
+      "instrument": "MIDCPNIFTY",
+      "ce_conditions": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        true,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 47.65,
+      "pdi": 25.14,
+      "mdi": 25.25,
+      "price": 14314.7
+    },
     {
       "time": "09:55",
       "instrument": "NIFTY",
