@@ -65,6 +65,7 @@ def as_dict() -> dict:
         "VWAP_CROSS_WINDOW_CANDLES": 6,
         "DI_THRESHOLD":              25,
         "REQUIRE_DI_DOMINANCE":      True,
+        "DI_TREND_CHECK":            True,
         "USE_ADX_FILTER":            False,
         "ADX_MIN":                   20,
         "COOLDOWN_CANDLES":          COOLDOWN_CANDLES,

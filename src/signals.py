@@ -18,6 +18,10 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     if len(df) < 4:
         return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
 
+    if rsi.dropna().shape[0] < 15 or pdi.dropna().shape[0] < 15 or ndi.dropna().shape[0] < 15:
+        print("[signals] Insufficient non-null indicator values — skipping evaluation")
+        return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
+
     idx0 = len(df) - 2  # latest closed candle index
     idx1 = len(df) - 3  # prior candle index
 
@@ -29,12 +33,12 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     p0 = pdi.iloc[idx0]
     n0 = ndi.iloc[idx0]
 
-    momentum_rule = cfg.get("MOMENTUM_RULE", "close_gt_prev_close")
-    rsi_lookback = cfg.get("RSI_SLOPE_LOOKBACK", 3)
-    vwap_window = cfg.get("VWAP_CROSS_WINDOW_CANDLES", 6)
-    di_threshold = cfg.get("DI_THRESHOLD", 25)
+    momentum_rule     = cfg.get("MOMENTUM_RULE", "close_gt_prev_close")
+    rsi_lookback      = cfg.get("RSI_SLOPE_LOOKBACK", 3)
+    vwap_window       = cfg.get("VWAP_CROSS_WINDOW_CANDLES", 6)
+    di_threshold      = cfg.get("DI_THRESHOLD", 25)
     require_dominance = cfg.get("REQUIRE_DI_DOMINANCE", True)
-    use_adx = cfg.get("USE_ADX_FILTER", False)
+    di_trend_check    = cfg.get("DI_TREND_CHECK", True)
 
     # C1 — Momentum
     if momentum_rule == "close_gt_prev_close":
@@ -74,19 +78,32 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
             ce_c3 = all(rsi_vals[i] > rsi_vals[i + 1] for i in range(rsi_lookback - 1))
             pe_c3 = all(rsi_vals[i] < rsi_vals[i + 1] for i in range(rsi_lookback - 1))
 
-    # C4 — DI threshold and dominance
+    # C4 — DI threshold, dominance, and (optionally) the dominant DI rising
     ce_c4 = False
     pe_c4 = False
     if pd.notna(p0) and pd.notna(n0):
-        ce_c4 = p0 > di_threshold and (p0 > n0 if require_dominance else True)
-        pe_c4 = n0 > di_threshold and (n0 > p0 if require_dominance else True)
+        pdi_now, ndi_now = p0, n0
+        ce_c4 = bool(pdi_now > di_threshold and (pdi_now > ndi_now if require_dominance else True))
+        pe_c4 = bool(ndi_now > di_threshold and (ndi_now > pdi_now if require_dominance else True))
+
+        if di_trend_check:
+            pdi_rising = False
+            ndi_rising = False
+            if pdi.dropna().shape[0] >= 3 and ndi.dropna().shape[0] >= 3 and idx1 >= 0:
+                pdi_prev = pdi.iloc[idx1]
+                ndi_prev = ndi.iloc[idx1]
+                if pd.notna(pdi_prev) and pd.notna(ndi_prev):
+                    pdi_rising = bool(pdi_now > pdi_prev)
+                    ndi_rising = bool(ndi_now > ndi_prev)
+            ce_c4 = ce_c4 and pdi_rising
+            pe_c4 = pe_c4 and ndi_rising
 
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
 
     # Guard — both firing simultaneously is theoretically impossible
     if ce_signal and pe_signal:
-        print(f"[signals] WARNING: Both CE and PE fired simultaneously — suppressing both")
+        print("[signals] WARNING: Both CE and PE fired simultaneously — suppressing both")
         ce_signal = False
         pe_signal = False
 
@@ -111,17 +128,17 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
 def _empty_result(df, vwap, rsi, pdi, ndi, strike_step):
     empty_side = {"c1": False, "c2": False, "c3": False, "c4": False, "signal": False}
     return {
-        "ce":           empty_side,
-        "pe":           dict(empty_side),
+        "ce":            empty_side,
+        "pe":            dict(empty_side),
         "futures_price": None,
-        "candle_high":  None,
-        "candle_low":   None,
-        "candle_time":  None,
-        "vwap":         None,
-        "rsi":          None,
-        "pdi":          None,
-        "ndi":          None,
-        "atm_strike":   None,
+        "candle_high":   None,
+        "candle_low":    None,
+        "candle_time":   None,
+        "vwap":          None,
+        "rsi":           None,
+        "pdi":           None,
+        "ndi":           None,
+        "atm_strike":    None,
     }
 
 
