@@ -69,21 +69,19 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 /* MAIN CONTENT */
 .content { padding: 16px; max-width: 680px; margin: 0 auto; }
 
-/* SIGNAL BANNERS */
+/* ── SIGNAL BANNER (new rich layout) ───────────────────────── */
 #signal-area { margin-bottom: 16px; }
+
 .signal-banner {
   border-radius: 10px;
-  padding: 18px 20px;
   margin-bottom: 10px;
-  text-align: center;
+  overflow: hidden;
 }
 .signal-banner-ce {
-  background: linear-gradient(135deg, #00e5a018, #00e5a008);
   border: 2px solid var(--green);
   animation: pulse-green 2s ease-in-out infinite;
 }
 .signal-banner-pe {
-  background: linear-gradient(135deg, #f8717118, #f8717108);
   border: 2px solid var(--red);
   animation: pulse-red 2s ease-in-out infinite;
 }
@@ -95,11 +93,88 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
   0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.45); }
   50%       { box-shadow: 0 0 0 16px rgba(248,113,113,0); }
 }
-.sig-label { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 4px; }
-.signal-banner-ce .sig-label { color: var(--green); }
-.signal-banner-pe .sig-label { color: var(--red); }
-.sig-main { font-family: var(--display); font-size: 26px; font-weight: 800; color: #fff; margin: 4px 0; }
-.sig-sub { font-size: 13px; color: var(--text-dim); }
+
+/* Banner header row */
+.sig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  background: var(--surface);
+}
+.sig-title { font-family: var(--display); font-weight: 800; font-size: 15px; }
+.signal-banner-ce .sig-title { color: var(--green); }
+.signal-banner-pe .sig-title { color: var(--red); }
+.sig-candle-time { font-size: 11px; color: var(--text-muted); }
+
+/* Buy this option box */
+.sig-option-box {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+.signal-banner-ce .sig-option-box { background: #00e5a00d; }
+.signal-banner-pe .sig-option-box { background: #f871710d; }
+.sig-section-label {
+  font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.sig-ts-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.sig-ts { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--text); }
+.sig-copy-btn {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text-muted); border-radius: 5px;
+  padding: 3px 9px; font-size: 11px; cursor: pointer;
+  font-family: var(--mono); transition: color .15s, border-color .15s;
+}
+.sig-copy-btn:hover { color: var(--text); border-color: var(--border2); }
+.sig-copy-btn.copied { color: var(--green); border-color: var(--green); }
+.sig-option-meta { font-size: 11px; color: var(--text-muted); }
+.sig-unavail { font-size: 12px; color: var(--amber); padding: 4px 0; }
+
+/* Three price boxes */
+.sig-prices {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+.sig-price-box {
+  background: var(--surface);
+  padding: 10px 14px;
+}
+.sig-price-label { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.sig-price-val { font-family: var(--display); font-weight: 700; font-size: 16px; color: var(--text); }
+.sig-price-val.unavail { font-size: 12px; color: var(--text-muted); font-family: var(--mono); font-weight: 400; }
+.sig-price-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* Conviction / Futures / Risk row */
+.sig-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+.sig-meta-item {
+  background: var(--surface2);
+  padding: 8px 14px;
+}
+.sig-meta-label { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.sig-meta-val { font-size: 12px; color: var(--text-dim); }
+
+/* Conditions row */
+.sig-conds {
+  background: var(--surface);
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+.sig-cond-pass { color: var(--green); }
+.sig-cond-fail { color: #f8717160; }
 
 /* INSTRUMENT CARDS */
 .instrument-card {
@@ -269,6 +344,38 @@ function updateTimeAgo() {
   } catch { el.textContent = 'Unknown'; }
 }
 
+/* ── Signal banner helpers ──────────────────────────────────── */
+
+function fp(v) {
+  return (v !== null && v !== undefined) ? `₹${Number(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}` : 'unavailable';
+}
+
+function fi(v) {
+  return (v !== null && v !== undefined) ? Number(v).toLocaleString('en-IN', {minimumFractionDigits:1, maximumFractionDigits:1}) : '—';
+}
+
+function fmtExpiry(isoDate) {
+  if (!isoDate) return '—';
+  try {
+    const d = new Date(isoDate + 'T00:00:00');
+    const day = d.getUTCDay(); // 2 = Tuesday
+    const dayStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    return dayStr + (day === 2 ? ' weekly' : ' monthly');
+  } catch { return isoDate; }
+}
+
+function condItem(pass, label) {
+  return `<span class="${pass ? 'sig-cond-pass' : 'sig-cond-fail'}">${pass ? '✅' : '❌'} ${escHtml(label)}</span>`;
+}
+
+function copyTs(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {});
+}
+
 function renderSignalBanners(signals) {
   const area = document.getElementById('signal-area');
   if (!signals || signals.length === 0) {
@@ -277,19 +384,116 @@ function renderSignalBanners(signals) {
     return;
   }
   area.style.display = 'block';
-  area.innerHTML = signals.map(s => {
-    const dir = (s.direction || '').toUpperCase();
-    const cls = dir === 'CE' ? 'signal-banner-ce' : 'signal-banner-pe';
-    const emoji = dir === 'CE' ? '🟢' : '🔴';
-    const strike = s.atm_strike ? `${Number(s.atm_strike).toLocaleString('en-IN')} ${dir}` : dir;
-    return `
-      <div class="signal-banner ${cls}">
-        <div class="sig-label">${emoji} ${dir} Signal</div>
-        <div class="sig-main">${escHtml(s.instrument || '')}</div>
-        <div class="sig-sub">Suggested: ${strike}</div>
-      </div>`;
-  }).join('');
+  area.innerHTML = signals.map(s => buildSignalBanner(s)).join('');
 }
+
+function buildSignalBanner(s) {
+  const dir    = (s.direction || '').toUpperCase();
+  const isCE   = dir === 'CE';
+  const cls    = isCE ? 'signal-banner-ce' : 'signal-banner-pe';
+  const emoji  = isCE ? '🟢' : '🔴';
+  const arrow  = isCE ? '↑' : '↓';
+
+  const ts     = s.tradingsymbol;
+  const strike = s.strike;
+  const hasOption = ts && s.atm_ltp !== null && s.atm_ltp !== undefined;
+
+  // Header
+  const header = `
+    <div class="sig-header">
+      <span class="sig-title">${emoji} ${dir} SIGNAL — ${escHtml(s.instrument || '')}</span>
+      <span class="sig-candle-time">${escHtml(s.candle_time || '')}</span>
+    </div>`;
+
+  // Buy this option
+  let optBox;
+  if (!hasOption) {
+    optBox = `
+      <div class="sig-option-box">
+        <div class="sig-section-label">BUY THIS OPTION</div>
+        <div class="sig-unavail">Option data unavailable — check morning-login ran correctly.</div>
+      </div>`;
+  } else {
+    const copyId = `copy_${s.instrument}_${dir}`;
+    optBox = `
+      <div class="sig-option-box">
+        <div class="sig-section-label">BUY THIS OPTION</div>
+        <div class="sig-ts-row">
+          <span class="sig-ts">${escHtml(ts)}</span>
+          <button class="sig-copy-btn" onclick="copyTs('${escHtml(ts)}', this)">copy</button>
+        </div>
+        <div class="sig-option-meta">
+          ${strike ? Number(strike).toLocaleString('en-IN') : '—'} ${dir}
+          &nbsp;·&nbsp;${escHtml(fmtExpiry(s.expiry))} expiry
+          &nbsp;·&nbsp;LTP fetched @ ${escHtml(s.fetch_time || '—')}
+        </div>
+      </div>`;
+  }
+
+  // Price boxes
+  const buyVal    = s.atm_ltp    !== null && s.atm_ltp    !== undefined;
+  const tgtVal    = s.opt_target !== null && s.opt_target !== undefined;
+  const slVal     = s.opt_sl     !== null && s.opt_sl     !== undefined;
+  const prices = `
+    <div class="sig-prices">
+      <div class="sig-price-box">
+        <div class="sig-price-label">Buy at</div>
+        <div class="sig-price-val${buyVal ? '' : ' unavail'}">${fp(s.atm_ltp)}</div>
+        <div class="sig-price-sub">live LTP @ ${escHtml(s.fetch_time || '—')}</div>
+      </div>
+      <div class="sig-price-box">
+        <div class="sig-price-label">Target</div>
+        <div class="sig-price-val${tgtVal ? '' : ' unavail'}">${fp(s.opt_target)}</div>
+        <div class="sig-price-sub">if ${escHtml(s.instrument || '')} spot → ${fi(s.spot_tgt)}</div>
+      </div>
+      <div class="sig-price-box">
+        <div class="sig-price-label">Stop Loss</div>
+        <div class="sig-price-val${slVal ? '' : ' unavail'}">${fp(s.opt_sl)}</div>
+        <div class="sig-price-sub">if ${escHtml(s.instrument || '')} spot → ${fi(s.spot_sl)}</div>
+      </div>
+    </div>`;
+
+  // Meta row
+  const convLabel = s.conviction ? `${escHtml(s.conviction)}  ·  1:${s.rr || 3.0}` : '—';
+  const futStr    = s.futures_price
+    ? (fi(s.futures_price) + (s.fut_spot_spread && Math.abs(s.fut_spot_spread) > 5
+        ? ` / ${fi(s.spot_ltp)}` : ''))
+    : '—';
+  const riskStr   = s.raw_risk !== null && s.raw_risk !== undefined
+    ? `${Number(s.raw_risk).toFixed(1)} pts` : '—';
+  const meta = `
+    <div class="sig-meta-row">
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">Conviction</div>
+        <div class="sig-meta-val">${convLabel}</div>
+      </div>
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">Futures / Spot</div>
+        <div class="sig-meta-val">${futStr}</div>
+      </div>
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">Risk</div>
+        <div class="sig-meta-val">${riskStr}</div>
+      </div>
+    </div>`;
+
+  // Conditions
+  const c1lbl = isCE ? `Candle ${arrow} prev close` : `Candle ${arrow} prev close`;
+  const c2lbl = isCE ? 'VWAP cross-up ≤30min' : 'VWAP cross-dn ≤30min';
+  const c3lbl = isCE ? 'RSI rising (3 candles)' : 'RSI falling (3 candles)';
+  const c4lbl = isCE ? '+DI > 25, dominant ↑' : '−DI > 25, dominant ↑';
+  const conds = `
+    <div class="sig-conds">
+      ${condItem(s.c1, c1lbl)}
+      ${condItem(s.c2, c2lbl)}
+      ${condItem(s.c3, c3lbl)}
+      ${condItem(s.c4, c4lbl)}
+    </div>`;
+
+  return `<div class="signal-banner ${cls}">${header}${optBox}${prices}${meta}${conds}</div>`;
+}
+
+/* ── Instrument cards ───────────────────────────────────────── */
 
 function renderInstruments(instruments) {
   const area = document.getElementById('instrument-area');
@@ -306,7 +510,7 @@ function buildInstrumentCard(inst) {
   const vwap = inst.vwap ? Number(inst.vwap).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '–';
   const rsi = inst.rsi ? Number(inst.rsi).toFixed(1) : '–';
   const pdi = inst.pdi ? Number(inst.pdi).toFixed(1) : '–';
-  const mdi = inst.mdi ? Number(inst.mdi).toFixed(1) : '–';
+  const ndi = inst.ndi ? Number(inst.ndi).toFixed(1) : '–';
 
   const priceArrow = inst.ce?.c1 ? ' ↑' : (inst.pe?.c1 ? ' ↓' : '');
   const priceColor = inst.ce?.signal ? 'var(--green)' : (inst.pe?.signal ? 'var(--red)' : 'var(--green)');
@@ -326,7 +530,7 @@ function buildInstrumentCard(inst) {
         <span class="card-name">${escHtml(inst.name || '')}</span>
         <span class="card-price" style="color:${priceColor}">${priceStr}${priceArrow}</span>
       </div>
-      <div class="card-meta">VWAP ${vwap} · RSI ${rsi} · +DI ${pdi} / -DI ${mdi}</div>
+      <div class="card-meta">VWAP ${vwap} · RSI ${rsi} · +DI ${pdi} / -DI ${ndi}</div>
       <div class="conditions-grid">
         <div class="cond-box cond-ce">
           <div class="cond-dir">🟢 CE</div>
@@ -354,6 +558,8 @@ function condRow(pass, label) {
     : '<span class="check-fail">✗</span>';
   return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
 }
+
+/* ── History ────────────────────────────────────────────────── */
 
 function renderHistory(history) {
   const table = document.getElementById('history-table');

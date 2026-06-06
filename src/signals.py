@@ -1,5 +1,8 @@
 """CE/PE signal evaluation — 4 conditions each, per spec §6."""
 import pandas as pd
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
@@ -93,26 +96,39 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     return {
         "ce": {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
         "pe": {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
-        "futures_price": price,
-        "vwap": float(v0) if pd.notna(v0) else None,
-        "rsi": float(r0) if pd.notna(r0) else None,
-        "pdi": float(p0) if pd.notna(p0) else None,
-        "mdi": float(n0) if pd.notna(n0) else None,
-        "atm_strike": int(atm_strike),
-        "candle_time": c0["timestamp"].isoformat() if hasattr(c0["timestamp"], "isoformat") else str(c0["timestamp"]),
+        "futures_price": round(price, 2),
+        "candle_high":   round(float(c0["high"]),  2),
+        "candle_low":    round(float(c0["low"]),   2),
+        "candle_time":   _fmt_candle_time(c0["timestamp"]),
+        "vwap":          float(v0) if pd.notna(v0) else None,
+        "rsi":           float(r0) if pd.notna(r0) else None,
+        "pdi":           float(p0) if pd.notna(p0) else None,
+        "ndi":           float(n0) if pd.notna(n0) else None,
+        "atm_strike":    int(atm_strike),
     }
 
 
 def _empty_result(df, vwap, rsi, pdi, ndi, strike_step):
     empty_side = {"c1": False, "c2": False, "c3": False, "c4": False, "signal": False}
     return {
-        "ce": empty_side,
-        "pe": dict(empty_side),
+        "ce":           empty_side,
+        "pe":           dict(empty_side),
         "futures_price": None,
-        "vwap": None,
-        "rsi": None,
-        "pdi": None,
-        "mdi": None,
-        "atm_strike": None,
-        "candle_time": None,
+        "candle_high":  None,
+        "candle_low":   None,
+        "candle_time":  None,
+        "vwap":         None,
+        "rsi":          None,
+        "pdi":          None,
+        "ndi":          None,
+        "atm_strike":   None,
     }
+
+
+def _fmt_candle_time(ts) -> str:
+    try:
+        if hasattr(ts, "astimezone"):
+            return ts.astimezone(IST).strftime("%H:%M IST")
+        return str(ts)
+    except Exception:
+        return str(ts)

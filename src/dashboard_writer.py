@@ -15,7 +15,7 @@ except ImportError:
 IST = ZoneInfo("Asia/Kolkata")
 DOCS = Path("docs")
 FILE = DOCS / "dashboard.json"
-MAX_HISTORY = 280  # 70 ticks × 4 instruments
+MAX_HISTORY = 140  # 70 ticks × 2 instruments
 
 
 def load() -> dict:
@@ -48,18 +48,12 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     data["token_refreshed_at"] = token_refreshed_at
     data["instruments"] = instruments_results
 
-    data["active_signals"] = [
-        {
-            "instrument": r["name"],
-            "direction": d,
-            "atm_strike": r.get("atm_strike"),
-        }
-        for r in instruments_results
-        for d in (
-            (["CE"] if r["ce"]["signal"] else []) +
-            (["PE"] if r["pe"]["signal"] else [])
-        )
-    ]
+    active = []
+    for r in instruments_results:
+        for d in (["CE"] * int(bool(r["ce"]["signal"])) +
+                  ["PE"] * int(bool(r["pe"]["signal"]))):
+            active.append(_build_signal_entry(r["name"], d, r))
+    data["active_signals"] = active
 
     new_rows = [
         {
@@ -71,7 +65,7 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
             "pe_signal": r["pe"]["signal"],
             "rsi": r.get("rsi"),
             "pdi": r.get("pdi"),
-            "mdi": r.get("mdi"),
+            "ndi": r.get("ndi"),
             "price": r.get("futures_price"),
         }
         for r in instruments_results
@@ -81,6 +75,53 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     DOCS.mkdir(exist_ok=True)
     FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(f"[dashboard] Written {FILE} at {now.strftime('%H:%M IST')}")
+    _git_commit(now)
+
+
+def _build_signal_entry(instrument: str, direction: str, result: dict) -> dict:
+    return {
+        "instrument":      instrument,
+        "direction":       direction,
+        "candle_time":     result.get("candle_time"),
+        "futures_price":   result.get("futures_price"),
+        "spot_ltp":        result.get("spot_ltp"),
+        "fut_spot_spread": result.get("fut_spot_spread"),
+        "tradingsymbol":   result.get("atm_data", {}).get("tradingsymbol"),
+        "strike":          result.get("atm_data", {}).get("strike"),
+        "expiry":          result.get("atm_data", {}).get("expiry"),
+        "fetch_time":      result.get("atm_data", {}).get("fetch_time"),
+        "atm_ltp":         result.get("atm_ltp"),
+        "opt_target":      result.get("opt_target"),
+        "opt_sl":          result.get("opt_sl"),
+        "spot_tgt":        result.get("spot_tgt"),
+        "spot_sl":         result.get("spot_sl"),
+        "raw_risk":        result.get("raw_risk"),
+        "conviction":      result.get("conviction"),
+        "rr":              result.get("rr"),
+        "rsi":             result.get("rsi"),
+        "pdi":             result.get("pdi"),
+        "ndi":             result.get("ndi"),
+        "vwap":            result.get("vwap"),
+        "c1":              result.get("c1"),
+        "c2":              result.get("c2"),
+        "c3":              result.get("c3"),
+        "c4":              result.get("c4"),
+    }
+
+
+def update_active_signal(instrument: str, direction: str, result: dict) -> None:
+    """Immediately write one rich signal entry to active_signals and push."""
+    data = load()
+    entry = _build_signal_entry(instrument, direction, result)
+    data["active_signals"] = [
+        s for s in data["active_signals"]
+        if not (s.get("instrument") == instrument and s.get("direction") == direction)
+    ]
+    data["active_signals"].append(entry)
+    now = datetime.now(IST)
+    DOCS.mkdir(exist_ok=True)
+    FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(f"[dashboard] Active signal written: {instrument} {direction}")
     _git_commit(now)
 
 
@@ -122,6 +163,13 @@ if __name__ == "__main__":
     parser.add_argument("--reset-day", action="store_true")
     args = parser.parse_args()
     if args.reset_day:
-        reset_day()
+        now_ist = datetime.now(IST)
+        if now_ist.hour < 10:
+            reset_day()
+        else:
+            print(
+                f"[dashboard] reset_day() skipped — already {now_ist.strftime('%H:%M IST')}. "
+                "Only resets before 10:00 IST to protect intraday history."
+            )
     else:
         print("[dashboard] Use --reset-day or call update_and_commit() from main.py")

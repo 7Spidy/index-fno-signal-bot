@@ -102,9 +102,10 @@ def main() -> None:
             result["strike_step"] = inst["strike_step"]
             results.append(result)
 
+            rsi_str = f"{result.get('rsi'):.1f}" if result.get("rsi") is not None else "n/a"
             print(
                 f"[main] {name}: CE={result['ce']['signal']} PE={result['pe']['signal']} "
-                f"price={result.get('futures_price')} rsi={result.get('rsi'):.1f if result.get('rsi') else 'n/a'}"
+                f"price={result.get('futures_price')} rsi={rsi_str}"
             )
 
             # Signal + dedup + cooldown
@@ -125,8 +126,95 @@ def main() -> None:
                         print(f"[main] {name} {direction.upper()} in cooldown — skip")
                         continue
 
-                    notifier.send_signal(name, direction.upper(), result)
-                    journal.log_signal(name, direction.upper(), result)
+                    dir_up = direction.upper()
+
+                    # ── 1. Risk from futures signal candle ───────────────────
+                    if dir_up == "CE":
+                        raw_risk = max(
+                            result["futures_price"] - result["candle_low"],
+                            inst["min_risk"],
+                        )
+                    else:
+                        raw_risk = max(
+                            result["candle_high"] - result["futures_price"],
+                            inst["min_risk"],
+                        )
+
+                    # ── 2. Max risk filter ───────────────────────────────────
+                    max_r = config.MAX_RISK_POINTS.get(name, 9999)
+                    if raw_risk > max_r:
+                        print(
+                            f"[main] SKIPPED {name} {dir_up} "
+                            f"@ {result['candle_time']}: "
+                            f"risk {raw_risk:.1f} pts > max {max_r} pts (wide candle)"
+                        )
+                        continue
+
+                    # ── 3. Fetch live SPOT LTP ───────────────────────────────
+                    spot_ltp  = kite_client.get_spot_ltp(name)
+                    reference = spot_ltp if spot_ltp is not None \
+                                else result["futures_price"]
+                    if spot_ltp is None:
+                        print(f"[main] {name}: spot LTP unavailable, "
+                              f"using futures close as fallback")
+
+                    # ── 4. Conviction label + uniform R:R ────────────────────
+                    spread = (result["pdi"] - result["ndi"]) if dir_up == "CE" \
+                             else (result["ndi"] - result["pdi"])
+                    if   spread >= 18: conv = "Strong"
+                    elif spread >= 10: conv = "Moderate"
+                    else:              conv = "Building"
+                    rr = config.TARGET_RR
+
+                    # ── 5. Spot-anchored index SL and Target ─────────────────
+                    if dir_up == "CE":
+                        spot_sl  = round(reference - raw_risk,      1)
+                        spot_tgt = round(reference + rr * raw_risk, 1)
+                    else:
+                        spot_sl  = round(reference + raw_risk,      1)
+                        spot_tgt = round(reference - rr * raw_risk, 1)
+
+                    # ── 6. Fetch ATM option + live LTP ───────────────────────
+                    atm_data = kite_client.get_atm_option(
+                        instrument_name=name,
+                        spot_price=reference,
+                        direction=dir_up,
+                        step=inst["strike_step"],
+                    )
+
+                    # ── 7. Option premium SL and Target ──────────────────────
+                    atm_ltp    = atm_data.get("ltp")
+                    opt_sl     = None
+                    opt_target = None
+                    if atm_ltp is not None:
+                        delta      = config.ATM_DELTA
+                        opt_sl     = round(atm_ltp - raw_risk * delta,      2)
+                        opt_target = round(atm_ltp + raw_risk * rr * delta, 2)
+
+                    # ── 8. Attach everything to result ───────────────────────
+                    result["c1"] = result[direction]["c1"]
+                    result["c2"] = result[direction]["c2"]
+                    result["c3"] = result[direction]["c3"]
+                    result["c4"] = result[direction]["c4"]
+                    result.update({
+                        "spot_ltp":        spot_ltp,
+                        "spot_sl":         spot_sl,
+                        "spot_tgt":        spot_tgt,
+                        "raw_risk":        round(raw_risk, 1),
+                        "conviction":      conv,
+                        "rr":              rr,
+                        "atm_data":        atm_data,
+                        "atm_ltp":         atm_ltp,
+                        "opt_sl":          opt_sl,
+                        "opt_target":      opt_target,
+                        "fut_spot_spread": round(result["futures_price"] - reference, 1)
+                                           if spot_ltp else None,
+                    })
+
+                    # ── 9. Fire alert and record ─────────────────────────────
+                    notifier.send_signal(name, dir_up, result)
+                    dashboard_writer.update_active_signal(name, dir_up, result)
+                    journal.log_signal(name, dir_up, result)
                     state.redis_set(dedup_key, "1", ex=86400)
                     state.redis_set(cooldown_key, candle_ts_str)
 

@@ -20,88 +20,139 @@ WARN_COLOR = 0xF59E0B
 
 def send_signal(instrument: str, direction: str, result: dict) -> bool:
     """Post a rich Discord embed for a CE or PE signal. Returns True on success."""
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
-    if not webhook_url:
-        print("[notifier] No DISCORD_WEBHOOK_URL — skipping")
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook:
+        print("[notifier] DISCORD_WEBHOOK_URL not set")
         return False
 
-    is_ce = direction.upper() == "CE"
-    color = CE_COLOR if is_ce else PE_COLOR
-    emoji = "🟢" if is_ce else "🔴"
-    di_label = "+DI" if is_ce else "-DI"
-    di_val = result.get("pdi") if is_ce else result.get("mdi")
-    opp_di_label = "-DI" if is_ce else "+DI"
-    opp_di_val = result.get("mdi") if is_ce else result.get("pdi")
+    is_ce  = direction.upper() == "CE"
+    color  = CE_COLOR if is_ce else PE_COLOR
+    emoji  = "🟢" if is_ce else "🔴"
+    arrow  = "↑" if is_ce else "↓"
 
-    price = result.get("futures_price") or 0.0
-    atm = result.get("atm_strike") or 0
-    strike_step = result.get("strike_step", 50)
-    vwap_val = result.get("vwap")
-    rsi_val = result.get("rsi")
-    candle_time = result.get("candle_time", "")
+    atm     = result.get("atm_data", {})
+    ts      = atm.get("tradingsymbol", "unavailable")
+    strike  = atm.get("strike")
+    expiry  = atm.get("expiry", "—")
+    ftime   = atm.get("fetch_time", "—")
 
-    vwap_delta_str = ""
-    if vwap_val:
-        delta = price - vwap_val
-        sign = "+" if delta >= 0 else ""
-        vwap_delta_str = f"{vwap_val:,.1f} ({sign}{delta:,.0f} pts)"
+    atm_ltp    = result.get("atm_ltp")
+    opt_target = result.get("opt_target")
+    opt_sl     = result.get("opt_sl")
+    spot_ltp   = result.get("spot_ltp")
+    spot_tgt   = result.get("spot_tgt")
+    spot_sl    = result.get("spot_sl")
+    spread     = result.get("fut_spot_spread")
 
-    conds = result.get("ce" if is_ce else "pe", {})
-    cond_labels = {
-        "c1": f"Candle closes {'above' if is_ce else 'below'} prior",
-        "c2": f"VWAP cross-{'up' if is_ce else 'down'} ≤30min",
-        "c3": f"RSI {'rising' if is_ce else 'falling'} (3 candles)",
-        "c4": f"{di_label} > 25 & dominant",
-    }
-    cond_str = "\n".join(
-        f"{'✅' if conds.get(k) else '❌'} {label}"
-        for k, label in cond_labels.items()
-    )
+    def fp(v):
+        return f"₹{v:,.2f}" if v is not None else "unavailable"
 
-    try:
-        candle_ist = _format_candle_time(candle_time)
-    except Exception:
-        candle_ist = candle_time
+    def fi(v):
+        return f"{v:,.1f}" if v is not None else "—"
+
+    buy_sub    = f"live LTP @ {ftime}"
+    tgt_sub    = f"if {instrument} spot → {fi(spot_tgt)}"
+    sl_sub     = f"if {instrument} spot → {fi(spot_sl)}"
+
+    fut_str = fi(result.get("futures_price"))
+    if spread and abs(spread) > 5:
+        fut_str += f"  (spot +{abs(spread):.0f} pts)"
+
+    vwap_val  = result.get("vwap")
+    spot_ref  = spot_ltp or 0
+    vwap_dir  = "↑ above" if spot_ref > (vwap_val or 0) else "↓ below"
+
+    fields = [
+        {
+            "name":   "Buy this option",
+            "value":  (f"**`{ts}`**\n"
+                       f"{strike} {direction.upper()}  ·  {expiry} expiry"),
+            "inline": False,
+        },
+        {
+            "name":   "Buy at",
+            "value":  f"**{fp(atm_ltp)}**\n{buy_sub}",
+            "inline": True,
+        },
+        {
+            "name":   "Target",
+            "value":  f"**{fp(opt_target)}**\n{tgt_sub}",
+            "inline": True,
+        },
+        {
+            "name":   "Stop Loss",
+            "value":  f"**{fp(opt_sl)}**\n{sl_sub}",
+            "inline": True,
+        },
+        {
+            "name":   "Conviction",
+            "value":  (f"{result.get('conviction', '—')}"
+                       f"  ·  1:{result.get('rr', '—')}"),
+            "inline": True,
+        },
+        {
+            "name":   "Futures / Spot",
+            "value":  fut_str,
+            "inline": True,
+        },
+        {
+            "name":   "Candle",
+            "value":  result.get("candle_time", "—"),
+            "inline": True,
+        },
+        {
+            "name":   "RSI(14)",
+            "value":  f"{result.get('rsi', 0):.1f} {arrow}",
+            "inline": True,
+        },
+        {
+            "name":   "+DI / −DI",
+            "value":  (f"{result.get('pdi', 0):.1f} / "
+                       f"{result.get('ndi', 0):.1f}"),
+            "inline": True,
+        },
+        {
+            "name":   "VWAP",
+            "value":  (fi(vwap_val) + "  " + vwap_dir),
+            "inline": True,
+        },
+        {
+            "name":   "Conditions",
+            "value":  (
+                f"{'✅' if result.get('c1') else '❌'} "
+                f"Candle {arrow} prev close\n"
+                f"{'✅' if result.get('c2') else '❌'} "
+                f"VWAP cross-{'up' if is_ce else 'dn'} ≤30min\n"
+                f"{'✅' if result.get('c3') else '❌'} "
+                f"RSI {'rising' if is_ce else 'falling'} (3 candles)\n"
+                f"{'✅' if result.get('c4') else '❌'} "
+                f"{'+' if is_ce else '−'}DI > 25, dominant & rising"
+            ),
+            "inline": False,
+        },
+    ]
 
     embed = {
-        "title": f"{emoji} {direction.upper()} Signal — {instrument}",
-        "color": color,
-        "fields": [
-            {
-                "name": "Futures Price | ATM Strike",
-                "value": f"`{price:,.2f}` | `{atm:,} {direction.upper()}`",
-                "inline": False,
-            },
-            {
-                "name": "Candle (IST) | RSI(14)",
-                "value": f"`{candle_ist}` | `{rsi_val:.1f}`" if rsi_val else f"`{candle_ist}` | n/a",
-                "inline": False,
-            },
-            {
-                "name": f"{di_label} / {opp_di_label}",
-                "value": f"`{di_val:.1f} / {opp_di_val:.1f}`" if di_val and opp_di_val else "n/a",
-                "inline": False,
-            },
-            {
-                "name": "VWAP | vs Price",
-                "value": f"`{vwap_delta_str}`" if vwap_delta_str else "n/a",
-                "inline": False,
-            },
-            {
-                "name": "Conditions",
-                "value": cond_str,
-                "inline": False,
-            },
-        ],
-        "footer": {"text": "Alert only · verify before trading"},
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "title":     f"{emoji} {direction.upper()} Signal — {instrument}",
+        "color":     color,
+        "fields":    fields,
+        "footer":    {
+            "text": (
+                "Alert only  ·  Buy/Target/SL are option premium levels  ·  "
+                "verify before trading"
+            )
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
     }
 
     try:
-        r = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
-        r.raise_for_status()
-        print(f"[notifier] ✓ Discord signal sent: {instrument} {direction}")
-        return True
+        resp = requests.post(webhook, json={"embeds": [embed]}, timeout=10)
+        ok = resp.status_code in (200, 204)
+        if not ok:
+            print(f"[notifier] Discord returned {resp.status_code}: {resp.text[:200]}")
+        else:
+            print(f"[notifier] ✓ Discord signal sent: {instrument} {direction}")
+        return ok
     except Exception as e:
         print(f"[notifier] Discord POST failed: {e}")
         return False
@@ -125,10 +176,3 @@ def send_warning(message: str) -> None:
         print(f"[notifier] Warning POST failed: {e}")
 
 
-def _format_candle_time(ts_str: str) -> str:
-    """Convert ISO timestamp string to HH:MM IST."""
-    from dateutil import parser as dtparser
-    dt = dtparser.parse(ts_str)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=IST)
-    return dt.astimezone(IST).strftime("%H:%M IST")

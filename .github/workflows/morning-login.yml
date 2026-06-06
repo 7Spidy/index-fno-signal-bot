@@ -38,7 +38,14 @@ jobs:
       - name: Cache instrument tokens
         run: python -m src.kite_client --cache-instruments
         env:
-          KITE_API_KEY:        ${{ secrets.KITE_API_KEY }}
+          KITE_API_KEY:             ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+      - name: Cache option tokens
+        run: python -m src.kite_client --cache-option-tokens
+        env:
+          KITE_API_KEY:             ${{ secrets.KITE_API_KEY }}
           UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
