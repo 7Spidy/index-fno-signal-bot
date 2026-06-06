@@ -15,6 +15,7 @@ from src import (
     signals,
     state,
 )
+from src.executor_bridge import write_executor_intent
 
 try:
     from dotenv import load_dotenv
@@ -213,6 +214,10 @@ def main() -> None:
 
                     # ── 9. Fire alert and record ─────────────────────────────
                     notifier.send_signal(name, dir_up, result)
+                    try:
+                        write_executor_intent(result, inst)
+                    except Exception as e:
+                        print(f"[main] executor_bridge error (non-fatal): {e}")
                     dashboard_writer.update_active_signal(name, dir_up, result)
                     journal.log_signal(name, dir_up, result)
                     state.redis_set(dedup_key, "1", ex=86400)
