@@ -194,7 +194,9 @@ def run_morning_login() -> None:
         token = get_access_token(api_key, api_secret, user_id, password, totp_secret)
         now_ist = datetime.now(IST).isoformat()
 
-        state.redis_set("kite:access_token", token, ex=43200)
+        stored = state.redis_set("kite:access_token", token, ex=43200)
+        if not stored:
+            raise RuntimeError("redis_set returned False — token was NOT saved to Redis")
         state.redis_set("kite:token_refreshed_at", now_ist)
         print(f"[auth] ✓ Token stored in Redis at {now_ist}")
 
