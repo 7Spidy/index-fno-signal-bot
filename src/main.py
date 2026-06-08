@@ -173,29 +173,29 @@ def main() -> None:
 
                     dir_up = direction.upper()
 
-                    # ── 1. Risk from futures signal candle ───────────────────
+                    # ── 1. Preliminary risk — prev candle vs futures (no API call yet) ──
                     if dir_up == "CE":
-                        raw_risk = max(
-                            result["futures_price"] - result["candle_low"],
+                        prelim_risk = max(
+                            result["futures_price"] - result["prev_candle_low"],
                             inst["min_risk"],
                         )
                     else:
-                        raw_risk = max(
-                            result["candle_high"] - result["futures_price"],
+                        prelim_risk = max(
+                            result["prev_candle_high"] - result["futures_price"],
                             inst["min_risk"],
                         )
 
-                    # ── 2. Max risk filter ───────────────────────────────────
+                    # ── 2. Max risk filter ───────────────────────────────────────────────
                     max_r = config.MAX_RISK_POINTS.get(name, 9999)
-                    if raw_risk > max_r:
+                    if prelim_risk > max_r:
                         print(
                             f"[main] SKIPPED {name} {dir_up} "
                             f"@ {result['candle_time']}: "
-                            f"risk {raw_risk:.1f} pts > max {max_r} pts (wide candle)"
+                            f"risk {prelim_risk:.1f} pts > max {max_r} pts (wide prev candle)"
                         )
                         continue
 
-                    # ── 3. Fetch live SPOT LTP ───────────────────────────────
+                    # ── 3. Fetch live SPOT LTP ───────────────────────────────────────────
                     spot_ltp  = kite_client.get_spot_ltp(name)
                     reference = spot_ltp if spot_ltp is not None \
                                 else result["futures_price"]
@@ -203,7 +203,7 @@ def main() -> None:
                         print(f"[main] {name}: spot LTP unavailable, "
                               f"using futures close as fallback")
 
-                    # ── 4. Conviction label + uniform R:R ────────────────────
+                    # ── 4. Conviction label + uniform R:R ────────────────────────────────
                     spread = (result["pdi"] - result["ndi"]) if dir_up == "CE" \
                              else (result["ndi"] - result["pdi"])
                     if   spread >= 18: conv = "Strong"
@@ -211,13 +211,15 @@ def main() -> None:
                     else:              conv = "Building"
                     rr = config.TARGET_RR
 
-                    # ── 5. Spot-anchored index SL and Target ─────────────────
+                    # ── 5. SL = prev candle structural extreme; risk = spot → SL ─────────
                     if dir_up == "CE":
-                        spot_sl  = round(reference - raw_risk,      1)
-                        spot_tgt = round(reference + rr * raw_risk, 1)
+                        spot_sl  = round(result["prev_candle_low"],  1)
+                        raw_risk = max(reference - spot_sl, inst["min_risk"])
+                        spot_tgt = round(reference + rr * raw_risk,  1)
                     else:
-                        spot_sl  = round(reference + raw_risk,      1)
-                        spot_tgt = round(reference - rr * raw_risk, 1)
+                        spot_sl  = round(result["prev_candle_high"], 1)
+                        raw_risk = max(spot_sl - reference, inst["min_risk"])
+                        spot_tgt = round(reference - rr * raw_risk,  1)
 
                     # ── 6. Fetch ATM option + live LTP ───────────────────────
                     atm_data = kite_client.get_atm_option(

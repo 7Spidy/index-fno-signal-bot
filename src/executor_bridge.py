@@ -54,30 +54,38 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         return False
     direction = "CE" if ce_signal else "PE"
 
-    futures_price = signal_result.get("futures_price")
-    candle_high   = signal_result.get("candle_high")
-    candle_low    = signal_result.get("candle_low")
-    atm_strike    = signal_result.get("atm_strike")
-    instrument    = instrument_cfg.get("name", "NIFTY")
-    strike_step   = instrument_cfg.get("strike_step", 50)
+    futures_price    = signal_result.get("futures_price")
+    prev_candle_low  = signal_result.get("prev_candle_low")
+    prev_candle_high = signal_result.get("prev_candle_high")
+    spot_ltp_val     = signal_result.get("spot_ltp")
+    atm_strike       = signal_result.get("atm_strike")
+    instrument       = instrument_cfg.get("name", "NIFTY")
+    strike_step      = instrument_cfg.get("strike_step", 50)
 
-    if futures_price is None or candle_high is None or candle_low is None:
+    if futures_price is None or prev_candle_low is None or prev_candle_high is None:
         print("[executor_bridge] Missing price data — skipping intent write")
         return False
 
-    # Risk calculation (matches config.py logic)
+    # SL = previous candle structural extreme.
+    # Risk = distance from spot (or futures fallback) to that structural level.
     atm_delta  = float(os.environ.get("ATM_DELTA", "0.50"))
     target_rr  = float(os.environ.get("TARGET_RR", "3.0"))
 
-    spot_sl       = candle_low  if direction == "CE" else candle_high
-    spot_risk_pts = abs(futures_price - spot_sl)
+    reference = spot_ltp_val if spot_ltp_val is not None else futures_price
+
+    if direction == "CE":
+        spot_sl       = round(prev_candle_low,  2)
+        spot_risk_pts = max(reference - spot_sl, 0.5)
+    else:
+        spot_sl       = round(prev_candle_high, 2)
+        spot_risk_pts = max(spot_sl - reference, 0.5)
 
     intent = {
         "ts":            datetime.now(timezone.utc).isoformat(),
         "instrument":    instrument,
         "direction":     direction,
         "atm_strike":    atm_strike,
-        "spot_close":    futures_price,
+        "spot_close":    round(reference, 2),
         "spot_sl":       round(spot_sl, 2),
         "spot_risk_pts": round(spot_risk_pts, 2),
         "target_rr":     target_rr,
