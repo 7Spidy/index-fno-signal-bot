@@ -1,12 +1,14 @@
 name: Signal Evaluation
 
 on:
-  schedule:
-    - cron: "*/5 4-9 * * 1-5"   # every 5min, ~09:30–15:29 IST; code gates 09:40–14:45
-  workflow_dispatch: {}
+  workflow_dispatch: {}            # cron-job.org is the sole trigger now
 
 permissions:
-  contents: write              # needed for git push to docs/dashboard.json
+  contents: write                  # needed for git push to docs/dashboard.json
+
+concurrency:
+  group: signal
+  cancel-in-progress: false        # serialize overlapping runs — never kill a run mid-alert/push
 
 jobs:
   evaluate:
@@ -20,6 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"             # saves ~40-60s/run vs cold install
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -27,9 +30,9 @@ jobs:
       - name: Evaluate signals
         run: python -m src.main
         env:
-          KITE_API_KEY:        ${{ secrets.KITE_API_KEY }}
+          KITE_API_KEY:             ${{ secrets.KITE_API_KEY }}
           UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          NOTION_TOKEN:        ${{ secrets.NOTION_TOKEN }}
-          NOTION_DB_ID:        ${{ secrets.NOTION_DB_ID }}
+          DISCORD_WEBHOOK_URL:      ${{ secrets.DISCORD_WEBHOOK_URL }}
+          NOTION_TOKEN:             ${{ secrets.NOTION_TOKEN }}
+          NOTION_DB_ID:             ${{ secrets.NOTION_DB_ID }}

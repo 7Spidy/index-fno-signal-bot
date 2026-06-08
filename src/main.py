@@ -1,6 +1,7 @@
 """Orchestrator — runs every 5 minutes via signal.yml."""
 import json
 import os
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -42,6 +43,30 @@ def _within_cooldown(last_fired_str: str | None, candle_ts: object) -> bool:
     except Exception as e:
         print(f"[main] Cooldown check error: {e}")
         return False
+
+
+def expected_closed_candle_ts(now_ist: datetime) -> datetime:
+    """Label (start time) of the 5-minute candle that should have just closed.
+
+    Candle labels are their start time: the candle covering [10:00, 10:05) is
+    labelled 10:00 and closes at 10:05. Shortly after a 5-min boundary this
+    returns the label of the candle that just closed.
+    """
+    floored = now_ist.replace(second=0, microsecond=0)
+    floored -= timedelta(minutes=floored.minute % 5)   # most recent 5-min boundary
+    return floored - timedelta(minutes=5)
+
+
+def _latest_closed_ts(df):
+    """tz-aware IST timestamp of the latest fully-closed candle (df.iloc[-2]).
+
+    The `timestamp` column from kite_client.fetch_ohlcv is tz-aware IST; this
+    localizes defensively in case it ever comes back tz-naive.
+    """
+    ts = df.iloc[-2]["timestamp"]
+    if getattr(ts, "tzinfo", None) is None:
+        ts = ts.tz_localize(IST) if hasattr(ts, "tz_localize") else ts.replace(tzinfo=IST)
+    return ts
 
 
 def main() -> None:
@@ -89,6 +114,25 @@ def main() -> None:
         try:
             df = kite_client.fetch_ohlcv(token_info["token"], today_open)
             print(f"[main] {name}: {len(df)} candles fetched")
+
+            # ── Freshness guard: act only on the candle that just closed ──────────────
+            if len(df) < 2:
+                print(f"[main] {name}: <2 candles — skip")
+                continue
+            expected_ts = expected_closed_candle_ts(now_ist)
+            closed_ts = _latest_closed_ts(df)
+            if closed_ts < expected_ts:                       # Kite lagging — one retry
+                print(f"[main] {name}: candle lag (have {closed_ts}, want {expected_ts}) — retry in 5s")
+                time.sleep(5)
+                df = kite_client.fetch_ohlcv(token_info["token"], today_open)
+                if len(df) < 2:
+                    print(f"[main] {name}: <2 candles after retry — skip")
+                    continue
+                closed_ts = _latest_closed_ts(df)
+            if closed_ts != expected_ts:
+                print(f"[main] {name}: stale candle (have {closed_ts}, want {expected_ts}) — skip")
+                continue
+            # ──────────────────────────────────────────────────────────────────────────
 
             vwap = indicators.vwap_session(df, today_open)
             rsi = indicators.rsi_wilder(df)
