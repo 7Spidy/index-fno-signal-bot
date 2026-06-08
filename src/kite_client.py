@@ -192,7 +192,7 @@ def get_atm_option(instrument_name: str, spot_price: float,
             print(f"[kite_client] ATM token not cached: {tk_key}")
             return {}
 
-        nfo_key  = f"NFO:{info['token']}"
+        nfo_key  = f"NFO:{info['tradingsymbol']}"
         kite     = get_kite()
         ltp_data = kite.ltp([nfo_key])
         ltp_val  = ltp_data.get(nfo_key, {}).get("last_price")

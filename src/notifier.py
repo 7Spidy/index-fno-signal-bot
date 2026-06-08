@@ -142,7 +142,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
                 "verify before trading"
             )
         },
-        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
     }
 
     try:
