@@ -243,6 +243,45 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .sig-pe { color: var(--red); }
 .sig-none { color: var(--border2); }
 
+/* Clickable signal rows */
+.history-row.row-ce-signal,
+.history-row.row-pe-signal { cursor: pointer; }
+.history-row.row-ce-signal:hover,
+.history-row.row-pe-signal:hover { background: var(--surface); }
+
+/* Bottom drawer */
+.drawer-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 200;
+}
+.drawer-overlay.open { display: block; }
+.drawer-panel {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  max-height: 82vh; overflow-y: auto;
+  background: var(--bg);
+  border-top: 2px solid var(--border2);
+  border-radius: 14px 14px 0 0;
+  z-index: 201;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.drawer-panel.open { transform: translateY(0); }
+.drawer-handle {
+  display: flex; justify-content: center;
+  padding: 10px 0 4px; position: relative;
+}
+.drawer-handle::before {
+  content: ''; width: 36px; height: 4px;
+  background: var(--border2); border-radius: 2px;
+}
+.drawer-close {
+  position: absolute; top: 8px; right: 16px;
+  background: none; border: none;
+  color: var(--text-muted); font-size: 18px;
+  cursor: pointer; line-height: 1;
+}
+.drawer-inner { padding: 0 16px 32px; }
+
 /* EMPTY STATES */
 .empty-state {
   text-align: center;
@@ -290,12 +329,23 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 
 </div>
 
+<!-- BOTTOM DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer-panel" id="drawer-panel">
+  <div class="drawer-handle">
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-inner" id="drawer-content"></div>
+</div>
+
 <script>
 const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25'];
 const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25'];
 
 let lastFetchTime = null;
 let lastRunISO = null;
+let activeSignalsMap = {};
+let signalRows = [];
 
 async function fetchData() {
   try {
@@ -312,6 +362,11 @@ async function fetchData() {
 }
 
 function render(data) {
+  activeSignalsMap = {};
+  for (const s of (data.active_signals || [])) {
+    const key = `${s.instrument}:${(s.direction || '').toUpperCase()}`;
+    activeSignalsMap[key] = s;
+  }
   updateHeader(data);
   renderSignalBanners(data.active_signals || []);
   renderInstruments(data.instruments || []);
@@ -562,13 +617,21 @@ function condRow(pass, label) {
 /* ── History ────────────────────────────────────────────────── */
 
 function renderHistory(history) {
+  signalRows = [];
   const table = document.getElementById('history-table');
   if (!history || history.length === 0) {
     table.innerHTML = '<div class="empty-state">No history yet today</div>';
     return;
   }
   table.innerHTML = history.map(row => {
+    const isSignal = row.ce_signal || row.pe_signal;
     const rowCls = row.ce_signal ? 'row-ce-signal' : (row.pe_signal ? 'row-pe-signal' : '');
+    let drawerAttr = '';
+    if (isSignal) {
+      const idx = signalRows.length;
+      signalRows.push(row);
+      drawerAttr = `onclick="openDrawer(${idx})" role="button" tabindex="0"`;
+    }
     const ceDots = buildDots(row.ce_conditions || []);
     const peDots = buildDots(row.pe_conditions || []);
     let sigSpan;
@@ -576,7 +639,7 @@ function renderHistory(history) {
     else if (row.pe_signal) sigSpan = '<span class="h-sig sig-pe">PE✓</span>';
     else sigSpan = '<span class="h-sig sig-none">──</span>';
     return `
-      <div class="history-row ${rowCls}">
+      <div class="history-row ${rowCls}" ${drawerAttr}>
         <span class="h-time">${escHtml(row.time || '')}</span>
         <span class="h-inst">${escHtml(row.instrument || '')}</span>
         <span class="h-dots">${ceDots}</span>
@@ -584,6 +647,62 @@ function renderHistory(history) {
         ${sigSpan}
       </div>`;
   }).join('');
+}
+
+/* ── Drawer ─────────────────────────────────────────────────── */
+
+function openDrawer(idx) {
+  const row = signalRows[idx];
+  if (!row) return;
+  const dir = row.ce_signal ? 'CE' : 'PE';
+  const key = `${row.instrument}:${dir}`;
+  const signal = activeSignalsMap[key];
+  document.getElementById('drawer-content').innerHTML =
+    signal ? buildSignalBanner(signal) : buildHistoryDetail(row, dir);
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function buildHistoryDetail(row, dir) {
+  const isCE   = dir === 'CE';
+  const cls    = isCE ? 'signal-banner-ce' : 'signal-banner-pe';
+  const emoji  = isCE ? '🟢' : '🔴';
+  const arrow  = isCE ? '↑' : '↓';
+  const conds  = isCE ? (row.ce_conditions || []) : (row.pe_conditions || []);
+  const labels = isCE ? CE_LABELS : PE_LABELS;
+  const meta = `
+    <div class="sig-meta-row">
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">Futures Price</div>
+        <div class="sig-meta-val">${fi(row.price)}</div>
+      </div>
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">RSI(14)</div>
+        <div class="sig-meta-val">${row.rsi !== null && row.rsi !== undefined ? Number(row.rsi).toFixed(1) : '—'}</div>
+      </div>
+      <div class="sig-meta-item">
+        <div class="sig-meta-label">+DI / −DI</div>
+        <div class="sig-meta-val">${fi(row.pdi)} / ${fi(row.ndi)}</div>
+      </div>
+    </div>`;
+  const condsHtml = `
+    <div class="sig-conds">
+      ${labels.map((lbl, i) => condItem(!!conds[i], lbl)).join('')}
+    </div>`;
+  return `<div class="signal-banner ${cls}" style="animation:none;margin-bottom:0">
+    <div class="sig-header">
+      <span class="sig-title">${emoji} ${dir} SIGNAL — ${escHtml(row.instrument || '')}</span>
+      <span class="sig-candle-time">${escHtml(row.time || '')} · cleared</span>
+    </div>
+    ${meta}${condsHtml}
+  </div>`;
 }
 
 function buildDots(conds) {

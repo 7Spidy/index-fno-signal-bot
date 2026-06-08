@@ -48,12 +48,21 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     data["token_refreshed_at"] = token_refreshed_at
     data["instruments"] = instruments_results
 
-    active = []
-    for r in instruments_results:
-        for d in (["CE"] * int(bool(r["ce"]["signal"])) +
-                  ["PE"] * int(bool(r["pe"]["signal"]))):
-            active.append(_build_signal_entry(r["name"], d, r))
-    data["active_signals"] = active
+    # Prune active_signals: remove banners whose signal is no longer firing.
+    # Only clear entries for instruments that were successfully evaluated this
+    # run; entries for instruments that errored/skipped are left untouched.
+    firing = {
+        (r["name"], d)
+        for r in instruments_results
+        for d, key in (("CE", "ce"), ("PE", "pe"))
+        if r.get(key, {}).get("signal")
+    }
+    evaluated = {r["name"] for r in instruments_results}
+    data["active_signals"] = [
+        s for s in data.get("active_signals", [])
+        if (s.get("instrument"), s.get("direction")) in firing
+        or s.get("instrument") not in evaluated
+    ]
 
     new_rows = [
         {
