@@ -1,8 +1,8 @@
 {
   "date": "2026-06-08",
-  "last_run": "2026-06-05T14:40:50.855684+05:30",
+  "last_run": "2026-06-08T09:41:29.579299+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-06-08T09:05:49.260735+05:30",
+  "token_refreshed_at": "2026-06-08T09:05:39.968208+05:30",
   "instruments": [
     {
       "ce": {
@@ -13,22 +13,24 @@
         "signal": false
       },
       "pe": {
-        "c1": true,
+        "c1": false,
         "c2": false,
         "c3": false,
-        "c4": true,
+        "c4": false,
         "signal": false
       },
-      "futures_price": 23404.6,
-      "vwap": 23474.39546040179,
-      "rsi": 45.50936822678418,
-      "pdi": 18.134104411076,
-      "atm_strike": 23400,
-      "candle_time": "2026-06-05T14:35:00+05:30",
+      "futures_price": null,
+      "candle_high": null,
+      "candle_low": null,
+      "candle_time": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "atm_strike": null,
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
-      "strike_step": 50,
-      "ndi": 26.68050264408139
+      "strike_step": 50
     },
     {
       "ce": {
@@ -39,25 +41,72 @@
         "signal": false
       },
       "pe": {
-        "c1": true,
+        "c1": false,
         "c2": false,
-        "c3": true,
-        "c4": true,
+        "c3": false,
+        "c4": false,
         "signal": false
       },
-      "futures_price": 54590.0,
-      "vwap": 54774.50584298778,
-      "rsi": 47.54148270483529,
-      "pdi": 18.77761597422777,
-      "atm_strike": 54600,
-      "candle_time": "2026-06-05T14:35:00+05:30",
+      "futures_price": null,
+      "candle_high": null,
+      "candle_low": null,
+      "candle_time": null,
+      "vwap": null,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "atm_strike": null,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
-      "strike_step": 100,
-      "ndi": 27.16645987546744
+      "strike_step": 100
     }
   ],
   "active_signals": [],
-  "history": [],
+  "history": [
+    {
+      "time": "09:41",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "price": null
+    },
+    {
+      "time": "09:41",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "price": null
+    }
+  ],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
