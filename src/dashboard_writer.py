@@ -48,10 +48,21 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     data["token_refreshed_at"] = token_refreshed_at
     data["instruments"] = instruments_results
 
-    # active_signals is managed exclusively by update_active_signal() and
-    # reset_day(). Do NOT overwrite it here — raw signal=True results include
-    # trades that were skipped by the risk/cooldown/dedup filters and must not
-    # appear as banners.
+    # Prune active_signals: remove banners whose signal is no longer firing.
+    # Only clear entries for instruments that were successfully evaluated this
+    # run; entries for instruments that errored/skipped are left untouched.
+    firing = {
+        (r["name"], d)
+        for r in instruments_results
+        for d, key in (("CE", "ce"), ("PE", "pe"))
+        if r.get(key, {}).get("signal")
+    }
+    evaluated = {r["name"] for r in instruments_results}
+    data["active_signals"] = [
+        s for s in data.get("active_signals", [])
+        if (s.get("instrument"), s.get("direction")) in firing
+        or s.get("instrument") not in evaluated
+    ]
 
     new_rows = [
         {
