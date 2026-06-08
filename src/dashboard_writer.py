@@ -48,12 +48,10 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     data["token_refreshed_at"] = token_refreshed_at
     data["instruments"] = instruments_results
 
-    active = []
-    for r in instruments_results:
-        for d in (["CE"] * int(bool(r["ce"]["signal"])) +
-                  ["PE"] * int(bool(r["pe"]["signal"]))):
-            active.append(_build_signal_entry(r["name"], d, r))
-    data["active_signals"] = active
+    # active_signals is managed exclusively by update_active_signal() and
+    # reset_day(). Do NOT overwrite it here — raw signal=True results include
+    # trades that were skipped by the risk/cooldown/dedup filters and must not
+    # appear as banners.
 
     new_rows = [
         {
