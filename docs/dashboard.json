@@ -1,6 +1,6 @@
 {
   "date": "2026-06-08",
-  "last_run": "2026-06-08T10:26:33.235547+05:30",
+  "last_run": "2026-06-08T10:31:30.327404+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-08T09:05:39.968208+05:30",
   "instruments": [
@@ -63,6 +63,50 @@
   ],
   "active_signals": [],
   "history": [
+    {
+      "time": "10:31",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "price": null
+    },
+    {
+      "time": "10:31",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": null,
+      "pdi": null,
+      "ndi": null,
+      "price": null
+    },
     {
       "time": "10:26",
       "instrument": "NIFTY",
