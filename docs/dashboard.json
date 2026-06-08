@@ -1,32 +1,32 @@
 {
   "date": "2026-06-08",
-  "last_run": "2026-06-08T11:21:39.902113+05:30",
+  "last_run": "2026-06-08T11:26:36.635298+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-08T09:05:39.968208+05:30",
   "instruments": [
     {
       "ce": {
-        "c1": false,
+        "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
       "pe": {
-        "c1": true,
+        "c1": false,
         "c2": false,
-        "c3": true,
-        "c4": true,
+        "c3": false,
+        "c4": false,
         "signal": false
       },
-      "futures_price": 23231.0,
-      "candle_high": 23257.2,
-      "candle_low": 23230.3,
-      "candle_time": "11:15 IST",
-      "vwap": 23219.900788560135,
-      "rsi": 39.301081435134094,
-      "pdi": 13.013283422036729,
-      "ndi": 27.98082465855306,
+      "futures_price": 23232.2,
+      "candle_high": 23250.0,
+      "candle_low": 23231.0,
+      "candle_time": "11:20 IST",
+      "vwap": 23220.048376652994,
+      "rsi": 39.63486171747376,
+      "pdi": 12.437294801751808,
+      "ndi": 26.74234885910783,
       "atm_strike": 23250,
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
@@ -47,14 +47,14 @@
         "c4": true,
         "signal": true
       },
-      "futures_price": 54343.6,
-      "candle_high": 54414.4,
-      "candle_low": 54333.0,
-      "candle_time": "11:15 IST",
-      "vwap": 54469.13763930692,
-      "rsi": 37.82938883981427,
-      "pdi": 15.546112849575334,
-      "ndi": 27.361270267435668,
+      "futures_price": 54307.0,
+      "candle_high": 54376.6,
+      "candle_low": 54300.0,
+      "candle_time": "11:20 IST",
+      "vwap": 54464.62106202588,
+      "rsi": 35.825517454846576,
+      "pdi": 14.646957293503652,
+      "ndi": 28.270463997692207,
       "atm_strike": 54300,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
@@ -65,8 +65,8 @@
     {
       "instrument": "BANKNIFTY",
       "direction": "PE",
-      "candle_time": "11:15 IST",
-      "futures_price": 54343.6,
+      "candle_time": "11:20 IST",
+      "futures_price": 54307.0,
       "spot_ltp": null,
       "fut_spot_spread": null,
       "tradingsymbol": null,
@@ -81,10 +81,10 @@
       "raw_risk": null,
       "conviction": null,
       "rr": null,
-      "rsi": 37.82938883981427,
-      "pdi": 15.546112849575334,
-      "ndi": 27.361270267435668,
-      "vwap": 54469.13763930692,
+      "rsi": 35.825517454846576,
+      "pdi": 14.646957293503652,
+      "ndi": 28.270463997692207,
+      "vwap": 54464.62106202588,
       "c1": null,
       "c2": null,
       "c3": null,
@@ -92,6 +92,50 @@
     }
   ],
   "history": [
+    {
+      "time": "11:26",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 39.63486171747376,
+      "pdi": 12.437294801751808,
+      "ndi": 26.74234885910783,
+      "price": 23232.2
+    },
+    {
+      "time": "11:26",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": true,
+      "rsi": 35.825517454846576,
+      "pdi": 14.646957293503652,
+      "ndi": 28.270463997692207,
+      "price": 54307.0
+    },
     {
       "time": "11:21",
       "instrument": "NIFTY",
