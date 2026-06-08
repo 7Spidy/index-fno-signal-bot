@@ -26,13 +26,13 @@ OPTION_CACHE_RANGE = {
 }
 
 # Max risk filter.
-# Risk = candle_high - futures_close  (PE)
-#      = futures_close - candle_low   (CE)
-# Wide-candle signals mean the entry is after the move;
-# SL is far; R:R collapses. Skip these cleanly with a log line.
+# Risk = prev_candle_high - spot  (PE)
+#      = spot - prev_candle_low   (CE)
+# Previous candle structural extreme is the SL level.
+# Wide prior candles mean the structural SL is too far from entry; skip.
 MAX_RISK_POINTS = {
-    "NIFTY":     25,   # 25 pts × lot 65  ≈ ₹1,625 max per lot
-    "BANKNIFTY": 60,   # 60 pts × lot 30  ≈ ₹1,800 max per lot
+    "NIFTY":     20,   # tightened from 25 — prev-candle SL anchor is wider than signal-candle low
+    "BANKNIFTY": 60,
 }
 
 # Uniform R:R target for ALL signals regardless of conviction.
