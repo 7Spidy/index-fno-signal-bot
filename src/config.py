@@ -5,10 +5,11 @@ INSTRUMENTS = [
     {"name": "BANKNIFTY", "strike_step": 100, "min_risk": 30},
 ]
 
-# Spot index tokens (NSE segment — verified from Kite API)
+# Spot index tradingsymbols for kite.ltp() — format is "NSE:<symbol>".
+# Integer instrument tokens (256265, 260105) do NOT work as ltp() keys.
 SPOT_TOKENS = {
-    "NIFTY":     256265,
-    "BANKNIFTY": 260105,
+    "NIFTY":     "NIFTY 50",
+    "BANKNIFTY": "NIFTY BANK",
 }
 
 # NIFTY: weekly options exist, expire every TUESDAY.

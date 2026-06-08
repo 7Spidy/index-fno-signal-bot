@@ -212,7 +212,10 @@ def get_atm_option(instrument_name: str, spot_price: float,
 
 def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
     kite = get_kite()
-    prior_session_start = today_open - timedelta(hours=3)
+    # Fetch from yesterday's session open so RSI(14) and DMI(14) have ~75
+    # warm-up candles. today_open - timedelta(hours=3) landed at 06:15 IST
+    # (before market open), giving zero prior-session data.
+    prior_session_start = today_open - timedelta(days=1)
 
     data = kite.historical_data(
         instrument_token=instrument_token,
