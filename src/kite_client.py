@@ -104,19 +104,20 @@ def get_nearest_expiry(instrument_name: str) -> date:
 
             kite = get_kite()
             instruments = kite.instruments("NFO")
-            monthly = [
+            # expiry_type is NOT returned by the Kite instruments API — filter
+            # by name + option type + future expiry only, then pick nearest.
+            opts = [
                 i for i in instruments
                 if i["name"] == instrument_name
                 and i["instrument_type"] in ("CE", "PE")
-                and i.get("expiry_type") == "monthly"
                 and i["expiry"] >= today
             ]
-            if not monthly:
-                raise ValueError(f"No monthly expiry found for {instrument_name}")
-            nearest  = min(monthly, key=lambda x: x["expiry"])
+            if not opts:
+                raise ValueError(f"No options found for {instrument_name}")
+            nearest  = min(opts, key=lambda x: x["expiry"])
             exp_date = nearest["expiry"]
             redis_set(cache_key, exp_date.isoformat(), ex=21600)
-            print(f"[kite_client] {instrument_name} monthly expiry: {exp_date}")
+            print(f"[kite_client] {instrument_name} nearest expiry: {exp_date}")
             return exp_date
 
     except Exception as e:
