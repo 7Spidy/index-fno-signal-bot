@@ -1,6 +1,6 @@
 {
   "date": "2026-06-09",
-  "last_run": "2026-06-09T11:10:43.789918+05:30",
+  "last_run": "2026-06-09T11:15:44.904760+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-09T09:05:38.637906+05:30",
   "instruments": [
@@ -15,20 +15,20 @@
       "pe": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
-      "futures_price": 23199.8,
-      "candle_high": 23208.5,
-      "candle_low": 23194.0,
-      "prev_candle_high": 23205.0,
-      "prev_candle_low": 23192.0,
-      "candle_time": "11:05 IST",
-      "vwap": 23235.77698492462,
-      "rsi": 45.47063136173416,
-      "pdi": 13.47014277092528,
-      "ndi": 19.9688203656568,
+      "futures_price": 23188.9,
+      "candle_high": 23199.9,
+      "candle_low": 23183.1,
+      "prev_candle_high": 23208.5,
+      "prev_candle_low": 23194.0,
+      "candle_time": "11:10 IST",
+      "vwap": 23234.692120320415,
+      "rsi": 43.13365720712221,
+      "pdi": 12.833145835355733,
+      "ndi": 22.092694696475892,
       "atm_strike": 23200,
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
@@ -36,30 +36,30 @@
     },
     {
       "ce": {
-        "c1": true,
+        "c1": false,
         "c2": true,
         "c3": false,
         "c4": false,
         "signal": false
       },
       "pe": {
-        "c1": false,
+        "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 54859.8,
-      "candle_high": 54859.8,
-      "candle_low": 54819.2,
-      "prev_candle_high": 54855.0,
-      "prev_candle_low": 54818.0,
-      "candle_time": "11:05 IST",
-      "vwap": 54785.95211123014,
-      "rsi": 59.80389921768501,
-      "pdi": 18.97702850854355,
-      "ndi": 14.18196058304042,
-      "atm_strike": 54900,
+      "futures_price": 54799.0,
+      "candle_high": 54871.8,
+      "candle_low": 54799.0,
+      "prev_candle_high": 54859.8,
+      "prev_candle_low": 54819.2,
+      "candle_time": "11:10 IST",
+      "vwap": 54786.51315835751,
+      "rsi": 54.08868655742263,
+      "pdi": 17.687052952193973,
+      "ndi": 15.104069926907911,
+      "atm_strike": 54800,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
       "strike_step": 100
@@ -67,6 +67,50 @@
   ],
   "active_signals": [],
   "history": [
+    {
+      "time": "11:15",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        true,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 43.13365720712221,
+      "pdi": 12.833145835355733,
+      "ndi": 22.092694696475892,
+      "price": 23188.9
+    },
+    {
+      "time": "11:15",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        false,
+        true,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 54.08868655742263,
+      "pdi": 17.687052952193973,
+      "ndi": 15.104069926907911,
+      "price": 54799.0
+    },
     {
       "time": "11:10",
       "instrument": "NIFTY",
