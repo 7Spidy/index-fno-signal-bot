@@ -128,6 +128,20 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 }
 .sig-copy-btn:hover { color: var(--text); border-color: var(--border2); }
 .sig-copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+/* Quick-copy rows: expiry and LTP inside the option box */
+.sig-quickcopy-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.sig-qc-label {
+  font-size: 11px; color: var(--text-muted);
+  min-width: 76px; flex-shrink: 0;
+}
+.sig-qc-val {
+  font-family: var(--mono); font-size: 14px;
+  color: var(--text); flex: 1;
+}
 .sig-option-meta { font-size: 11px; color: var(--text-muted); }
 .sig-unavail { font-size: 12px; color: var(--amber); padding: 4px 0; }
 
@@ -470,12 +484,24 @@ function buildSignalBanner(s) {
       </div>`;
   } else {
     const copyId = `copy_${s.instrument}_${dir}`;
+    const ltpNum = s.atm_ltp != null ? Number(s.atm_ltp).toFixed(2) : '';
+    const expiryFmt = fmtExpiry(s.expiry);
     optBox = `
       <div class="sig-option-box">
         <div class="sig-section-label">BUY THIS OPTION</div>
         <div class="sig-ts-row">
           <span class="sig-ts">${escHtml(ts)}</span>
           <button class="sig-copy-btn" onclick="copyTs('${escHtml(ts)}', this)">copy</button>
+        </div>
+        <div class="sig-quickcopy-row">
+          <span class="sig-qc-label">Expiry</span>
+          <span class="sig-qc-val">${escHtml(expiryFmt)}</span>
+          <button class="sig-copy-btn" onclick="copyTs('${escHtml(expiryFmt)}', this)">copy</button>
+        </div>
+        <div class="sig-quickcopy-row">
+          <span class="sig-qc-label">Buy at (LTP)</span>
+          <span class="sig-qc-val">${ltpNum || '—'}</span>
+          <button class="sig-copy-btn" onclick="copyTs('${ltpNum}', this)">copy</button>
         </div>
         <div class="sig-option-meta">
           ${strike ? Number(strike).toLocaleString('en-IN') : '—'} ${dir}

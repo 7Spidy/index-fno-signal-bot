@@ -18,6 +18,17 @@ except ImportError:
 
 IST = ZoneInfo("Asia/Kolkata")
 
+# Per-process cache so each exchange dump (NFO, BFO) is fetched at most once per run.
+_INSTRUMENTS_BY_EXCHANGE: dict[str, list] = {}
+
+
+def _instruments_for(kite: KiteConnect, exchange: str) -> list:
+    """Fetch and cache the full instrument list for an exchange segment."""
+    if exchange not in _INSTRUMENTS_BY_EXCHANGE:
+        print(f"[kite] Fetching {exchange} instrument list...")
+        _INSTRUMENTS_BY_EXCHANGE[exchange] = kite.instruments(exchange)
+    return _INSTRUMENTS_BY_EXCHANGE[exchange]
+
 
 def get_kite() -> KiteConnect:
     api_key = os.environ["KITE_API_KEY"]
@@ -33,25 +44,24 @@ def resolve_futures_tokens(kite: KiteConnect | None = None) -> dict:
     if kite is None:
         kite = get_kite()
 
-    print("[kite] Fetching NFO instrument list...")
-    instruments = kite.instruments("NFO")
-
     result = {}
     for inst in config.INSTRUMENTS:
         underlying = inst["name"]
+        exchange   = inst.get("fno_exchange", "NFO")
+        instruments = _instruments_for(kite, exchange)
         futs = [i for i in instruments
                 if i["name"] == underlying
                 and i["instrument_type"] == "FUT"
                 and i["expiry"] >= date.today()]
         if not futs:
-            print(f"[kite] WARNING: No futures found for {underlying}")
+            print(f"[kite] WARNING: No futures found for {underlying} on {exchange}")
             continue
         nearest = min(futs, key=lambda x: x["expiry"])
         result[underlying] = {
-            "token": nearest["instrument_token"],
-            "expiry": nearest["expiry"].isoformat(),
+            "token":         nearest["instrument_token"],
+            "expiry":        nearest["expiry"].isoformat(),
             "tradingsymbol": nearest["tradingsymbol"],
-            "strike_step": inst["strike_step"],
+            "strike_step":   inst["strike_step"],
         }
         print(f"[kite]   {underlying}: {nearest['tradingsymbol']} (token={nearest['instrument_token']})")
 
@@ -67,8 +77,9 @@ def get_spot_ltp(instrument_name: str) -> float | None:
         if not token:
             print(f"[kite_client] No spot token for {instrument_name}")
             return None
+        exchange = config.SPOT_EXCHANGE.get(instrument_name, "NSE")
         kite = get_kite()
-        key  = f"NSE:{token}"
+        key  = f"{exchange}:{token}"
         data = kite.ltp([key])
         return data[key]["last_price"]
     except Exception as e:
@@ -103,9 +114,8 @@ def get_nearest_expiry(instrument_name: str) -> date:
                     return exp_date
 
             kite = get_kite()
-            instruments = kite.instruments("NFO")
-            # expiry_type is NOT returned by the Kite instruments API — filter
-            # by name + option type + future expiry only, then pick nearest.
+            exchange = config.fno_exchange_for(instrument_name)
+            instruments = kite.instruments(exchange)
             opts = [
                 i for i in instruments
                 if i["name"] == instrument_name
@@ -113,7 +123,7 @@ def get_nearest_expiry(instrument_name: str) -> date:
                 and i["expiry"] >= today
             ]
             if not opts:
-                raise ValueError(f"No options found for {instrument_name}")
+                raise ValueError(f"No options found for {instrument_name} on {exchange}")
             nearest  = min(opts, key=lambda x: x["expiry"])
             exp_date = nearest["expiry"]
             redis_set(cache_key, exp_date.isoformat(), ex=21600)
@@ -129,16 +139,16 @@ def get_nearest_expiry(instrument_name: str) -> date:
 
 
 def cache_option_tokens() -> None:
-    """Called once from morning-login. Fetches NFO instruments and stores a compact
-    token map in Redis (key 'kite:option_tokens', TTL 24 hours)."""
+    """Called once from morning-login. Fetches instrument lists per exchange and stores
+    a compact token map in Redis (key 'kite:option_tokens', TTL 24 hours)."""
     try:
-        kite        = get_kite()
-        instruments = kite.instruments("NFO")
-        result      = {}
+        kite   = get_kite()
+        result = {}
 
         for inst_cfg in config.INSTRUMENTS:
-            name   = inst_cfg["name"]
-            step   = inst_cfg["strike_step"]
+            name     = inst_cfg["name"]
+            exchange = inst_cfg.get("fno_exchange", "NFO")
+            instruments = _instruments_for(kite, exchange)
             spot   = get_spot_ltp(name) or 0
             expiry = get_nearest_expiry(name)
             rng    = config.OPTION_CACHE_RANGE[name]
@@ -192,10 +202,11 @@ def get_atm_option(instrument_name: str, spot_price: float,
             print(f"[kite_client] ATM token not cached: {tk_key}")
             return {}
 
-        nfo_key  = f"NFO:{info['tradingsymbol']}"
+        exchange = config.fno_exchange_for(instrument_name)
+        opt_key  = f"{exchange}:{info['tradingsymbol']}"
         kite     = get_kite()
-        ltp_data = kite.ltp([nfo_key])
-        ltp_val  = ltp_data.get(nfo_key, {}).get("last_price")
+        ltp_data = kite.ltp([opt_key])
+        ltp_val  = ltp_data.get(opt_key, {}).get("last_price")
         expiry   = get_nearest_expiry(instrument_name)
 
         return {

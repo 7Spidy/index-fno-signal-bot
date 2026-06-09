@@ -37,6 +37,14 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
     Writes a pending trade intent to Redis if no position is currently open.
     Returns True if written, False if skipped or failed.
     """
+    instrument = instrument_cfg.get("name", "NIFTY")
+
+    # SENSEX is alert-only — the executor (repo 2) is hardcoded NIFTY/NFO-only.
+    # A SENSEX intent would be mishandled, so never write one.
+    if instrument == "SENSEX":
+        print("[executor_bridge] SENSEX is alert-only — skipping executor intent")
+        return False
+
     if not REDIS_URL or not REDIS_TOKEN:
         print("[executor_bridge] Redis env vars not set — skipping intent write")
         return False

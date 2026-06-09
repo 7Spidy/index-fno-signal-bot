@@ -66,12 +66,12 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
         {
             "name":   "Buy this option",
             "value":  (f"**`{ts}`**\n"
-                       f"{strike} {direction.upper()}  ·  {expiry} expiry"),
+                       f"{strike} {direction.upper()}  ·  `{expiry}` expiry"),
             "inline": False,
         },
         {
             "name":   "Buy at",
-            "value":  f"**{fp(atm_ltp)}**\n{buy_sub}",
+            "value":  f"`{fp(atm_ltp)}`\n{buy_sub}",
             "inline": True,
         },
         {

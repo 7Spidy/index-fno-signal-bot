@@ -1,8 +1,9 @@
 import os
 
 INSTRUMENTS = [
-    {"name": "NIFTY",     "strike_step": 50,  "min_risk": 10},
-    {"name": "BANKNIFTY", "strike_step": 100, "min_risk": 30},
+    {"name": "NIFTY",     "strike_step": 50,  "min_risk": 10, "fno_exchange": "NFO"},
+    {"name": "BANKNIFTY", "strike_step": 100, "min_risk": 30, "fno_exchange": "NFO"},
+    {"name": "SENSEX",    "strike_step": 100, "min_risk": 30, "fno_exchange": "BFO"},
 ]
 
 # Spot index tradingsymbols for kite.ltp() — format is "NSE:<symbol>".
@@ -10,19 +11,31 @@ INSTRUMENTS = [
 SPOT_TOKENS = {
     "NIFTY":     "NIFTY 50",
     "BANKNIFTY": "NIFTY BANK",
+    "SENSEX":    "SENSEX",
 }
 
-# NIFTY: weekly options exist, expire every TUESDAY.
-# BANKNIFTY: weekly options discontinued — use MONTHLY expiry only.
+# Exchange segment for spot LTP lookups. NIFTY/BANKNIFTY are on NSE; SENSEX is on BSE.
+SPOT_EXCHANGE = {
+    "NIFTY":     "NSE",
+    "BANKNIFTY": "NSE",
+    "SENSEX":    "BSE",
+}
+
+# NIFTY: weekly, Tuesday expiry — hardcoded weekday path.
+# BANKNIFTY: monthly only — resolved from the live NFO dump.
+# SENSEX: has weeklies (currently Thursday) — resolved from the live BFO dump,
+#         not hardcoded, so it survives future expiry-day changes.
 USE_WEEKLY = {
     "NIFTY":     True,
     "BANKNIFTY": False,
+    "SENSEX":    False,
 }
 
 # Strike range (pts from spot) to pre-cache at morning-login.
 OPTION_CACHE_RANGE = {
     "NIFTY":     500,
     "BANKNIFTY": 1500,
+    "SENSEX":    2000,   # ~2.5% of ~78,000 spot
 }
 
 # Max risk filter.
@@ -33,6 +46,7 @@ OPTION_CACHE_RANGE = {
 MAX_RISK_POINTS = {
     "NIFTY":     20,   # tightened from 25 — prev-candle SL anchor is wider than signal-candle low
     "BANKNIFTY": 100,
+    "SENSEX":    80,   # proportional to NIFTY's 20 at ~3.4x the spot level
 }
 
 # Uniform R:R target for ALL signals regardless of conviction.
@@ -57,6 +71,14 @@ RSI_SLOPE_CANDLES = 3
 
 # Cooldown: minimum candles between same-direction signals
 COOLDOWN_CANDLES = 3
+
+
+def fno_exchange_for(name: str) -> str:
+    """Returns the F&O exchange segment for an underlying (NFO or BFO)."""
+    for inst in INSTRUMENTS:
+        if inst["name"] == name:
+            return inst.get("fno_exchange", "NFO")
+    return "NFO"
 
 
 def as_dict() -> dict:
