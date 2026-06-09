@@ -32,7 +32,7 @@ OPTION_CACHE_RANGE = {
 # Wide prior candles mean the structural SL is too far from entry; skip.
 MAX_RISK_POINTS = {
     "NIFTY":     20,   # tightened from 25 — prev-candle SL anchor is wider than signal-candle low
-    "BANKNIFTY": 60,
+    "BANKNIFTY": 100,
 }
 
 # Uniform R:R target for ALL signals regardless of conviction.
