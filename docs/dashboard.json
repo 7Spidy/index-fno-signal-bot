@@ -1,34 +1,34 @@
 {
   "date": "2026-06-10",
-  "last_run": "2026-06-10T12:55:43.536238+05:30",
+  "last_run": "2026-06-10T13:01:03.977535+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-10T09:05:41.725879+05:30",
   "instruments": [
     {
       "ce": {
-        "c1": true,
+        "c1": false,
         "c2": true,
-        "c3": true,
+        "c3": false,
         "c4": false,
         "signal": false
       },
       "pe": {
-        "c1": false,
+        "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 23411.0,
-      "candle_high": 23417.3,
-      "candle_low": 23385.0,
-      "prev_candle_high": 23392.6,
-      "prev_candle_low": 23350.1,
-      "candle_time": "12:50 IST",
-      "vwap": 23381.406116527374,
-      "rsi": 53.53041921567182,
-      "pdi": 19.05844959403929,
-      "ndi": 26.989639254459767,
+      "futures_price": 23409.7,
+      "candle_high": 23412.0,
+      "candle_low": 23388.5,
+      "prev_candle_high": 23417.3,
+      "prev_candle_low": 23385.0,
+      "candle_time": "12:55 IST",
+      "vwap": 23381.563503531863,
+      "rsi": 53.06678370879769,
+      "pdi": 17.620349490175222,
+      "ndi": 24.953072595478673,
       "atm_strike": 23400,
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
@@ -49,16 +49,16 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 55498.2,
-      "candle_high": 55499.8,
-      "candle_low": 55428.0,
-      "prev_candle_high": 55448.0,
-      "prev_candle_low": 55350.0,
-      "candle_time": "12:50 IST",
-      "vwap": 55412.880929635336,
-      "rsi": 53.345740387064524,
-      "pdi": 18.955468240644965,
-      "ndi": 22.310074158017482,
+      "futures_price": 55505.4,
+      "candle_high": 55505.4,
+      "candle_low": 55468.0,
+      "prev_candle_high": 55499.8,
+      "prev_candle_low": 55428.0,
+      "candle_time": "12:55 IST",
+      "vwap": 55413.307278695225,
+      "rsi": 54.0262648890367,
+      "pdi": 18.793169673859232,
+      "ndi": 21.400806061116118,
       "atm_strike": 55500,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
@@ -66,29 +66,29 @@
     },
     {
       "ce": {
-        "c1": true,
+        "c1": false,
         "c2": true,
-        "c3": true,
-        "c4": true,
-        "signal": true
+        "c3": false,
+        "c4": false,
+        "signal": false
       },
       "pe": {
-        "c1": false,
+        "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 74600.0,
-      "candle_high": 74614.6,
-      "candle_low": 74515.0,
-      "prev_candle_high": 74517.2,
-      "prev_candle_low": 74460.0,
-      "candle_time": "12:50 IST",
-      "vwap": 74497.67280585106,
-      "rsi": 56.31624305792733,
-      "pdi": 27.294408250522647,
-      "ndi": 22.457425465075097,
+      "futures_price": 74575.0,
+      "candle_high": 74600.0,
+      "candle_low": 74570.0,
+      "prev_candle_high": 74614.6,
+      "prev_candle_low": 74515.0,
+      "candle_time": "12:55 IST",
+      "vwap": 74498.0065562914,
+      "rsi": 53.48998440359696,
+      "pdi": 26.213996302835398,
+      "ndi": 21.568478888030384,
       "atm_strike": 74600,
       "name": "SENSEX",
       "symbol": "SENSEX26JUNFUT",
@@ -97,6 +97,72 @@
   ],
   "active_signals": [],
   "history": [
+    {
+      "time": "13:01",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        true,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 53.06678370879769,
+      "pdi": 17.620349490175222,
+      "ndi": 24.953072595478673,
+      "price": 23409.7
+    },
+    {
+      "time": "13:01",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        true,
+        true,
+        true,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 54.0262648890367,
+      "pdi": 18.793169673859232,
+      "ndi": 21.400806061116118,
+      "price": 55505.4
+    },
+    {
+      "time": "13:01",
+      "instrument": "SENSEX",
+      "ce_conditions": [
+        false,
+        true,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 53.48998440359696,
+      "pdi": 26.213996302835398,
+      "ndi": 21.568478888030384,
+      "price": 74575.0
+    },
     {
       "time": "12:55",
       "instrument": "NIFTY",
