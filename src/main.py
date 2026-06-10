@@ -233,8 +233,13 @@ def main() -> None:
                     atm_ltp    = atm_data.get("ltp")
                     opt_sl     = None
                     opt_target = None
+                    delta      = kite_client.estimate_atm_delta(
+                        instrument_name=name,
+                        atm_strike=atm_data.get("strike") or result["atm_strike"],
+                        direction=dir_up,
+                        step=inst["strike_step"],
+                    )
                     if atm_ltp is not None:
-                        delta      = config.ATM_DELTA
                         opt_sl     = round(atm_ltp - raw_risk * delta,      2)
                         opt_target = round(atm_ltp + raw_risk * rr * delta, 2)
 
@@ -248,6 +253,7 @@ def main() -> None:
                         "spot_sl":         spot_sl,
                         "spot_tgt":        spot_tgt,
                         "raw_risk":        round(raw_risk, 1),
+                        "atm_delta":       delta,
                         "conviction":      conv,
                         "rr":              rr,
                         "atm_data":        atm_data,

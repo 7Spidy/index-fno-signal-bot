@@ -88,54 +88,63 @@ def get_spot_ltp(instrument_name: str) -> float | None:
 
 
 def get_nearest_expiry(instrument_name: str) -> date:
-    """Returns the nearest valid option expiry.
-
-    NIFTY (USE_WEEKLY=True): next Tuesday; rolls if today IS Tuesday and >= 15:30 IST.
-    BANKNIFTY (USE_WEEKLY=False): nearest monthly expiry from Kite NFO instruments.
+    """Nearest valid option expiry. Resolved from the LIVE instrument dump for
+    all instruments — survives NSE holiday shifts and expiry-day rule changes.
+    Calendar-aware fallback only when the dump is unreachable.
     """
+    from datetime import time as dtime
+    now_ist     = datetime.now(IST)
+    today       = now_ist.date()
+    after_close = now_ist.time() >= dtime(15, 30)   # fixed: true for all of 15:30→23:59
+
+    from src.state import redis_get, redis_set
+    cache_key = f"kite:expiry:{instrument_name}"
+    cached = redis_get(cache_key)
+    if cached:
+        try:
+            exp = date.fromisoformat(cached)
+            if exp > today or (exp == today and not after_close):
+                return exp
+        except ValueError:
+            pass
+
+    # ── Primary: live Kite dump (authoritative on holiday shifts) ──
     try:
-        now_ist = datetime.now(IST)
-        today   = now_ist.date()
-
-        if config.USE_WEEKLY.get(instrument_name, False):
-            days_ahead = (1 - today.weekday()) % 7
-            if days_ahead == 0:
-                if now_ist.hour >= 15 and now_ist.minute >= 30:
-                    days_ahead = 7
-            return today + timedelta(days=days_ahead)
-
-        else:
-            from src.state import redis_get, redis_set
-            cache_key = f"kite:expiry:{instrument_name}"
-            cached = redis_get(cache_key)
-            if cached:
-                exp_date = date.fromisoformat(cached)
-                if exp_date >= today:
-                    return exp_date
-
-            kite = get_kite()
-            exchange = config.fno_exchange_for(instrument_name)
-            instruments = kite.instruments(exchange)
-            opts = [
-                i for i in instruments
+        kite        = get_kite()
+        exchange    = config.fno_exchange_for(instrument_name)
+        instruments = _instruments_for(kite, exchange)
+        opts = [i for i in instruments
                 if i["name"] == instrument_name
                 and i["instrument_type"] in ("CE", "PE")
-                and i["expiry"] >= today
-            ]
-            if not opts:
-                raise ValueError(f"No options found for {instrument_name} on {exchange}")
-            nearest  = min(opts, key=lambda x: x["expiry"])
-            exp_date = nearest["expiry"]
-            redis_set(cache_key, exp_date.isoformat(), ex=21600)
-            print(f"[kite_client] {instrument_name} nearest expiry: {exp_date}")
-            return exp_date
-
+                and i["expiry"] >= today]
+        if after_close:                       # post-close on expiry day → roll forward
+            opts = [i for i in opts if i["expiry"] > today] or opts
+        if not opts:
+            raise ValueError(f"no options for {instrument_name} on {exchange}")
+        exp = min(opts, key=lambda x: x["expiry"])["expiry"]
+        redis_set(cache_key, exp.isoformat(), ex=21600)
+        print(f"[kite_client] {instrument_name} nearest expiry (live): {exp}")
+        return exp
     except Exception as e:
-        print(f"[kite_client] get_nearest_expiry({instrument_name}) failed: {e}")
-        import calendar as _cal
-        today = date.today()
-        last  = _cal.monthrange(today.year, today.month)[1]
-        return date(today.year, today.month, last)
+        print(f"[kite_client] live expiry resolve failed for {instrument_name}: {e}")
+
+    # ── Calendar-aware fallback (no Kite): weekly instruments ──
+    weekday = config.WEEKLY_EXPIRY_WEEKDAY.get(instrument_name)
+    if weekday is not None:
+        from src import calendar_nse
+        days_ahead = (weekday - today.weekday()) % 7
+        if days_ahead == 0 and after_close:
+            days_ahead = 7
+        cand = today + timedelta(days=days_ahead)
+        while not calendar_nse.is_trading_day(cand):   # holiday → previous trading day
+            cand -= timedelta(days=1)
+        print(f"[kite_client] {instrument_name} nearest expiry (calendar fallback): {cand}")
+        return cand
+
+    # ── Monthly fallback ──
+    import calendar as _cal
+    last = _cal.monthrange(today.year, today.month)[1]
+    return date(today.year, today.month, last)
 
 
 def cache_option_tokens() -> None:
@@ -178,6 +187,57 @@ def cache_option_tokens() -> None:
 
     except Exception as e:
         print(f"[kite_client] cache_option_tokens failed: {e}")
+
+
+def estimate_atm_delta(instrument_name: str, atm_strike: int,
+                       direction: str, step: int) -> float:
+    """Central-difference delta from adjacent-strike premiums.
+        delta ≈ (P(K∓step) − P(K±step)) / (2·step)
+    Reuses the kite:option_tokens cache. Falls back to config.ATM_DELTA
+    on any missing leg, illiquid strike, or out-of-band (<0.15 or >0.85) result.
+    """
+    fallback = config.ATM_DELTA
+    try:
+        from src.state import redis_get
+        raw = redis_get("kite:option_tokens")
+        if not raw:
+            print("[kite_client] delta: option cache empty — fallback")
+            return fallback
+
+        token_map = json.loads(raw)
+        opt_type  = "CE" if direction.upper() == "CE" else "PE"
+        k_lo, k_hi = int(atm_strike - step), int(atm_strike + step)
+        lo = token_map.get(f"{instrument_name}_{k_lo}_{opt_type}")
+        hi = token_map.get(f"{instrument_name}_{k_hi}_{opt_type}")
+        if not lo or not hi:
+            print(f"[kite_client] delta: neighbor strikes uncached "
+                  f"({instrument_name} {k_lo}/{k_hi} {opt_type}) — fallback")
+            return fallback
+
+        exchange = config.fno_exchange_for(instrument_name)
+        lo_key   = f"{exchange}:{lo['tradingsymbol']}"
+        hi_key   = f"{exchange}:{hi['tradingsymbol']}"
+        ltp      = get_kite().ltp([lo_key, hi_key])
+        p_lo = ltp.get(lo_key, {}).get("last_price")
+        p_hi = ltp.get(hi_key, {}).get("last_price")
+        if not p_lo or not p_hi:
+            print("[kite_client] delta: zero/None premium leg — fallback")
+            return fallback
+
+        # CE: lower strike richer → positive. PE: higher strike richer.
+        delta = (p_lo - p_hi) / (2 * step) if opt_type == "CE" \
+                else (p_hi - p_lo) / (2 * step)
+        delta = abs(delta)
+        if not (0.15 <= delta <= 0.85):
+            print(f"[kite_client] delta {delta:.3f} out of band — fallback")
+            return fallback
+
+        print(f"[kite_client] {instrument_name} {opt_type} est. delta={delta:.3f} "
+              f"(P{k_lo}={p_lo}, P{k_hi}={p_hi})")
+        return round(delta, 3)
+    except Exception as e:
+        print(f"[kite_client] estimate_atm_delta failed: {e} — fallback {fallback}")
+        return fallback
 
 
 def get_atm_option(instrument_name: str, spot_price: float,

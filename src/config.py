@@ -31,6 +31,15 @@ USE_WEEKLY = {
     "SENSEX":    False,
 }
 
+# Weekly expiry weekday for the CALENDAR FALLBACK path only (Mon=0 … Sun=6).
+# Primary expiry resolution is the live Kite dump (handles holiday shifts);
+# this is used solely when the dump is unreachable.
+WEEKLY_EXPIRY_WEEKDAY = {
+    "NIFTY":  1,   # Tuesday
+    "SENSEX": 3,   # Thursday
+    # BANKNIFTY omitted — monthly only, falls through to month-end fallback
+}
+
 # Strike range (pts from spot) to pre-cache at morning-login.
 OPTION_CACHE_RANGE = {
     "NIFTY":     500,

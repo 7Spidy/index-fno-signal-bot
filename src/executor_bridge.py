@@ -78,7 +78,8 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
 
     # SL = previous candle structural extreme.
     # Risk = distance from spot (or futures fallback) to that structural level.
-    atm_delta  = float(os.environ.get("ATM_DELTA", str(config.ATM_DELTA)))
+    atm_delta  = signal_result.get("atm_delta") \
+                 or float(os.environ.get("ATM_DELTA", str(config.ATM_DELTA)))
     target_rr  = config.TARGET_RR
 
     reference = spot_ltp_val if spot_ltp_val is not None else futures_price
