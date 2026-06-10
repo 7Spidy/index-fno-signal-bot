@@ -1,6 +1,6 @@
 {
   "date": "2026-06-10",
-  "last_run": "2026-06-10T14:10:52.928836+05:30",
+  "last_run": "2026-06-10T14:15:54.980080+05:30",
   "token_valid": true,
   "token_refreshed_at": "2026-06-10T13:23:20.271582+05:30",
   "instruments": [
@@ -15,20 +15,20 @@
       "pe": {
         "c1": true,
         "c2": true,
-        "c3": false,
-        "c4": false,
-        "signal": false
+        "c3": true,
+        "c4": true,
+        "signal": true
       },
-      "futures_price": 23361.0,
-      "candle_high": 23385.0,
-      "candle_low": 23361.0,
-      "prev_candle_high": 23388.0,
-      "prev_candle_low": 23365.5,
-      "candle_time": "14:05 IST",
-      "vwap": 23385.466550079782,
-      "rsi": 40.717276670254,
-      "pdi": 14.620179350366836,
-      "ndi": 24.146490972485182,
+      "futures_price": 23335.0,
+      "candle_high": 23372.6,
+      "candle_low": 23330.0,
+      "prev_candle_high": 23385.0,
+      "prev_candle_low": 23361.0,
+      "candle_time": "14:10 IST",
+      "vwap": 23384.244182040442,
+      "rsi": 35.852620530163165,
+      "pdi": 12.843354120846941,
+      "ndi": 30.05581616600194,
       "atm_strike": 23350,
       "name": "NIFTY",
       "symbol": "NIFTY26JUNFUT",
@@ -44,21 +44,21 @@
       },
       "pe": {
         "c1": true,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
+        "c2": true,
+        "c3": true,
+        "c4": true,
+        "signal": true
       },
-      "futures_price": 55444.4,
-      "candle_high": 55496.6,
-      "candle_low": 55441.0,
-      "prev_candle_high": 55494.0,
-      "prev_candle_low": 55417.0,
-      "candle_time": "14:05 IST",
-      "vwap": 55427.45519929336,
-      "rsi": 45.17060332934686,
-      "pdi": 12.954541140969715,
-      "ndi": 20.85392229042376,
+      "futures_price": 55371.0,
+      "candle_high": 55444.4,
+      "candle_low": 55360.0,
+      "prev_candle_high": 55496.6,
+      "prev_candle_low": 55441.0,
+      "candle_time": "14:10 IST",
+      "vwap": 55426.89832295369,
+      "rsi": 38.76800505132853,
+      "pdi": 11.784678897674711,
+      "ndi": 27.637434872069527,
       "atm_strike": 55400,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26JUNFUT",
@@ -75,21 +75,21 @@
       "pe": {
         "c1": true,
         "c2": true,
-        "c3": false,
+        "c3": true,
         "c4": true,
-        "signal": false
+        "signal": true
       },
-      "futures_price": 74500.0,
-      "candle_high": 74560.55,
-      "candle_low": 74500.0,
-      "prev_candle_high": 74561.0,
-      "prev_candle_low": 74520.0,
-      "candle_time": "14:05 IST",
-      "vwap": 74529.80632002802,
-      "rsi": 43.37386532292864,
-      "pdi": 25.55694929520662,
-      "ndi": 25.638192406140345,
-      "atm_strike": 74500,
+      "futures_price": 74441.8,
+      "candle_high": 74500.0,
+      "candle_low": 74432.0,
+      "prev_candle_high": 74560.55,
+      "prev_candle_low": 74500.0,
+      "candle_time": "14:10 IST",
+      "vwap": 74528.25510448785,
+      "rsi": 38.63809083156774,
+      "pdi": 23.18150372939091,
+      "ndi": 32.54991039229317,
+      "atm_strike": 74400,
       "name": "SENSEX",
       "symbol": "SENSEX26JUNFUT",
       "strike_step": 100
@@ -97,6 +97,72 @@
   ],
   "active_signals": [],
   "history": [
+    {
+      "time": "14:15",
+      "instrument": "NIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": true,
+      "rsi": 35.852620530163165,
+      "pdi": 12.843354120846941,
+      "ndi": 30.05581616600194,
+      "price": 23335.0
+    },
+    {
+      "time": "14:15",
+      "instrument": "BANKNIFTY",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": true,
+      "rsi": 38.76800505132853,
+      "pdi": 11.784678897674711,
+      "ndi": 27.637434872069527,
+      "price": 55371.0
+    },
+    {
+      "time": "14:15",
+      "instrument": "SENSEX",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "ce_signal": false,
+      "pe_signal": true,
+      "rsi": 38.63809083156774,
+      "pdi": 23.18150372939091,
+      "ndi": 32.54991039229317,
+      "price": 74441.8
+    },
     {
       "time": "14:10",
       "instrument": "NIFTY",
@@ -3110,72 +3176,6 @@
       "pdi": 13.876308798368704,
       "ndi": 20.10588833251324,
       "price": 55334.2
-    },
-    {
-      "time": "10:25",
-      "instrument": "SENSEX",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 52.00727427968869,
-      "pdi": 15.226930682265362,
-      "ndi": 24.547819991486282,
-      "price": 74370.0
-    },
-    {
-      "time": "10:20",
-      "instrument": "NIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 55.93034224382068,
-      "pdi": 17.394798895321706,
-      "ndi": 29.783245567565743,
-      "price": 23360.0
-    },
-    {
-      "time": "10:20",
-      "instrument": "BANKNIFTY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 50.88918520930988,
-      "pdi": 14.39756636610065,
-      "ndi": 21.007496683067703,
-      "price": 55345.0
     }
   ],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
