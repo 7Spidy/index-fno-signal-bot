@@ -303,6 +303,16 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
   color: var(--text-muted);
   font-size: 12px;
 }
+
+/* FOOTER */
+.footer-credit {
+  text-align: center;
+  padding: 24px 16px 20px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+.footer-credit .heart { color: var(--green); }
 </style>
 </head>
 <body>
@@ -748,5 +758,6 @@ setInterval(updateTimeAgo, 30 * 1000);
 // Load immediately
 fetchData();
 </script>
+<footer class="footer-credit">Made With Love <span class="heart">♥</span> by Avi</footer>
 </body>
 </html>
