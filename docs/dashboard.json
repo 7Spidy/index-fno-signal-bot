@@ -95,7 +95,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "PE",
+      "candle_time": "14:30 IST",
+      "futures_price": 55399.0,
+      "spot_ltp": 55384.45,
+      "fut_spot_spread": 14.6,
+      "tradingsymbol": "BANKNIFTY26JUN55400PE",
+      "strike": 55400,
+      "expiry": "2026-06-30",
+      "fetch_time": "14:35:46 IST",
+      "atm_ltp": 976.1,
+      "opt_target": 1050.31,
+      "opt_sl": 926.62,
+      "spot_tgt": 55236.0,
+      "spot_sl": 55483.4,
+      "raw_risk": 99.0,
+      "conviction": "Strong",
+      "rr": 1.5,
+      "rsi": 42.871826690845204,
+      "pdi": 12.105344613162552,
+      "ndi": 30.78443761481536,
+      "vwap": 55425.97041286775,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "14:31",
