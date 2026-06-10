@@ -50,10 +50,14 @@ MAX_RISK_POINTS = {
 }
 
 # Uniform R:R target for ALL signals regardless of conviction.
-# Backtested May 22 – Jun 5, 2026 (17 signals, 41% win rate):
-# win rate is flat across R:R levels; R:R 3.0 gives highest P&L.
+# Changed 3.0 → 1.5 (2026-06-10): base target tightened to bank
+# lower-health winners sooner. Runner mode (executor, health ≥ 75) still
+# lets strong winners trail PAST 1.5R, so this only governs non-runner exits.
+# Break-even win rate at 1.5R = 40%; measured NIFTY backtest = ~41% (thin
+# margin — monitor per-index win rate on paper before live).
+# Original backtest: May 22 – Jun 5, 2026, NIFTY only, 17 signals.
 # Conviction label is still surfaced in the alert for context.
-TARGET_RR = 3.0
+TARGET_RR = 1.5
 
 # Delta used to convert spot risk → option premium SL / Target.
 # 0.50 is a reliable approximation for liquid ATM index options.

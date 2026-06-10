@@ -4,6 +4,8 @@ import os
 import requests
 from datetime import datetime, timezone
 
+from . import config
+
 
 REDIS_URL    = os.environ.get("UPSTASH_REDIS_REST_URL", "")
 REDIS_TOKEN  = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
@@ -76,8 +78,8 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
 
     # SL = previous candle structural extreme.
     # Risk = distance from spot (or futures fallback) to that structural level.
-    atm_delta  = float(os.environ.get("ATM_DELTA", "0.50"))
-    target_rr  = float(os.environ.get("TARGET_RR", "3.0"))
+    atm_delta  = float(os.environ.get("ATM_DELTA", str(config.ATM_DELTA)))
+    target_rr  = config.TARGET_RR
 
     reference = spot_ltp_val if spot_ltp_val is not None else futures_price
 
