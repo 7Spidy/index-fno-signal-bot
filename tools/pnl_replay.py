@@ -134,7 +134,8 @@ def simulate_exit(forward: pd.DataFrame, direction: str,
 def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                       from_dt: datetime, to_dt: datetime,
                       ew_start: dtime, ew_end: dtime, rr: float,
-                      delta: float, cooldown_candles: int) -> list[dict]:
+                      delta: float, cooldown_candles: int,
+                      max_risk_pts: int = 9999) -> list[dict]:
     """Replay one instrument over [from_dt, to_dt]. Returns a list of taken-trade
     dicts (already exit-simulated)."""
     fut = resolve_fut(kite, name)
@@ -216,11 +217,10 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                 # Gate 5: max-risk filter — mirrors main.py §2 exactly.
                 # Suppresses signals where the prev-candle structural SL is too
                 # far from entry (wide candle = oversized risk).
-                max_r = MAX_RISK_POINTS.get(name, 9999)
-                if raw_risk > max_r:
+                if raw_risk > max_risk_pts:
                     print(f"[pnl_replay] SKIPPED {name} {dir_up} "
                           f"@ {candle_ts.strftime('%H:%M')}: "
-                          f"risk {raw_risk:.1f} pts > max {max_r} pts "
+                          f"risk {raw_risk:.1f} pts > max {max_risk_pts} pts "
                           f"(wide prev candle)")
                     continue
 
@@ -447,6 +447,10 @@ def main(argv=None) -> int:
                     help="Comma list, e.g. NIFTY,SENSEX (default all in config).")
     ap.add_argument("--discord", action="store_true",
                     help="POST each alert via src.notifier (default OFF).")
+    ap.add_argument("--max-risk-override", default=None, dest="max_risk_override",
+                    metavar="INSTR:PTS[,...]",
+                    help="Override MAX_RISK_POINTS for one or more instruments, "
+                         "e.g. NIFTY:40,BANKNIFTY:150,SENSEX:120.")
     args = ap.parse_args(argv)
 
     # Console may be cp1252 on Windows; the table/summary use ₹ Σ → arrows.
@@ -476,6 +480,30 @@ def main(argv=None) -> int:
     from_dt = datetime.combine(from_date, dtime(0, 0), tzinfo=IST)
     to_dt = datetime.combine(to_date, dtime(23, 59, 59), tzinfo=IST)
 
+    # Apply --max-risk-override before replay (unknown instruments are an error).
+    max_risk = dict(MAX_RISK_POINTS)
+    if args.max_risk_override:
+        for token in args.max_risk_override.split(","):
+            token = token.strip()
+            if not token:
+                continue
+            if ":" not in token:
+                print(f"[pnl_replay] Bad --max-risk-override token (expected INSTR:PTS): {token!r}")
+                return 1
+            instr, pts = token.split(":", 1)
+            instr = instr.strip().upper()
+            if instr not in max_risk:
+                print(f"[pnl_replay] --max-risk-override: unknown instrument {instr!r}. "
+                      f"Known: {', '.join(max_risk)}")
+                return 1
+            try:
+                max_risk[instr] = int(pts)
+            except ValueError:
+                print(f"[pnl_replay] --max-risk-override: pts must be an integer, got {pts!r}")
+                return 1
+        print(f"[pnl_replay] max_risk overrides applied: "
+              f"{', '.join(f'{k}:{v}' for k, v in max_risk.items())}")
+
     ew_start = _parse_hhmm(config.EVAL_WINDOW_START)
     ew_end = _parse_hhmm(config.EVAL_WINDOW_END)
     rr = config.TARGET_RR
@@ -500,7 +528,8 @@ def main(argv=None) -> int:
         try:
             trades = replay_instrument(
                 kite, name, step_by_name[name], min_risk_by_name[name],
-                from_dt, to_dt, ew_start, ew_end, rr, delta, cooldown)
+                from_dt, to_dt, ew_start, ew_end, rr, delta, cooldown,
+                max_risk.get(name, 9999))
             all_trades.extend(trades)
         except Exception as e:
             print(f"[pnl_replay] ERROR replaying {name}: {e}")
