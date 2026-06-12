@@ -140,6 +140,7 @@ def main() -> None:
 
             inst_cfg = dict(cfg)
             inst_cfg["strike_step"] = inst["strike_step"]
+            inst_cfg["instrument_name"] = name
 
             result = signals.evaluate(df, vwap, rsi, pdi, ndi, inst_cfg)
             result["name"] = name
@@ -148,9 +149,14 @@ def main() -> None:
             results.append(result)
 
             rsi_str = f"{result.get('rsi'):.1f}" if result.get("rsi") is not None else "n/a"
+            vwap_val = result.get("vwap")
+            vwap_gap = (
+                f"{abs(result.get('futures_price', 0) - vwap_val):.1f}pts from VWAP"
+                if vwap_val else "vwap=n/a"
+            )
             print(
                 f"[main] {name}: CE={result['ce']['signal']} PE={result['pe']['signal']} "
-                f"price={result.get('futures_price')} rsi={rsi_str}"
+                f"price={result.get('futures_price')} rsi={rsi_str} {vwap_gap}"
             )
 
             # Signal + dedup + cooldown
@@ -172,28 +178,6 @@ def main() -> None:
                         continue
 
                     dir_up = direction.upper()
-
-                    # ── 1. Preliminary risk — prev candle vs futures (no API call yet) ──
-                    if dir_up == "CE":
-                        prelim_risk = max(
-                            result["futures_price"] - result["prev_candle_low"],
-                            inst["min_risk"],
-                        )
-                    else:
-                        prelim_risk = max(
-                            result["prev_candle_high"] - result["futures_price"],
-                            inst["min_risk"],
-                        )
-
-                    # ── 2. Max risk filter ───────────────────────────────────────────────
-                    max_r = config.MAX_RISK_POINTS.get(name, 9999)
-                    if prelim_risk > max_r:
-                        print(
-                            f"[main] SKIPPED {name} {dir_up} "
-                            f"@ {result['candle_time']}: "
-                            f"risk {prelim_risk:.1f} pts > max {max_r} pts (wide prev candle)"
-                        )
-                        continue
 
                     # ── 3. Fetch live SPOT LTP ───────────────────────────────────────────
                     spot_ltp  = kite_client.get_spot_ltp(name)

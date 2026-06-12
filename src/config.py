@@ -47,15 +47,15 @@ OPTION_CACHE_RANGE = {
     "SENSEX":    2000,   # ~2.5% of ~78,000 spot
 }
 
-# Max risk filter.
-# Risk = prev_candle_high - spot  (PE)
-#      = spot - prev_candle_low   (CE)
-# Previous candle structural extreme is the SL level.
-# Wide prior candles mean the structural SL is too far from entry; skip.
-MAX_RISK_POINTS = {
-    "NIFTY":     20,   # tightened from 25 — prev-candle SL anchor is wider than signal-candle low
-    "BANKNIFTY": 100,
-    "SENSEX":    80,   # proportional to NIFTY's 20 at ~3.4x the spot level
+# VWAP proximity filter — part of C2.
+# Price must be within this many points of VWAP at signal time.
+# Prevents entries where price has already extended far from VWAP,
+# replacing the old max-risk candle-width gate.
+# Values are index-futures points (not option premium).
+VWAP_PROXIMITY_PTS = {
+    "NIFTY":     40,
+    "BANKNIFTY": 200,
+    "SENSEX":    160,
 }
 
 # Uniform R:R target for ALL signals regardless of conviction.
@@ -110,4 +110,5 @@ def as_dict() -> dict:
         "INSTRUMENTS":               INSTRUMENTS,
         "TARGET_RR":                 TARGET_RR,
         "ATM_DELTA":                 ATM_DELTA,
+        "VWAP_PROXIMITY_PTS":        VWAP_PROXIMITY_PTS,
     }
