@@ -28,6 +28,10 @@ from src import kite_client
 
 IST = ZoneInfo("Asia/Kolkata")
 
+# Max risk per instrument (points). Mirrors main.py §2 gate; defined inline
+# here because src.config carries this as live-bot logic, not a config constant.
+MAX_RISK_POINTS = {"NIFTY": 20, "BANKNIFTY": 100, "SENSEX": 80}
+
 SQUAREOFF_TIME = dtime(15, 10)   # hard intraday square-off (§5)
 CANDLE_SECONDS = 5 * 60
 
@@ -212,7 +216,7 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                 # Gate 5: max-risk filter — mirrors main.py §2 exactly.
                 # Suppresses signals where the prev-candle structural SL is too
                 # far from entry (wide candle = oversized risk).
-                max_r = config.MAX_RISK_POINTS.get(name, 9999)
+                max_r = MAX_RISK_POINTS.get(name, 9999)
                 if raw_risk > max_r:
                     print(f"[pnl_replay] SKIPPED {name} {dir_up} "
                           f"@ {candle_ts.strftime('%H:%M')}: "
