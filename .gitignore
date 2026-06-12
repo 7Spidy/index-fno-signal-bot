@@ -8,3 +8,6 @@ __pycache__/
 .env
 .venv/
 venv/
+
+# Backtest output
+pnl_out/
