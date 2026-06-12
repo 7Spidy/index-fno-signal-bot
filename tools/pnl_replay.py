@@ -44,42 +44,11 @@ def _parse_hhmm(s: str) -> dtime:
     return dtime(int(h), int(m))
 
 
-def resolve_fut(kite, name: str):
-    """Resolve near-month FUT instrument_token + lot_size for `name`.
-
-    Filters the live instruments dump directly (§1/§8): instrument_type=='FUT',
-    name==underlying, nearest expiry>=today. Read-only — does NOT touch Redis.
-    """
-    exch = config.fno_exchange_for(name)
-    instruments = kite.instruments(exch)
-    today = datetime.now(IST).date()
-    futs = [i for i in instruments
-            if i["name"] == name
-            and i["instrument_type"] == "FUT"
-            and i["expiry"] >= today]
-    if not futs:
-        return None
-    nearest = min(futs, key=lambda x: x["expiry"])
-    return {
-        "token":         nearest["instrument_token"],
-        "tradingsymbol": nearest["tradingsymbol"],
-        "expiry":        nearest["expiry"],
-        "lot_size":      nearest["lot_size"],
-        "exchange":      exch,
-    }
+CHUNK_DAYS = 60   # max calendar days per historical_data call
 
 
-def fetch_candles(kite, token: int, from_dt: datetime, to_dt: datetime) -> pd.DataFrame:
-    """One historical_data call for the full window (§8). Returns a DataFrame
-    with tz-aware IST `timestamp` and OHLCV columns, sorted ascending."""
-    data = kite.historical_data(
-        instrument_token=token,
-        from_date=from_dt,
-        to_date=to_dt,
-        interval="5minute",
-        continuous=False,
-        oi=False,
-    )
+def _raw_to_df(data: list) -> pd.DataFrame:
+    """Convert a kite.historical_data() result list to a normalised DataFrame."""
     df = pd.DataFrame(data)
     if df.empty:
         return df
@@ -90,9 +59,98 @@ def fetch_candles(kite, token: int, from_dt: datetime, to_dt: datetime) -> pd.Da
     else:
         ts = ts.dt.tz_convert(IST)
     df["timestamp"] = ts
-    df = df[["timestamp", "open", "high", "low", "close", "volume"]]
-    df = df.sort_values("timestamp").reset_index(drop=True)
+    return df[["timestamp", "open", "high", "low", "close", "volume"]]
+
+
+def fetch_candles_chunked(kite, token: int,
+                          from_dt: datetime, to_dt: datetime) -> pd.DataFrame:
+    """Fetch 5-min candles in ≤60-day chunks and concatenate.
+
+    Kite's historical_data API supports at most ~60 calendar days per call for
+    the 5-minute interval. Splitting into chunks allows --days values beyond 60.
+    Sorts ascending and drops duplicate timestamps after concatenation.
+    """
+    chunks = []
+    cur = from_dt
+    while cur <= to_dt:
+        chunk_end = min(cur + timedelta(days=CHUNK_DAYS - 1), to_dt)
+        data = kite.historical_data(
+            instrument_token=token,
+            from_date=cur,
+            to_date=chunk_end,
+            interval="5minute",
+            continuous=False,
+            oi=False,
+        )
+        chunk = _raw_to_df(data)
+        if not chunk.empty:
+            chunks.append(chunk)
+        cur = chunk_end + timedelta(days=1)
+
+    if not chunks:
+        return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df = pd.concat(chunks, ignore_index=True)
+    df = df.sort_values("timestamp").drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
     return df
+
+
+def resolve_futures_for_window(kite, name: str,
+                               from_dt: datetime, to_dt: datetime):
+    """Resolve all near-month FUT contracts active during [from_dt, to_dt].
+
+    Returns a list of segment dicts sorted by expiry ascending, each covering
+    the calendar slice when that contract was the near-month:
+
+        segment["from_dt"]  — start of this contract's near-month tenure
+                              (day after previous contract's expiry, or from_dt)
+        segment["to_dt"]    — end of tenure (contract's own expiry, or to_dt)
+        segment["token"]    — instrument_token
+        segment["tradingsymbol"], segment["lot_size"], segment["expiry"]
+
+    Contracts are near-month from the day after the prior expiry through their
+    own expiry date. Only contracts whose expiry >= window start are included
+    (earlier ones were no longer near-month when the window opens).
+    """
+    exch = config.fno_exchange_for(name)
+    instruments = kite.instruments(exch)
+    window_start = from_dt.date()
+    window_end = to_dt.date()
+
+    futs = sorted(
+        [i for i in instruments
+         if i["name"] == name and i["instrument_type"] == "FUT"
+         and i["expiry"] >= window_start],
+        key=lambda x: x["expiry"],
+    )
+    if not futs:
+        return []
+
+    segments = []
+    for idx, f in enumerate(futs):
+        # This contract is near-month starting the day after the prior expiry.
+        if idx == 0:
+            seg_start = window_start
+        else:
+            seg_start = futs[idx - 1]["expiry"] + timedelta(days=1)
+
+        seg_end = f["expiry"]
+
+        # Clamp to the requested window.
+        eff_start = max(seg_start, window_start)
+        eff_end = min(seg_end, window_end)
+        if eff_start > eff_end:
+            continue
+
+        segments.append({
+            "token":         f["instrument_token"],
+            "tradingsymbol": f["tradingsymbol"],
+            "expiry":        f["expiry"],
+            "lot_size":      f["lot_size"],
+            "from_dt":       datetime.combine(eff_start, dtime(0, 0), tzinfo=IST),
+            "to_dt":         datetime.combine(eff_end,   dtime(23, 59, 59), tzinfo=IST),
+        })
+
+    return segments
 
 
 def conviction_label(pdi: float, ndi: float, direction: str) -> str:
@@ -138,19 +196,32 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                       max_risk_pts: int = 9999) -> list[dict]:
     """Replay one instrument over [from_dt, to_dt]. Returns a list of taken-trade
     dicts (already exit-simulated)."""
-    fut = resolve_fut(kite, name)
-    if not fut:
-        print(f"[pnl_replay] {name}: no near-month FUT found — skipping")
+    segments = resolve_futures_for_window(kite, name, from_dt, to_dt)
+    if not segments:
+        print(f"[pnl_replay] {name}: no FUT contracts found for window — skipping")
         return []
-    print(f"[pnl_replay] {name}: FUT {fut['tradingsymbol']} "
-          f"(token={fut['token']}, lot={fut['lot_size']})")
 
-    full = fetch_candles(kite, fut["token"], from_dt, to_dt)
-    if full.empty:
+    # Fetch each contract's candles only for its near-month tenure, then stitch.
+    pieces = []
+    lot_size = segments[-1]["lot_size"]   # use the last (current) contract's lot size
+    for seg in segments:
+        print(f"[pnl_replay] {name}: fetching {seg['tradingsymbol']} "
+              f"{seg['from_dt'].date()} → {seg['to_dt'].date()}")
+        chunk = fetch_candles_chunked(kite, seg["token"], seg["from_dt"], seg["to_dt"])
+        if not chunk.empty:
+            pieces.append(chunk)
+
+    if not pieces:
         print(f"[pnl_replay] {name}: no candles returned — skipping")
         return []
-    print(f"[pnl_replay] {name}: {len(full)} candles "
-          f"({full['timestamp'].iloc[0].date()} → {full['timestamp'].iloc[-1].date()})")
+
+    full = pd.concat(pieces, ignore_index=True)
+    full = (full.sort_values("timestamp")
+                .drop_duplicates(subset=["timestamp"])
+                .reset_index(drop=True))
+    print(f"[pnl_replay] {name}: {len(full)} candles total "
+          f"({full['timestamp'].iloc[0].date()} → {full['timestamp'].iloc[-1].date()}, "
+          f"{len(segments)} contract(s))")
 
     full["session_date"] = full["timestamp"].dt.date
     sessions = sorted(full["session_date"].unique())
@@ -241,7 +312,7 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                     pnl_pts = (exit_price - ref) if dir_up == "CE" else (ref - exit_price)
 
                 r_multiple = pnl_pts / raw_risk if raw_risk else 0.0
-                pnl_rupees = pnl_pts * delta * fut["lot_size"]
+                pnl_rupees = pnl_pts * delta * lot_size
 
                 last_taken[key] = candle_ts
                 trades.append({
@@ -266,7 +337,7 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                     "_ndi":        result.get("ndi"),
                     "_vwap":       result.get("vwap"),
                     "_candle_time": result.get("candle_time"),
-                    "_lot_size":   fut["lot_size"],
+                    "_lot_size":   lot_size,
                     "_rr":         rr,
                     "_c": {k: result[direction][k] for k in ("c1", "c2", "c3", "c4")},
                 })
