@@ -32,6 +32,10 @@ IST = ZoneInfo("Asia/Kolkata")
 # here because src.config carries this as live-bot logic, not a config constant.
 MAX_RISK_POINTS = {"NIFTY": 20, "BANKNIFTY": 100, "SENSEX": 80}
 
+# Stable cash index instrument_tokens for kite.historical_data() spot series.
+# These never change — they identify the continuous index, not a derivative.
+SPOT_INDEX_TOKENS = {"NIFTY": 256265, "BANKNIFTY": 260105, "SENSEX": 265}
+
 SQUAREOFF_TIME = dtime(15, 10)   # hard intraday square-off (§5)
 CANDLE_SECONDS = 5 * 60
 
@@ -153,6 +157,40 @@ def resolve_futures_for_window(kite, name: str,
     return segments
 
 
+def twap_session(df: pd.DataFrame, session_open: datetime) -> pd.Series:
+    """Session-anchored TWAP: expanding mean of HLC3 from session_open, NaN before.
+
+    Drop-in substitute for indicators.vwap_session() when the fetched series has
+    zero volume (cash / spot indices). Mirrors vwap_session()'s masking structure
+    exactly — uniform weights instead of volume weights.
+    """
+    typical = (df["high"] + df["low"] + df["close"]) / 3.0
+    mask = df["timestamp"] >= session_open
+    cum_tp = typical.where(mask, 0.0).cumsum()
+    cum_cnt = mask.astype(float).cumsum()
+    twap = (cum_tp / cum_cnt).where(mask)
+    twap.name = "vwap"   # same name — slots into signals.evaluate() unchanged
+    return twap
+
+
+def resolve_lot_size(kite, name: str) -> int:
+    """Return lot_size from the current near-month FUT for `name`.
+
+    Used in spot mode: we need lot_size for P&L math but don't fetch FUT candles.
+    Raises RuntimeError if no active FUT is found.
+    """
+    exch = config.fno_exchange_for(name)
+    instruments = kite.instruments(exch)
+    today = datetime.now(IST).date()
+    futs = [i for i in instruments
+            if i["name"] == name and i["instrument_type"] == "FUT"
+            and i["expiry"] >= today]
+    if not futs:
+        raise RuntimeError(f"No active FUT found for {name} on {exch}")
+    nearest = min(futs, key=lambda x: x["expiry"])
+    return int(nearest["lot_size"])
+
+
 def conviction_label(pdi: float, ndi: float, direction: str) -> str:
     spread = (pdi - ndi) if direction == "CE" else (ndi - pdi)
     if spread >= 18:
@@ -193,35 +231,60 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                       from_dt: datetime, to_dt: datetime,
                       ew_start: dtime, ew_end: dtime, rr: float,
                       delta: float, cooldown_candles: int,
-                      max_risk_pts: int = 9999) -> list[dict]:
+                      max_risk_pts: int = 9999,
+                      series: str = "spot") -> list[dict]:
     """Replay one instrument over [from_dt, to_dt]. Returns a list of taken-trade
-    dicts (already exit-simulated)."""
-    segments = resolve_futures_for_window(kite, name, from_dt, to_dt)
-    if not segments:
-        print(f"[pnl_replay] {name}: no FUT contracts found for window — skipping")
-        return []
+    dicts (already exit-simulated).
 
-    # Fetch each contract's candles only for its near-month tenure, then stitch.
-    pieces = []
-    lot_size = segments[-1]["lot_size"]   # use the last (current) contract's lot size
-    for seg in segments:
-        print(f"[pnl_replay] {name}: fetching {seg['tradingsymbol']} "
-              f"{seg['from_dt'].date()} → {seg['to_dt'].date()}")
-        chunk = fetch_candles_chunked(kite, seg["token"], seg["from_dt"], seg["to_dt"])
-        if not chunk.empty:
-            pieces.append(chunk)
-
-    if not pieces:
-        print(f"[pnl_replay] {name}: no candles returned — skipping")
-        return []
-
-    full = pd.concat(pieces, ignore_index=True)
-    full = (full.sort_values("timestamp")
-                .drop_duplicates(subset=["timestamp"])
-                .reset_index(drop=True))
-    print(f"[pnl_replay] {name}: {len(full)} candles total "
-          f"({full['timestamp'].iloc[0].date()} → {full['timestamp'].iloc[-1].date()}, "
-          f"{len(segments)} contract(s))")
+    series="spot"    — fetch continuous cash index via stable token; TWAP fallback
+                       when volume is zero; lot_size from current near-month FUT.
+    series="futures" — stitch near-month FUT segments (existing behaviour).
+    """
+    if series == "spot":
+        spot_token = SPOT_INDEX_TOKENS.get(name)
+        if spot_token is None:
+            print(f"[pnl_replay] {name}: no spot token configured — skipping")
+            return []
+        try:
+            lot_size = resolve_lot_size(kite, name)
+        except Exception as e:
+            print(f"[pnl_replay] {name}: could not resolve lot_size: {e} — skipping")
+            return []
+        print(f"[pnl_replay] {name}: fetching spot index "
+              f"(token={spot_token}, lot={lot_size})")
+        full = fetch_candles_chunked(kite, spot_token, from_dt, to_dt)
+        if full.empty:
+            print(f"[pnl_replay] {name}: no candles returned — skipping")
+            return []
+        use_twap = int(full["volume"].sum()) == 0
+        if use_twap:
+            print(f"[pnl_replay] {name}: zero volume — using TWAP in place of VWAP")
+        print(f"[pnl_replay] {name}: {len(full)} candles "
+              f"({full['timestamp'].iloc[0].date()} → {full['timestamp'].iloc[-1].date()})")
+    else:  # futures
+        segments = resolve_futures_for_window(kite, name, from_dt, to_dt)
+        if not segments:
+            print(f"[pnl_replay] {name}: no FUT contracts found for window — skipping")
+            return []
+        pieces = []
+        lot_size = segments[-1]["lot_size"]
+        for seg in segments:
+            print(f"[pnl_replay] {name}: fetching {seg['tradingsymbol']} "
+                  f"{seg['from_dt'].date()} → {seg['to_dt'].date()}")
+            chunk = fetch_candles_chunked(kite, seg["token"], seg["from_dt"], seg["to_dt"])
+            if not chunk.empty:
+                pieces.append(chunk)
+        if not pieces:
+            print(f"[pnl_replay] {name}: no candles returned — skipping")
+            return []
+        full = pd.concat(pieces, ignore_index=True)
+        full = (full.sort_values("timestamp")
+                    .drop_duplicates(subset=["timestamp"])
+                    .reset_index(drop=True))
+        use_twap = False
+        print(f"[pnl_replay] {name}: {len(full)} candles total "
+              f"({full['timestamp'].iloc[0].date()} → {full['timestamp'].iloc[-1].date()}, "
+              f"{len(segments)} contract(s))")
 
     full["session_date"] = full["timestamp"].dt.date
     sessions = sorted(full["session_date"].unique())
@@ -250,7 +313,8 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
 
             work_df = full.iloc[window_start_pos:i + 2].reset_index(drop=True)
 
-            vwap = indicators.vwap_session(work_df, session_open)
+            vwap = (twap_session(work_df, session_open) if use_twap
+                    else indicators.vwap_session(work_df, session_open))
             rsi = indicators.rsi_wilder(work_df)
             pdi, ndi, adx = indicators.dmi_wilder(work_df)
             result = signals.evaluate(work_df, vwap, rsi, pdi, ndi, cfg)
@@ -339,6 +403,7 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                     "_candle_time": result.get("candle_time"),
                     "_lot_size":   lot_size,
                     "_rr":         rr,
+                    "_series":     series,
                     "_c": {k: result[direction][k] for k in ("c1", "c2", "c3", "c4")},
                 })
 
@@ -348,9 +413,18 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
 # --------------------------------------------------------------------------- #
 # Output
 # --------------------------------------------------------------------------- #
-CAVEATS = (
+CAVEATS_FUTURES = (
     "futures series used as reference (entry/SL/target/exit-walk all on the "
     "near-month FUT 5-min series; fut–spot basis is a known small approximation);\n"
+    "  option P&L = delta(0.50) approximation;\n"
+    "  historical option LTP not fetched (expired contracts unresolvable) — "
+    "absolute premium levels omitted."
+)
+
+CAVEATS_SPOT = (
+    "continuous cash index used as reference (small spot–futures basis is a known "
+    "approximation; entry/SL/target/exit-walk are on the index series);\n"
+    "  VWAP uses session-anchored TWAP fallback (cash indices return zero volume);\n"
     "  option P&L = delta(0.50) approximation;\n"
     "  historical option LTP not fetched (expired contracts unresolvable) — "
     "absolute premium levels omitted."
@@ -385,16 +459,21 @@ def _fmt_cell(val) -> str:
     return str(val)
 
 
-def print_header(from_date: date, to_date: date, names: list[str]) -> None:
+def print_header(from_date: date, to_date: date, names: list[str],
+                 series: str = "spot") -> None:
+    series_label = ("continuous cash index (spot), 5-minute candles"
+                    if series == "spot"
+                    else "near-month FUTURES, 5-minute candles")
+    caveats = CAVEATS_SPOT if series == "spot" else CAVEATS_FUTURES
     print("=" * 96)
     print("  SIGNAL-BOT P&L REPLAY  (offline backtest)")
     print("=" * 96)
     print(f"  Window      : {from_date.isoformat()} → {to_date.isoformat()}  (IST)")
     print(f"  Instruments : {', '.join(names)}")
-    print(f"  Series      : near-month FUTURES, 5-minute candles")
+    print(f"  Series      : {series_label}")
     print(f"  Gates       : eval window {config.EVAL_WINDOW_START}–{config.EVAL_WINDOW_END} IST, "
           f"cooldown {config.COOLDOWN_CANDLES} candles, R:R 1:{config.TARGET_RR}")
-    print(f"  Caveats     : {CAVEATS}")
+    print(f"  Caveats     : {caveats}")
     print("=" * 96)
 
 
@@ -445,11 +524,12 @@ def write_csv(trades: list[dict], path: str) -> None:
 
 def alert_text(t: dict) -> str:
     arrow = "↑" if t["dir"] == "CE" else "↓"
+    entry_label = "spot close" if t.get("_series") == "spot" else "futures close"
     return (
         f"{'🟢' if t['dir'] == 'CE' else '🔴'} {t['dir']} Signal — {t['instr']}\n"
         f"  Candle      : {t['date']} {t['time_IST']} IST\n"
         f"  ATM strike  : {t['atm_strike']} {t['dir']}\n"
-        f"  Entry (ref) : {t['entry']}  (futures close)\n"
+        f"  Entry (ref) : {t['entry']}  ({entry_label})\n"
         f"  Spot SL     : {t['spot_sl']}\n"
         f"  Spot Target : {t['spot_tgt']}\n"
         f"  Risk (pts)  : {t['risk_pts']}  ·  R:R 1:{t['_rr']}\n"
@@ -522,6 +602,9 @@ def main(argv=None) -> int:
                     metavar="INSTR:PTS[,...]",
                     help="Override MAX_RISK_POINTS for one or more instruments, "
                          "e.g. NIFTY:40,BANKNIFTY:150,SENSEX:120.")
+    ap.add_argument("--series", choices=["spot", "futures"], default="spot",
+                    help="Price series to replay on: 'spot' (default) uses the "
+                         "continuous cash index; 'futures' uses near-month FUT candles.")
     args = ap.parse_args(argv)
 
     # Console may be cp1252 on Windows; the table/summary use ₹ Σ → arrows.
@@ -592,7 +675,7 @@ def main(argv=None) -> int:
               "to populate kite:access_token in Upstash, then retry.")
         return 1
 
-    print_header(from_date, to_date, names)
+    print_header(from_date, to_date, names, series=args.series)
 
     all_trades: list[dict] = []
     for name in names:
@@ -600,7 +683,7 @@ def main(argv=None) -> int:
             trades = replay_instrument(
                 kite, name, step_by_name[name], min_risk_by_name[name],
                 from_dt, to_dt, ew_start, ew_end, rr, delta, cooldown,
-                max_risk.get(name, 9999))
+                max_risk.get(name, 9999), series=args.series)
             all_trades.extend(trades)
         except Exception as e:
             print(f"[pnl_replay] ERROR replaying {name}: {e}")
