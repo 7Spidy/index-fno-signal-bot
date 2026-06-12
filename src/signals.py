@@ -89,12 +89,17 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
         if di_trend_check:
             pdi_rising = False
             ndi_rising = False
-            if pdi.dropna().shape[0] >= 3 and ndi.dropna().shape[0] >= 3 and idx1 >= 0:
-                pdi_prev = pdi.iloc[idx1]
-                ndi_prev = ndi.iloc[idx1]
-                if pd.notna(pdi_prev) and pd.notna(ndi_prev):
-                    pdi_rising = bool(pdi_now > pdi_prev)
-                    ndi_rising = bool(ndi_now > ndi_prev)
+            idx2 = idx0 - 2   # two candles prior to the latest closed candle
+            if (pdi.dropna().shape[0] >= 3 and ndi.dropna().shape[0] >= 3
+                    and idx2 >= 0 and idx1 >= 0):
+                pdi_p1 = pdi.iloc[idx1]   # one candle back
+                pdi_p2 = pdi.iloc[idx2]   # two candles back
+                ndi_p1 = ndi.iloc[idx1]
+                ndi_p2 = ndi.iloc[idx2]
+                if pd.notna(pdi_p1) and pd.notna(pdi_p2):
+                    pdi_rising = bool(pdi_now > pdi_p1 > pdi_p2)
+                if pd.notna(ndi_p1) and pd.notna(ndi_p2):
+                    ndi_rising = bool(ndi_now > ndi_p1 > ndi_p2)
             ce_c4 = ce_c4 and pdi_rising
             pe_c4 = pe_c4 and ndi_rising
 
