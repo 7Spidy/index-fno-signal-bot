@@ -39,6 +39,7 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     di_threshold      = cfg.get("DI_THRESHOLD", 25)
     require_dominance = cfg.get("REQUIRE_DI_DOMINANCE", True)
     di_trend_check    = cfg.get("DI_TREND_CHECK", True)
+    vwap_proximity_pts = cfg.get("VWAP_PROXIMITY_PTS", {})
 
     # C1 — Momentum
     if momentum_rule == "close_gt_prev_close":
@@ -48,12 +49,16 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
         ce_c1 = bool(c0["open"] > c1["close"])
         pe_c1 = bool(c0["open"] < c1["close"])
 
-    # C2 — VWAP cross within last vwap_window candles
+    # C2 — VWAP cross within last vwap_window candles AND price within proximity band
     ce_c2 = False
     pe_c2 = False
     if pd.notna(v0):
         currently_above = c0["close"] > v0
         currently_below = c0["close"] < v0
+
+        # Sub-condition 1: recent cross (unchanged)
+        ce_cross = False
+        pe_cross = False
         for k in range(1, vwap_window + 1):
             past_idx = idx0 - k
             if past_idx < 0:
@@ -63,11 +68,20 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
             if pd.isna(past_vwap):
                 continue
             if currently_above and past_close <= past_vwap:
-                ce_c2 = True
+                ce_cross = True
                 break
             if currently_below and past_close >= past_vwap:
-                pe_c2 = True
+                pe_cross = True
                 break
+
+        # Sub-condition 2: price within proximity band of VWAP
+        instrument_name = cfg.get("instrument_name", "")
+        proximity_limit = vwap_proximity_pts.get(instrument_name, float("inf"))
+        gap = abs(c0["close"] - v0)
+        within_band = gap <= proximity_limit
+
+        ce_c2 = bool(ce_cross and currently_above and within_band)
+        pe_c2 = bool(pe_cross and currently_below and within_band)
 
     # C3 — RSI slope over rsi_lookback candles
     ce_c3 = False
