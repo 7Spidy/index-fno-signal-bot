@@ -343,6 +343,14 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
     <div class="empty-state">Loading instruments…</div>
   </div>
 
+  <!-- STOCK CARDS -->
+  <div class="section-title" style="padding: 16px 16px 6px; margin-top: 8px;">
+    NSE Stocks <span style="font-size:9px;color:var(--text-muted);font-weight:400;margin-left:6px;">ALERT ONLY · MONTHLY EXPIRY</span>
+  </div>
+  <div id="stock-area">
+    <div class="empty-state">Loading stocks…</div>
+  </div>
+
   <!-- HISTORY -->
   <div class="history-section">
     <div class="section-title">Today's Log</div>
@@ -586,8 +594,8 @@ function buildSignalBanner(s) {
 
 /* ── Instrument cards ───────────────────────────────────────── */
 
-function renderInstruments(instruments) {
-  const area = document.getElementById('instrument-area');
+function renderInstruments(instruments, targetId = 'instrument-area') {
+  const area = document.getElementById(targetId);
   if (!instruments || instruments.length === 0) {
     area.innerHTML = '<div class="empty-state">Waiting for first run…</div>';
     return;
@@ -757,6 +765,26 @@ setInterval(fetchData, 5 * 60 * 1000);
 setInterval(updateTimeAgo, 30 * 1000);
 // Load immediately
 fetchData();
+
+// ── Stock dashboard ───────────────────────────────────────────────────────────
+
+async function fetchStockDashboard() {
+  try {
+    const r = await fetch('stock-dashboard.json?t=' + Date.now());
+    if (!r.ok) {
+      document.getElementById('stock-area').innerHTML =
+        '<div class="empty-state">Stock dashboard not yet available.</div>';
+      return;
+    }
+    const data = await r.json();
+    renderInstruments(data.instruments || [], 'stock-area');
+  } catch (e) {
+    console.warn('stock-dashboard fetch failed:', e);
+  }
+}
+
+fetchStockDashboard();
+setInterval(fetchStockDashboard, 5 * 60 * 1000);
 </script>
 <footer class="footer-credit">Made With Love <span class="heart">♥</span> by Avi</footer>
 </body>
