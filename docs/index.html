@@ -246,6 +246,12 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .history-row.row-ce-signal, .history-row.row-pe-signal { padding-left: 9px; }
 .h-time { color: var(--text-muted); }
 .h-inst { color: var(--text); font-weight: 600; }
+.eq-chip {
+  font-size: 8px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-muted); border: 1px solid var(--border);
+  padding: 1px 4px; border-radius: 3px; margin-left: 4px;
+  vertical-align: middle;
+}
 .h-dots { display: flex; gap: 3px; }
 .dot {
   width: 7px; height: 7px; border-radius: 50%;
@@ -380,29 +386,53 @@ let activeSignalsMap = {};
 let signalRows = [];
 
 async function fetchData() {
-  try {
-    const res = await fetch(`./dashboard.json?t=${Date.now()}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+  const t = Date.now();
+  const [idxResult, stkResult] = await Promise.allSettled([
+    fetch(`./dashboard.json?t=${t}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+    fetch(`./stock-dashboard.json?t=${t}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+  ]);
+
+  if (idxResult.status === 'fulfilled') {
     lastFetchTime = Date.now();
     document.getElementById('offline-banner').style.display = 'none';
-    render(data);
-  } catch (e) {
+    const stockData = stkResult.status === 'fulfilled' ? stkResult.value : null;
+    if (stkResult.status === 'rejected') console.warn('stock-dashboard fetch failed:', stkResult.reason);
+    render(idxResult.value, stockData);
+  } else {
     document.getElementById('offline-banner').style.display = 'block';
-    console.error('Fetch failed:', e);
+    console.error('Index dashboard fetch failed:', idxResult.reason);
   }
 }
 
-function render(data) {
+function render(indexData, stockData) {
+  // Merge activeSignalsMap: index signals + stock signals
   activeSignalsMap = {};
-  for (const s of (data.active_signals || [])) {
+  for (const s of (indexData.active_signals || [])) {
     const key = `${s.instrument}:${(s.direction || '').toUpperCase()}`;
     activeSignalsMap[key] = s;
   }
-  updateHeader(data);
-  renderSignalBanners(data.active_signals || []);
-  renderInstruments(data.instruments || []);
-  renderHistory(data.history || []);
+  if (stockData) {
+    for (const s of (stockData.active_signals || [])) {
+      const key = `${s.instrument}:${(s.direction || '').toUpperCase()}`;
+      activeSignalsMap[key] = s;
+    }
+  }
+  updateHeader(indexData);
+  renderSignalBanners(indexData.active_signals || []);  // index banners only
+  renderInstruments(indexData.instruments || []);        // index cards only
+  if (stockData) {
+    renderInstruments(stockData.instruments || [], 'stock-area');
+  } else {
+    document.getElementById('stock-area').innerHTML = '<div class="empty-state">Stock dashboard unavailable.</div>';
+  }
+
+  // Merge and sort histories; tag source for EQ chip
+  const idxHist = (indexData.history || []).map(r => ({ ...r, source: 'INDEX' }));
+  const stkHist = stockData ? (stockData.history || []).map(r => ({ ...r, source: 'STOCK' })) : [];
+  const merged = [...idxHist, ...stkHist]
+    .sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+    .slice(0, 500);
+  renderHistory(merged);
 }
 
 function updateHeader(data) {
@@ -553,9 +583,11 @@ function buildSignalBanner(s) {
     </div>`;
 
   // Meta row
+  const isStock   = s.asset_class === 'STOCK';
   const convLabel = s.conviction ? `${escHtml(s.conviction)}  ·  1:${s.rr || 3.0}` : '—';
+  const futLabel  = isStock ? 'Spot' : 'Futures / Spot';
   const futStr    = s.futures_price
-    ? (fi(s.futures_price) + (s.fut_spot_spread && Math.abs(s.fut_spot_spread) > 5
+    ? (fi(s.futures_price) + (!isStock && s.fut_spot_spread && Math.abs(s.fut_spot_spread) > 5
         ? ` / ${fi(s.spot_ltp)}` : ''))
     : '—';
   const riskStr   = s.raw_risk !== null && s.raw_risk !== undefined
@@ -567,7 +599,7 @@ function buildSignalBanner(s) {
         <div class="sig-meta-val">${convLabel}</div>
       </div>
       <div class="sig-meta-item">
-        <div class="sig-meta-label">Futures / Spot</div>
+        <div class="sig-meta-label">${futLabel}</div>
         <div class="sig-meta-val">${futStr}</div>
       </div>
       <div class="sig-meta-item">
@@ -678,6 +710,7 @@ function renderHistory(history) {
     }
     const ceDots = buildDots(row.ce_conditions || []);
     const peDots = buildDots(row.pe_conditions || []);
+    const eqChip = row.source === 'STOCK' ? '<span class="eq-chip">EQ</span>' : '';
     let sigSpan;
     if (row.ce_signal) sigSpan = '<span class="h-sig sig-ce">CE✓</span>';
     else if (row.pe_signal) sigSpan = '<span class="h-sig sig-pe">PE✓</span>';
@@ -685,7 +718,7 @@ function renderHistory(history) {
     return `
       <div class="history-row ${rowCls}" ${drawerAttr}>
         <span class="h-time">${escHtml(row.time || '')}</span>
-        <span class="h-inst">${escHtml(row.instrument || '')}</span>
+        <span class="h-inst">${escHtml(row.instrument || '')}${eqChip}</span>
         <span class="h-dots">${ceDots}</span>
         <span class="h-dots">${peDots}</span>
         ${sigSpan}
@@ -765,26 +798,6 @@ setInterval(fetchData, 5 * 60 * 1000);
 setInterval(updateTimeAgo, 30 * 1000);
 // Load immediately
 fetchData();
-
-// ── Stock dashboard ───────────────────────────────────────────────────────────
-
-async function fetchStockDashboard() {
-  try {
-    const r = await fetch('stock-dashboard.json?t=' + Date.now());
-    if (!r.ok) {
-      document.getElementById('stock-area').innerHTML =
-        '<div class="empty-state">Stock dashboard not yet available.</div>';
-      return;
-    }
-    const data = await r.json();
-    renderInstruments(data.instruments || [], 'stock-area');
-  } catch (e) {
-    console.warn('stock-dashboard fetch failed:', e);
-  }
-}
-
-fetchStockDashboard();
-setInterval(fetchStockDashboard, 5 * 60 * 1000);
 </script>
 <footer class="footer-credit">Made With Love <span class="heart">♥</span> by Avi</footer>
 </body>

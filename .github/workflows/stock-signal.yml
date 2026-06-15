@@ -7,8 +7,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: stock-signal-${{ github.ref }}
-  cancel-in-progress: true
+  group: gh-pages-commit
+  cancel-in-progress: false
 
 jobs:
   evaluate:
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

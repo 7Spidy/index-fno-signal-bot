@@ -54,9 +54,16 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     tgt_sub    = f"if {instrument} spot → {fi(spot_tgt)}"
     sl_sub     = f"if {instrument} spot → {fi(spot_sl)}"
 
-    fut_str = fi(result.get("futures_price"))
-    if spread and abs(spread) > 5:
-        fut_str += f"  (spot +{abs(spread):.0f} pts)"
+    asset_class = result.get("asset_class", "INDEX")
+    if asset_class == "STOCK":
+        px_field = {"name": "Spot",
+                    "value": fi(result.get("futures_price")),
+                    "inline": True}
+    else:
+        fut_str = fi(result.get("futures_price"))
+        if spread and abs(spread) > 5:
+            fut_str += f"  (spot +{abs(spread):.0f} pts)"
+        px_field = {"name": "Futures / Spot", "value": fut_str, "inline": True}
 
     vwap_val  = result.get("vwap")
     spot_ref  = spot_ltp or 0
@@ -90,11 +97,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
                        f"  ·  1:{result.get('rr', '—')}"),
             "inline": True,
         },
-        {
-            "name":   "Futures / Spot",
-            "value":  fut_str,
-            "inline": True,
-        },
+        px_field,
         {
             "name":   "Candle",
             "value":  result.get("candle_time", "—"),

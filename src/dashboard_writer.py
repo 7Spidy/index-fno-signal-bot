@@ -15,7 +15,7 @@ except ImportError:
 IST = ZoneInfo("Asia/Kolkata")
 DOCS = Path("docs")
 FILE = DOCS / "dashboard.json"
-MAX_HISTORY = 140  # 70 ticks × 2 instruments
+MAX_HISTORY = 400
 
 
 def load() -> dict:
@@ -150,20 +150,8 @@ def reset_day() -> None:
 
 
 def _git_commit(now: datetime) -> None:
-    try:
-        subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True)
-        subprocess.run(["git", "add", "docs/dashboard.json"], check=True)
-        diff = subprocess.run(["git", "diff", "--staged", "--quiet"])
-        if diff.returncode != 0:
-            msg = f"dashboard: {now.strftime('%H:%M IST')}"
-            subprocess.run(["git", "commit", "-m", msg], check=True)
-            subprocess.run(["git", "push"], check=True)
-            print(f"[dashboard] ✓ Committed and pushed: {msg}")
-        else:
-            print("[dashboard] No changes to commit")
-    except subprocess.CalledProcessError as e:
-        print(f"[dashboard] Git error: {e}")
+    from src.git_util import commit_and_push
+    commit_and_push(["docs/dashboard.json"], f"dashboard: {now.strftime('%H:%M IST')}")
 
 
 if __name__ == "__main__":

@@ -12,18 +12,17 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, indicators, notifier, state
+from src import calendar_nse, config as idx_cfg, indicators, notifier, state
 from src import stock_config as cfg
 from src.kite_client import fetch_ohlcv, get_kite
 
 IST = ZoneInfo("Asia/Kolkata")
 
 _DASHBOARD_FILE = "docs/stock-dashboard.json"
-_MAX_HISTORY    = 280
+_MAX_HISTORY    = 600
 
 
 # ── Dashboard helpers ─────────────────────────────────────────────────────────
@@ -53,23 +52,12 @@ def _empty_dashboard() -> dict:
 
 
 def _commit_dashboard(data: dict) -> None:
+    from src.git_util import commit_and_push
     data["last_run"] = datetime.now(IST).isoformat()
     with open(_DASHBOARD_FILE, "w") as f:
         json.dump(data, f, indent=2, default=str)
-    try:
-        subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True)
-        subprocess.run(["git", "add", _DASHBOARD_FILE], check=True)
-        diff = subprocess.run(["git", "diff", "--staged", "--quiet"])
-        if diff.returncode != 0:
-            ts = datetime.now(IST).strftime("%Y-%m-%d %H:%M IST")
-            subprocess.run(
-                ["git", "commit", "-m", f"stock-dashboard update {ts}"],
-                check=True,
-            )
-            subprocess.run(["git", "push"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[stock_main] git commit/push failed: {e}")
+    ts = datetime.now(IST).strftime("%Y-%m-%d %H:%M IST")
+    commit_and_push([_DASHBOARD_FILE], f"stock-dashboard update {ts}")
 
 
 # ── Signal deduplication ──────────────────────────────────────────────────────
@@ -86,24 +74,60 @@ def _is_duplicate(name: str, direction: str, candle_time: str) -> bool:
 
 # ── Option lookup ─────────────────────────────────────────────────────────────
 
+def _live_atm_fallback(name: str, spot: float, step: int, direction: str) -> dict:
+    """Resolve ATM contract from live NFO instruments dump when cache misses."""
+    try:
+        today = date.today()
+        kite = get_kite()
+        instruments = kite.instruments("NFO")
+        atm = round(spot / step) * step
+        candidates = [
+            i for i in instruments
+            if i["name"] == name
+            and i["instrument_type"] == direction
+            and i["expiry"] >= today
+            and i["strike"] == atm
+        ]
+        if not candidates:
+            print(f"[stock_main] live fallback: no {name} {direction} {atm} in NFO")
+            return {}
+        nearest = min(candidates, key=lambda x: x["expiry"])
+        ts = nearest["tradingsymbol"]
+        ltp_key = f"NFO:{ts}"
+        ltp_data = kite.ltp([ltp_key])
+        ltp_val = ltp_data.get(ltp_key, {}).get("last_price")
+        return {
+            "tradingsymbol": ts,
+            "strike":        atm,
+            "ltp":           round(ltp_val, 2) if ltp_val else None,
+            "expiry":        nearest["expiry"],
+            "lot_size":      nearest.get("lot_size"),
+            "fetch_time":    datetime.now(IST).strftime("%H:%M:%S IST"),
+        }
+    except Exception as e:
+        print(f"[stock_main] live fallback for {name} failed: {e}")
+        return {}
+
+
 def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
     """
     Retrieve ATM option details from the stock option token cache.
-    Returns empty dict on any miss — caller handles gracefully.
+    Falls back to live NFO dump on any miss. Returns empty dict only if live
+    resolve also fails.
     """
     try:
         raw = state.redis_get(cfg.REDIS_OPTION_TOKENS_KEY)
         if not raw:
-            print(f"[stock_main] {cfg.REDIS_OPTION_TOKENS_KEY} empty — did morning-login run?")
-            return {}
+            print(f"[stock_main] {cfg.REDIS_OPTION_TOKENS_KEY} empty — live NFO fallback")
+            return _live_atm_fallback(name, spot, step, direction)
 
         token_map = json.loads(raw)
         atm       = round(spot / step) * step
         tk_key    = f"{name}_{int(atm)}_{direction}"
         info      = token_map.get(tk_key)
         if not info:
-            print(f"[stock_main] ATM token not cached: {tk_key}")
-            return {}
+            print(f"[stock_main] ATM token not cached: {tk_key} — live NFO fallback")
+            return _live_atm_fallback(name, spot, step, direction)
 
         kite     = get_kite()
         opt_key  = f"NFO:{info['tradingsymbol']}"
@@ -229,10 +253,14 @@ def main() -> None:
         return
     equity_tokens: dict[str, int] = json.loads(raw_equity)
 
-    today_open         = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0)
+    now                = datetime.now(IST)
+    today_open         = now.replace(hour=9, minute=15, second=0, microsecond=0)
     dashboard          = _load_dashboard()
     instrument_results = []
     new_history_rows   = []
+    fired_signals      = []
+
+    target_rr = getattr(idx_cfg, "TARGET_RR", 1.5)
 
     for stock in cfg.STOCKS:
         name = stock["name"]
@@ -257,7 +285,8 @@ def main() -> None:
             candle_time = result["candle_time"]
 
             new_history_rows.append({
-                "time":          candle_time,
+                "time":          now.strftime("%H:%M"),
+                "candle_time":   candle_time,
                 "instrument":    name,
                 "ce_conditions": [result["ce"]["c1"], result["ce"]["c2"],
                                   result["ce"]["c3"], result["ce"]["c4"]],
@@ -282,34 +311,74 @@ def main() -> None:
             # Option data
             opt = _get_atm_option(name, result["futures_price"], stock["strike_step"], direction)
 
-            # SL / target (delta-scaled, same math as index bot)
+            # SL / target (delta-scaled)
             spot     = result["futures_price"]
             sl_spot  = result["prev_candle_low"] if direction == "CE" else result["prev_candle_high"]
             risk_pts = abs(spot - sl_spot)
-            delta    = 0.50
-            from src import config as idx_cfg
-            target_rr  = getattr(idx_cfg, "TARGET_RR", 1.5)
-            sl_opt     = round(risk_pts * delta, 2)
-            target_opt = round(sl_opt * target_rr, 2)
+            dkey     = direction.lower()
 
             signal_payload = {
                 **result,
-                "instrument":    name,
-                "direction":     direction,
-                "tradingsymbol": opt.get("tradingsymbol"),
-                "strike":        opt.get("strike"),
-                "atm_ltp":       opt.get("ltp"),
-                "expiry":        opt.get("expiry"),
-                "opt_sl":        (opt["ltp"] - sl_opt) if opt.get("ltp") else None,
-                "opt_target":    (opt["ltp"] + target_opt) if opt.get("ltp") else None,
-                "spot_sl":       round(sl_spot, 2),
-                "raw_risk":      round(risk_pts, 1),
-                "conviction":    "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
-                "rr":            target_rr,
+                "instrument":  name,
+                "direction":   direction,
+                "asset_class": "STOCK",
+
+                # --- contract identity the NOTIFIER reads (nested) ---
+                "atm_data": {
+                    "tradingsymbol": opt.get("tradingsymbol"),
+                    "strike":        opt.get("strike"),
+                    "expiry":        opt.get("expiry"),
+                    "fetch_time":    opt.get("fetch_time"),
+                },
+
+                # --- premium + spot levels (read top-level by notifier) ---
+                "atm_ltp":    opt.get("ltp"),
+                "opt_sl":     (opt["ltp"] - round(risk_pts * 0.50, 2))             if opt.get("ltp") else None,
+                "opt_target": (opt["ltp"] + round(risk_pts * 0.50 * target_rr, 2)) if opt.get("ltp") else None,
+                "spot_ltp":   spot,
+                "spot_sl":    round(sl_spot, 2),
+                "spot_tgt":   round(spot + risk_pts * target_rr, 2) if direction == "CE"
+                              else round(spot - risk_pts * target_rr, 2),
+                "raw_risk":   round(risk_pts, 1),
+
+                # --- context fields ---
+                "conviction": "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
+                "rr":         target_rr,
+                "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
+                "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
             }
 
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED")
+
+            # Rich flat entry for the dashboard drawer
+            fired_signals.append({
+                "instrument":      name,
+                "direction":       direction,
+                "candle_time":     result["candle_time"],
+                "futures_price":   result["futures_price"],
+                "spot_ltp":        spot,
+                "fut_spot_spread": None,
+                "tradingsymbol":   opt.get("tradingsymbol"),
+                "strike":          opt.get("strike"),
+                "expiry":          opt.get("expiry"),
+                "fetch_time":      opt.get("fetch_time"),
+                "atm_ltp":         opt.get("ltp"),
+                "opt_target":      signal_payload["opt_target"],
+                "opt_sl":          signal_payload["opt_sl"],
+                "spot_tgt":        signal_payload["spot_tgt"],
+                "spot_sl":         signal_payload["spot_sl"],
+                "raw_risk":        signal_payload["raw_risk"],
+                "conviction":      signal_payload["conviction"],
+                "rr":              target_rr,
+                "rsi":             result["rsi"],
+                "pdi":             result["pdi"],
+                "ndi":             result["ndi"],
+                "vwap":            result["vwap"],
+                "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
+                "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
+                "asset_class":     "STOCK",
+            })
 
         except Exception as e:
             print(f"[stock_main] ERROR processing {name}: {e}")
@@ -319,9 +388,7 @@ def main() -> None:
     dashboard["instruments"]    = instrument_results
     existing_history            = dashboard.get("history", [])
     dashboard["history"]        = (new_history_rows + existing_history)[:_MAX_HISTORY]
-    dashboard["active_signals"] = [
-        r for r in new_history_rows if r.get("ce_signal") or r.get("pe_signal")
-    ]
+    dashboard["active_signals"] = fired_signals
 
     _commit_dashboard(dashboard)
     print(f"[stock_main] Run complete — {len(instrument_results)} stocks evaluated")
