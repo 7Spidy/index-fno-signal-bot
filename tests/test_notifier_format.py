@@ -109,15 +109,16 @@ def test_no_bold_inline_code_pattern():
 
 
 def test_strike_and_expiry_line_still_present():
-    """The strike / expiry line below the code block must be preserved."""
+    """Strike and expiry must appear in the new 'Contract' field, not in 'Buy this option'."""
     _requests_stub.post.reset_mock()
     symbol = "BANKNIFTY26JUN55400PE"
 
     notifier.send_signal("BANKNIFTY", "PE", _make_result(symbol))
 
     call_kwargs = _requests_stub.post.call_args[1]
-    buy_field = _get_buy_field(call_kwargs["json"])
+    embed = call_kwargs["json"]["embeds"][0]
+    contract_field = next(f for f in embed["fields"] if f["name"] == "Contract")
 
-    assert "55400" in buy_field["value"], "Strike missing from field value"
-    assert "2026-06-30" in buy_field["value"], "Expiry missing from field value"
-    print("✅ Strike and expiry line preserved below code block")
+    assert "55400" in contract_field["value"], "Strike missing from Contract field"
+    assert "2026-06-30" in contract_field["value"], "Expiry missing from Contract field"
+    print("✅ Strike and expiry found in Contract field")
