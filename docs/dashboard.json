@@ -95,7 +95,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "CE",
+      "candle_time": "13:25 IST",
+      "futures_price": 57285.4,
+      "spot_ltp": 57242.4,
+      "fut_spot_spread": 43.0,
+      "tradingsymbol": "BANKNIFTY26JUN57200CE",
+      "strike": 57200,
+      "expiry": "2026-06-30",
+      "fetch_time": "13:31:27 IST",
+      "atm_ltp": 721.2,
+      "opt_target": 768.78,
+      "opt_sl": 689.48,
+      "spot_tgt": 57333.9,
+      "spot_sl": 57181.4,
+      "raw_risk": 61.0,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 63.71698909580644,
+      "pdi": 26.425062409540747,
+      "ndi": 12.306696571538144,
+      "vwap": 57216.1155136612,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "13:25",
