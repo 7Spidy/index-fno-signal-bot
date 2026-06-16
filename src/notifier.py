@@ -72,7 +72,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     fields = [
         {
             "name":   "Buy this option",
-            "value":  f"```\n{ts}\n```",
+            "value":  ts,
             "inline": False,
         },
         {

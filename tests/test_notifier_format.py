@@ -1,5 +1,5 @@
 """
-Unit test: tradingsymbol must be in a triple-backtick code block
+Unit test: tradingsymbol must be plain text (no markdown wrapping)
 in the Discord embed 'Buy this option' field.
 """
 import os
@@ -53,8 +53,8 @@ def _get_buy_field(payload: dict) -> dict:
     return next(f for f in embed["fields"] if f["name"] == "Buy this option")
 
 
-def test_tradingsymbol_in_code_block_pe():
-    """PE signal: tradingsymbol must be wrapped in a triple-backtick code block."""
+def test_tradingsymbol_plain_text_pe():
+    """PE signal: tradingsymbol must be plain text (no code-block wrapping)."""
     _requests_stub.post.reset_mock()
     symbol = "BANKNIFTY26JUN55400PE"
 
@@ -63,15 +63,14 @@ def test_tradingsymbol_in_code_block_pe():
     call_kwargs = _requests_stub.post.call_args[1]
     buy_field = _get_buy_field(call_kwargs["json"])
 
-    expected_prefix = f"```\n{symbol}\n```"
-    assert buy_field["value"].startswith(expected_prefix), (
-        f"Expected field to start with code block, got: {buy_field['value']!r}"
+    assert buy_field["value"] == symbol, (
+        f"Expected plain-text symbol, got: {buy_field['value']!r}"
     )
-    print(f"✅ PE: tradingsymbol '{symbol}' is in a code block")
+    print(f"✅ PE: tradingsymbol '{symbol}' is plain text")
 
 
-def test_tradingsymbol_in_code_block_ce():
-    """CE signal: tradingsymbol must also be wrapped in a triple-backtick code block."""
+def test_tradingsymbol_plain_text_ce():
+    """CE signal: tradingsymbol must also be plain text (no code-block wrapping)."""
     _requests_stub.post.reset_mock()
     symbol = "BANKNIFTY26JUN55600CE"
     result = _make_result(symbol)
@@ -83,15 +82,14 @@ def test_tradingsymbol_in_code_block_ce():
     call_kwargs = _requests_stub.post.call_args[1]
     buy_field = _get_buy_field(call_kwargs["json"])
 
-    expected_prefix = f"```\n{symbol}\n```"
-    assert buy_field["value"].startswith(expected_prefix), (
-        f"Expected field to start with code block, got: {buy_field['value']!r}"
+    assert buy_field["value"] == symbol, (
+        f"Expected plain-text symbol, got: {buy_field['value']!r}"
     )
-    print(f"✅ CE: tradingsymbol '{symbol}' is in a code block")
+    print(f"✅ CE: tradingsymbol '{symbol}' is plain text")
 
 
-def test_no_bold_inline_code_pattern():
-    """Confirm the OLD bold-inline-code pattern is gone."""
+def test_no_markdown_wrapping():
+    """Confirm neither code-block nor bold-inline-code wrapping is present."""
     _requests_stub.post.reset_mock()
     symbol = "NIFTY26JUN24450CE"
     result = _make_result(symbol)
@@ -103,9 +101,12 @@ def test_no_bold_inline_code_pattern():
     buy_field = _get_buy_field(call_kwargs["json"])
 
     assert not buy_field["value"].startswith(f"**`{symbol}`**"), (
-        "Old bold-inline-code pattern still present — change not applied"
+        "Old bold-inline-code pattern still present"
     )
-    print("✅ Old **`symbol`** pattern is absent")
+    assert not buy_field["value"].startswith("```"), (
+        "Code-block pattern still present — breaks Android copy"
+    )
+    print("✅ No markdown wrapping — plain text confirmed")
 
 
 def test_strike_and_expiry_line_still_present():
