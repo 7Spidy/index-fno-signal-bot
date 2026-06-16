@@ -95,7 +95,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "CE",
+      "candle_time": "10:35 IST",
+      "futures_price": 23984.0,
+      "spot_ltp": 23968,
+      "fut_spot_spread": 16.0,
+      "tradingsymbol": "NIFTY2661623950CE",
+      "strike": 23950,
+      "expiry": "2026-06-16",
+      "fetch_time": "10:41:00 IST",
+      "atm_ltp": 48.65,
+      "opt_target": 56.59,
+      "opt_sl": 43.36,
+      "spot_tgt": 23983.0,
+      "spot_sl": 23961.0,
+      "raw_risk": 10,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 61.74638694432385,
+      "pdi": 25.003158115406848,
+      "ndi": 14.822788324171968,
+      "vwap": 23958.7177312669,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "10:35",
