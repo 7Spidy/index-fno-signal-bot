@@ -1,6 +1,6 @@
 {
-  "date": "2026-06-15",
-  "last_run": "2026-06-15T14:41:05.168499+05:30",
+  "date": "2026-06-16",
+  "last_run": "2026-06-16T09:41:37.254730+05:30",
   "token_valid": true,
   "instruments": [
     {
@@ -9,28 +9,28 @@
       "lot_size": 250,
       "ce": {
         "c1": true,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
+        "c2": true,
+        "c3": true,
+        "c4": true,
+        "signal": true
       },
       "pe": {
         "c1": false,
-        "c2": false,
+        "c2": true,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1308.3,
-      "candle_high": 1309.0,
-      "candle_low": 1307.2,
-      "prev_candle_high": 1308.0,
-      "prev_candle_low": 1305.6,
-      "candle_time": "14:35 IST",
-      "vwap": 1311.7457784144644,
-      "rsi": 52.37193703859818,
-      "pdi": 20.69748470041011,
-      "ndi": 21.962580911705206,
+      "futures_price": 1314.8,
+      "candle_high": 1315.6,
+      "candle_low": 1313.0,
+      "prev_candle_high": 1313.4,
+      "prev_candle_low": 1311.1,
+      "candle_time": "09:35 IST",
+      "vwap": 1311.3012970092554,
+      "rsi": 69.01063006493087,
+      "pdi": 31.106902238248978,
+      "ndi": 17.585274711649763,
       "atm_strike": 1300,
       "strike_step": 50
     },
@@ -39,30 +39,30 @@
       "sector": "Private Banking",
       "lot_size": 700,
       "ce": {
-        "c1": true,
-        "c2": false,
-        "c3": true,
-        "c4": true,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1337.0,
-      "candle_high": 1337.2,
-      "candle_low": 1334.8,
-      "prev_candle_high": 1336.1,
-      "prev_candle_low": 1332.8,
-      "candle_time": "14:35 IST",
-      "vwap": 1343.64270236182,
-      "rsi": 55.3784414783415,
-      "pdi": 26.489711067288443,
-      "ndi": 20.773929970767078,
-      "atm_strike": 1340,
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 1329.6,
+      "candle_high": 1331.0,
+      "candle_low": 1329.1,
+      "prev_candle_high": 1332.6,
+      "prev_candle_low": 1330.4,
+      "candle_time": "09:35 IST",
+      "vwap": 1331.0178416282927,
+      "rsi": 43.2572938010327,
+      "pdi": 27.738062226422638,
+      "ndi": 25.64121070661221,
+      "atm_strike": 1320,
       "strike_step": 20
     },
     {
@@ -70,29 +70,29 @@
       "sector": "IT",
       "lot_size": 400,
       "ce": {
-        "c1": false,
-        "c2": true,
-        "c3": false,
+        "c1": true,
+        "c2": false,
+        "c3": true,
         "c4": false,
         "signal": false
       },
       "pe": {
-        "c1": true,
-        "c2": true,
+        "c1": false,
+        "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1136.2,
-      "candle_high": 1137.8,
-      "candle_low": 1135.7,
-      "prev_candle_high": 1137.9,
-      "prev_candle_low": 1136.4,
-      "candle_time": "14:35 IST",
-      "vwap": 1136.4506164611723,
-      "rsi": 47.83262878958542,
-      "pdi": 15.521410222427852,
-      "ndi": 20.235130518900338,
+      "futures_price": 1144.5,
+      "candle_high": 1145.4,
+      "candle_low": 1140.0,
+      "prev_candle_high": 1143.4,
+      "prev_candle_low": 1136.0,
+      "candle_time": "09:35 IST",
+      "vwap": 1135.926937359211,
+      "rsi": 73.77011359076351,
+      "pdi": 25.30183577160662,
+      "ndi": 25.468154239665267,
       "atm_strike": 1140,
       "strike_step": 20
     },
@@ -101,30 +101,30 @@
       "sector": "NBFC",
       "lot_size": 125,
       "ce": {
-        "c1": true,
-        "c2": false,
-        "c3": true,
-        "c4": true,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 948.3,
-      "candle_high": 948.55,
-      "candle_low": 947.15,
-      "prev_candle_high": 947.55,
-      "prev_candle_low": 945.75,
-      "candle_time": "14:35 IST",
-      "vwap": 949.5734767343059,
-      "rsi": 59.81053528793553,
-      "pdi": 27.47885331806102,
-      "ndi": 22.89345443368518,
-      "atm_strike": 900,
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 960.8,
+      "candle_high": 963.0,
+      "candle_low": 959.05,
+      "prev_candle_high": 963.9,
+      "prev_candle_low": 959.5,
+      "candle_time": "09:35 IST",
+      "vwap": 958.4392607422982,
+      "rsi": 72.06501130674428,
+      "pdi": 35.85190643701485,
+      "ndi": 14.01009262271217,
+      "atm_strike": 1000,
       "strike_step": 100
     },
     {
@@ -132,29 +132,29 @@
       "sector": "Pharma",
       "lot_size": 400,
       "ce": {
-        "c1": true,
-        "c2": true,
+        "c1": false,
+        "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
       "pe": {
-        "c1": false,
-        "c2": true,
+        "c1": true,
+        "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1805.1,
-      "candle_high": 1805.8,
-      "candle_low": 1803.5,
-      "prev_candle_high": 1806.0,
-      "prev_candle_low": 1803.0,
-      "candle_time": "14:35 IST",
-      "vwap": 1803.846767693326,
-      "rsi": 54.312025795488495,
-      "pdi": 18.109600517050154,
-      "ndi": 10.101218975723436,
+      "futures_price": 1803.6,
+      "candle_high": 1804.5,
+      "candle_low": 1800.6,
+      "prev_candle_high": 1805.0,
+      "prev_candle_low": 1803.2,
+      "candle_time": "09:35 IST",
+      "vwap": 1804.7739992853085,
+      "rsi": 45.82030510088637,
+      "pdi": 13.7809257630917,
+      "ndi": 21.130252809626093,
       "atm_strike": 1800,
       "strike_step": 20
     },
@@ -163,29 +163,29 @@
       "sector": "Auto",
       "lot_size": 175,
       "ce": {
-        "c1": true,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 3160.0,
-      "candle_high": 3162.2,
-      "candle_low": 3158.2,
-      "prev_candle_high": 3158.9,
-      "prev_candle_low": 3155.7,
-      "candle_time": "14:35 IST",
-      "vwap": 3132.1520371680504,
-      "rsi": 58.10779425621451,
-      "pdi": 24.159765674065977,
-      "ndi": 18.303150927441898,
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": false,
+        "c4": true,
+        "signal": false
+      },
+      "futures_price": 3133.3,
+      "candle_high": 3137.5,
+      "candle_low": 3130.0,
+      "prev_candle_high": 3145.0,
+      "prev_candle_low": 3136.6,
+      "candle_time": "09:35 IST",
+      "vwap": 3142.24685629003,
+      "rsi": 40.296704608802145,
+      "pdi": 24.5185150242326,
+      "ndi": 25.64134593068094,
       "atm_strike": 3150,
       "strike_step": 50
     },
@@ -194,213 +194,91 @@
       "sector": "Engineering/Infra",
       "lot_size": 175,
       "ce": {
-        "c1": true,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 4178.7,
-      "candle_high": 4181.0,
-      "candle_low": 4175.8,
-      "prev_candle_high": 4178.5,
-      "prev_candle_low": 4172.1,
-      "candle_time": "14:35 IST",
-      "vwap": 4179.886066717553,
-      "rsi": 54.663675092826374,
-      "pdi": 22.257294943545297,
-      "ndi": 21.27869663224689,
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 4221.0,
+      "candle_high": 4230.0,
+      "candle_low": 4220.0,
+      "prev_candle_high": 4235.4,
+      "prev_candle_low": 4219.0,
+      "candle_time": "09:35 IST",
+      "vwap": 4216.240384326398,
+      "rsi": 70.2569217387519,
+      "pdi": 39.36762089837157,
+      "ndi": 12.021150874542045,
       "atm_strike": 4200,
       "strike_step": 50
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "RELIANCE",
+      "direction": "CE",
+      "candle_time": "09:35 IST",
+      "futures_price": 1314.8,
+      "spot_ltp": 1314.8,
+      "fut_spot_spread": null,
+      "tradingsymbol": "RELIANCE26JUN1300CE",
+      "strike": 1300,
+      "expiry": "2026-06-30",
+      "fetch_time": "09:41:33 IST",
+      "atm_ltp": 36.15,
+      "opt_target": 38.93,
+      "opt_sl": 34.3,
+      "spot_tgt": 1320.35,
+      "spot_sl": 1311.1,
+      "raw_risk": 3.7,
+      "conviction": "HIGH",
+      "rr": 1.5,
+      "rsi": 69.01063006493087,
+      "pdi": 31.106902238248978,
+      "ndi": 17.585274711649763,
+      "vwap": 1311.3012970092554,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "asset_class": "STOCK"
+    }
+  ],
   "history": [
     {
-      "time": "14:35 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "RELIANCE",
       "ce_conditions": [
         true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 52.37193703859818,
-      "pdi": 20.69748470041011,
-      "ndi": 21.962580911705206,
-      "price": 1308.3
-    },
-    {
-      "time": "14:35 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
         true,
-        false,
         true,
         true
       ],
       "pe_conditions": [
         false,
-        false,
+        true,
         false,
         false
       ],
-      "ce_signal": false,
+      "ce_signal": true,
       "pe_signal": false,
-      "rsi": 55.3784414783415,
-      "pdi": 26.489711067288443,
-      "ndi": 20.773929970767078,
-      "price": 1337.0
+      "rsi": 69.01063006493087,
+      "pdi": 31.106902238248978,
+      "ndi": 17.585274711649763,
+      "price": 1314.8
     },
     {
-      "time": "14:35 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.83262878958542,
-      "pdi": 15.521410222427852,
-      "ndi": 20.235130518900338,
-      "price": 1136.2
-    },
-    {
-      "time": "14:35 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 59.81053528793553,
-      "pdi": 27.47885331806102,
-      "ndi": 22.89345443368518,
-      "price": 948.3
-    },
-    {
-      "time": "14:35 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 54.312025795488495,
-      "pdi": 18.109600517050154,
-      "ndi": 10.101218975723436,
-      "price": 1805.1
-    },
-    {
-      "time": "14:35 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 58.10779425621451,
-      "pdi": 24.159765674065977,
-      "ndi": 18.303150927441898,
-      "price": 3160.0
-    },
-    {
-      "time": "14:35 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 54.663675092826374,
-      "pdi": 22.257294943545297,
-      "ndi": 21.27869663224689,
-      "price": 4178.7
-    },
-    {
-      "time": "14:20 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 55.71075851316766,
-      "pdi": 23.513409886797124,
-      "ndi": 18.212643079976765,
-      "price": 1308.9
-    },
-    {
-      "time": "14:20 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "ICICIBANK",
       "ce_conditions": [
         false,
@@ -416,103 +294,16 @@
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 32.50130549108141,
-      "pdi": 18.098741116374836,
-      "ndi": 27.342354109447136,
-      "price": 1331.8
+      "rsi": 43.2572938010327,
+      "pdi": 27.738062226422638,
+      "ndi": 25.64121070661221,
+      "price": 1329.6
     },
     {
-      "time": "14:20 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "INFY",
       "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 45.894365036765805,
-      "pdi": 18.67610466887237,
-      "ndi": 22.037142270205486,
-      "price": 1135.8
-    },
-    {
-      "time": "14:20 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 45.8528049378986,
-      "pdi": 18.310300399500733,
-      "ndi": 27.70618292360675,
-      "price": 945.45
-    },
-    {
-      "time": "14:20 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 52.02045236049033,
-      "pdi": 17.315147951673495,
-      "ndi": 13.008368543317761,
-      "price": 1804.4
-    },
-    {
-      "time": "14:20 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 54.35849531457044,
-      "pdi": 20.806788575938675,
-      "ndi": 20.835429686798413,
-      "price": 3156.8
-    },
-    {
-      "time": "14:20 IST",
-      "instrument": "LT",
-      "ce_conditions": [
         true,
         false,
         true,
@@ -526,79 +317,14 @@
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 50.639213136206834,
-      "pdi": 19.20340351054483,
-      "ndi": 25.810769106443885,
-      "price": 4175.0
+      "rsi": 73.77011359076351,
+      "pdi": 25.30183577160662,
+      "ndi": 25.468154239665267,
+      "price": 1144.5
     },
     {
-      "time": "14:00 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 50.78773861963207,
-      "pdi": 26.03259878596656,
-      "ndi": 17.17151384513649,
-      "price": 1307.9
-    },
-    {
-      "time": "14:00 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 27.947034887025154,
-      "pdi": 14.485206964444139,
-      "ndi": 32.289763397861805,
-      "price": 1331.3
-    },
-    {
-      "time": "14:00 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 51.090969557710764,
-      "pdi": 20.4885799960069,
-      "ndi": 20.313738847427608,
-      "price": 1136.8
-    },
-    {
-      "time": "14:00 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "BAJFINANCE",
       "ce_conditions": [
         false,
@@ -614,13 +340,14 @@
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 47.59034126067367,
-      "pdi": 22.84114886913993,
-      "ndi": 24.70052699189323,
-      "price": 945.95
+      "rsi": 72.06501130674428,
+      "pdi": 35.85190643701485,
+      "ndi": 14.01009262271217,
+      "price": 960.8
     },
     {
-      "time": "14:00 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "SUNPHARMA",
       "ce_conditions": [
         false,
@@ -636,13 +363,14 @@
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 46.71778778209681,
-      "pdi": 19.64636474752537,
-      "ndi": 15.53520137987767,
-      "price": 1802.9
+      "rsi": 45.82030510088637,
+      "pdi": 13.7809257630917,
+      "ndi": 21.130252809626093,
+      "price": 1803.6
     },
     {
-      "time": "14:00 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "M&M",
       "ce_conditions": [
         false,
@@ -654,17 +382,18 @@
         true,
         false,
         false,
-        false
+        true
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 61.69642759542067,
-      "pdi": 25.17860734140632,
-      "ndi": 13.29421584460472,
-      "price": 3162.2
+      "rsi": 40.296704608802145,
+      "pdi": 24.5185150242326,
+      "ndi": 25.64134593068094,
+      "price": 3133.3
     },
     {
-      "time": "14:00 IST",
+      "time": "09:41",
+      "candle_time": "09:35 IST",
       "instrument": "LT",
       "ce_conditions": [
         false,
@@ -680,2474 +409,10 @@
       ],
       "ce_signal": false,
       "pe_signal": false,
-      "rsi": 46.51105192782264,
-      "pdi": 20.036716029527387,
-      "ndi": 24.848795977819528,
-      "price": 4173.0
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.99975834318985,
-      "pdi": 22.88074212717355,
-      "ndi": 20.097248788086628,
-      "price": 1307.3
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 29.465526942615668,
-      "pdi": 17.012472994541884,
-      "ndi": 35.45198526790713,
-      "price": 1332.4
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 46.755983881451535,
-      "pdi": 17.621672309022205,
-      "ndi": 22.771284847743672,
-      "price": 1135.8
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.51624613394091,
-      "pdi": 18.74762077212715,
-      "ndi": 26.7295347563173,
-      "price": 945.95
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.02106599782434,
-      "pdi": 17.996119330835413,
-      "ndi": 17.064825805549795,
-      "price": 1803.0
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 58.75078018472882,
-      "pdi": 27.535357090038847,
-      "ndi": 14.854221354003146,
-      "price": 3158.2
-    },
-    {
-      "time": "13:50 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 40.77990134319729,
-      "pdi": 17.364856097965074,
-      "ndi": 30.695372038334405,
-      "price": 4168.9
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 46.855386605509246,
-      "pdi": 25.32206651268485,
-      "ndi": 20.018710201352036,
-      "price": 1307.1
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 33.105312320117505,
-      "pdi": 19.506571982534997,
-      "ndi": 26.803446470600647,
-      "price": 1334.0
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.76263128159188,
-      "pdi": 19.296482017927403,
-      "ndi": 20.390011090599145,
-      "price": 1136.3
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.54590956477366,
-      "pdi": 20.020273662891107,
-      "ndi": 26.35423916729206,
-      "price": 946.2
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.82414458348048,
-      "pdi": 19.067672967547423,
-      "ndi": 18.08092687798834,
-      "price": 1803.3
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 64.01675547902728,
-      "pdi": 28.355226004958645,
-      "ndi": 16.336301745447578,
-      "price": 3162.3
-    },
-    {
-      "time": "13:45 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 44.55516850058228,
-      "pdi": 19.94865153478254,
-      "ndi": 22.77456365986461,
-      "price": 4172.5
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 42.75846006266946,
-      "pdi": 20.960877754754915,
-      "ndi": 25.17405860720387,
-      "price": 1306.5
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 37.883215178601674,
-      "pdi": 20.72863609381105,
-      "ndi": 24.44524620995449,
-      "price": 1336.0
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.80561732700642,
-      "pdi": 19.258714270438684,
-      "ndi": 19.570197211416883,
-      "price": 1136.2
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 44.487100467143705,
-      "pdi": 17.47834211202804,
-      "ndi": 29.267297631713,
-      "price": 945.4
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 46.32510292917983,
-      "pdi": 17.063098482336994,
-      "ndi": 19.381810108237126,
-      "price": 1803.1
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 62.68952399539045,
-      "pdi": 30.101756147962398,
-      "ndi": 18.844976537558576,
-      "price": 3159.0
-    },
-    {
-      "time": "13:25 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.066328722110484,
-      "pdi": 18.328975738700944,
-      "ndi": 25.765680596740232,
-      "price": 4175.1
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 34.77143602943883,
-      "pdi": 14.203929467327026,
-      "ndi": 29.160419196689272,
-      "price": 1305.5
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 35.97792461467262,
-      "pdi": 15.712333755800985,
-      "ndi": 29.150047738052482,
-      "price": 1336.5
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 44.84421670230333,
-      "pdi": 17.70943274322209,
-      "ndi": 22.323172668039653,
-      "price": 1135.4
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 44.39736402493825,
-      "pdi": 16.759623688535964,
-      "ndi": 28.158443517568355,
-      "price": 946.15
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 46.824366878117374,
-      "pdi": 15.543799666238117,
-      "ndi": 21.468050956021926,
-      "price": 1803.4
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 62.98563919138302,
-      "pdi": 30.56476367121318,
-      "ndi": 18.05302051221236,
-      "price": 3157.0
-    },
-    {
-      "time": "13:00 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.539446950718585,
-      "pdi": 22.932165924031796,
-      "ndi": 21.801453531834607,
-      "price": 4176.7
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 31.780218851379786,
-      "pdi": 14.049566654164932,
-      "ndi": 31.51492692951617,
-      "price": 1305.0
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 39.11110110942403,
-      "pdi": 17.055099215555956,
-      "ndi": 26.663560239577382,
-      "price": 1337.8
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 52.829560990947115,
-      "pdi": 20.650942176375896,
-      "ndi": 20.66264167082371,
-      "price": 1138.5
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 45.5308814284259,
-      "pdi": 16.457945650173887,
-      "ndi": 26.347743222932113,
-      "price": 946.55
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.54481757411895,
-      "pdi": 16.0778272885638,
-      "ndi": 20.771156041630256,
-      "price": 1803.7
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 60.86698815666027,
-      "pdi": 31.161997982620328,
-      "ndi": 19.57510131925179,
-      "price": 3152.1
-    },
-    {
-      "time": "12:50 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 54.907019641635195,
-      "pdi": 25.864876157247032,
-      "ndi": 19.401636596543838,
-      "price": 4183.4
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 32.54630460366833,
-      "pdi": 16.31412024144744,
-      "ndi": 28.061797346579187,
-      "price": 1305.7
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 42.40005597861047,
-      "pdi": 19.924823137535178,
-      "ndi": 24.069329941326238,
-      "price": 1339.4
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.2407129887145,
-      "pdi": 19.905872258477473,
-      "ndi": 24.446745660499676,
-      "price": 1136.7
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.85507771191036,
-      "pdi": 20.663348582937083,
-      "ndi": 22.279200137033932,
-      "price": 947.7
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 53.921006119250904,
-      "pdi": 19.190963471258033,
-      "ndi": 16.532663216280135,
-      "price": 1806.0
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 56.5641157394055,
-      "pdi": 26.375921913256867,
-      "ndi": 18.033448580900963,
-      "price": 3144.6
-    },
-    {
-      "time": "12:35 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 49.42733449910265,
-      "pdi": 22.651948146590026,
-      "ndi": 22.38760367937686,
-      "price": 4177.2
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 37.382790373528856,
-      "pdi": 18.926165100198045,
-      "ndi": 26.628224296930828,
-      "price": 1307.5
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 34.32255834174343,
-      "pdi": 16.198294914563338,
-      "ndi": 27.062774784459442,
-      "price": 1337.2
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 49.0060839138354,
-      "pdi": 20.63806152709992,
-      "ndi": 26.032119595726876,
-      "price": 1137.0
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 49.549326976015614,
-      "pdi": 22.692197380772622,
-      "ndi": 22.511838063515118,
-      "price": 948.2
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 55.30183821477497,
-      "pdi": 19.815411753696086,
-      "ndi": 18.508340066708403,
-      "price": 1806.3
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 52.35100667342165,
-      "pdi": 23.460574566456984,
-      "ndi": 21.159196104536267,
-      "price": 3137.0
-    },
-    {
-      "time": "12:25 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 49.96529300170203,
-      "pdi": 25.414641333130522,
-      "ndi": 19.77823816990323,
-      "price": 4178.0
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 43.573863677628204,
-      "pdi": 22.136117927913343,
-      "ndi": 20.911912450043967,
-      "price": 1309.5
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 30.28781388323513,
-      "pdi": 16.393704765615055,
-      "ndi": 31.633611455382756,
-      "price": 1337.0
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.71782340812439,
-      "pdi": 22.50431565280978,
-      "ndi": 27.654469354675655,
-      "price": 1136.9
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.37377370445421,
-      "pdi": 20.099271702887968,
-      "ndi": 25.14272962894538,
-      "price": 947.8
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 41.90374120828497,
-      "pdi": 16.243766895690094,
-      "ndi": 21.006721621331845,
-      "price": 1801.5
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 51.68448332129976,
-      "pdi": 21.233569026565878,
-      "ndi": 24.224418226256052,
-      "price": 3135.4
-    },
-    {
-      "time": "12:15 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 56.35906658427133,
-      "pdi": 28.464209022976235,
-      "ndi": 16.918492096819506,
-      "price": 4184.5
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 59.306432806379746,
-      "pdi": 30.089134603591575,
-      "ndi": 10.049537493633068,
-      "price": 1313.8
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 43.25877402995856,
-      "pdi": 21.737637602153164,
-      "ndi": 22.262982939773956,
-      "price": 1342.9
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 54.36651852182444,
-      "pdi": 33.63796859622947,
-      "ndi": 20.920330045116664,
-      "price": 1137.8
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 58.42218158983533,
-      "pdi": 29.923123905031336,
-      "ndi": 17.514070477709982,
-      "price": 951.2
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 47.31615330619526,
-      "pdi": 17.41662986952947,
-      "ndi": 19.0611879116144,
-      "price": 1803.7
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 71.14317353539167,
-      "pdi": 30.031195033966505,
-      "ndi": 10.893496911544357,
-      "price": 3146.8
-    },
-    {
-      "time": "11:40 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 63.812092053408136,
-      "pdi": 36.44185795718314,
-      "ndi": 15.217181690989035,
-      "price": 4190.5
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 60.37319738358238,
-      "pdi": 30.940227315569516,
-      "ndi": 10.333795855738279,
-      "price": 1314.1
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 46.52882836800991,
-      "pdi": 23.06884233076932,
-      "ndi": 21.585038856748184,
-      "price": 1344.1
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 63.97989871030247,
-      "pdi": 36.7214699286928,
-      "ndi": 16.577834962073545,
-      "price": 1141.8
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 56.62970136630806,
-      "pdi": 30.386722270845283,
-      "ndi": 18.22601921920862,
-      "price": 950.3
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 48.272678297857134,
-      "pdi": 16.884039464463214,
-      "ndi": 19.79505143837193,
-      "price": 1804.1
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 70.1091674394924,
-      "pdi": 32.64336160417196,
-      "ndi": 11.841032580131241,
-      "price": 3145.0
-    },
-    {
-      "time": "11:35 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 64.67176737054825,
-      "pdi": 37.40867252585926,
-      "ndi": 15.62089856432534,
-      "price": 4191.5
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 61.79563665512115,
-      "pdi": 33.48677108945649,
-      "ndi": 10.658170638645945,
-      "price": 1314.2
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 42.809588647948864,
-      "pdi": 24.00122534504561,
-      "ndi": 26.558435654604256,
-      "price": 1343.2
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 73.94905859874052,
-      "pdi": 45.31973474615949,
-      "ndi": 10.591857262584227,
-      "price": 1145.0
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 59.40362046727293,
-      "pdi": 34.50495124756237,
-      "ndi": 17.052842505643486,
-      "price": 951.3
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 56.67941875838066,
-      "pdi": 21.16684382316197,
-      "ndi": 12.215143805393165,
-      "price": 1806.7
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 75.96749047222735,
-      "pdi": 36.09210492722965,
-      "ndi": 10.274972020801165,
-      "price": 3145.6
-    },
-    {
-      "time": "11:15 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 61.400565858682015,
-      "pdi": 37.604409742544156,
-      "ndi": 16.91730344958103,
-      "price": 4184.1
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 59.72885352711278,
-      "pdi": 32.662818507976034,
-      "ndi": 10.437419168705821,
-      "price": 1312.6
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 61.60394097464939,
-      "pdi": 29.24639743205525,
-      "ndi": 12.68745331861009,
-      "price": 1348.3
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 66.92455738836901,
-      "pdi": 35.166078918084146,
-      "ndi": 14.322643273635308,
-      "price": 1132.1
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 76.34664423460774,
-      "pdi": 47.31896497556555,
-      "ndi": 7.39135176665009,
-      "price": 958.5
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 53.133320206823406,
-      "pdi": 19.95365492430597,
-      "ndi": 12.557931704487158,
-      "price": 1805.1
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 78.4674232827814,
-      "pdi": 36.97506202240591,
-      "ndi": 9.764267334644128,
-      "price": 3139.0
-    },
-    {
-      "time": "10:45 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        true,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 73.77594693175247,
-      "pdi": 48.93031147167797,
-      "ndi": 8.477688334442982,
-      "price": 4201.8
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 63.65351755052406,
-      "pdi": 37.095891566463514,
-      "ndi": 7.070514857313494,
-      "price": 1314.5
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 64.7764651716764,
-      "pdi": 33.129847500708124,
-      "ndi": 13.430339540417025,
-      "price": 1348.9
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 68.79005318984677,
-      "pdi": 38.62743779800829,
-      "ndi": 13.38412825547345,
-      "price": 1132.0
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 77.36012791756262,
-      "pdi": 50.18214611939811,
-      "ndi": 6.8032886273283815,
-      "price": 957.9
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 43.730199872107626,
-      "pdi": 14.065227499438885,
-      "ndi": 14.666547487941644,
-      "price": 1801.8
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 79.09490347453226,
-      "pdi": 36.10189388411708,
-      "ndi": 10.234627730120645,
-      "price": 3134.0
-    },
-    {
-      "time": "10:30 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 79.88201520386197,
-      "pdi": 53.94461765150321,
-      "ndi": 9.310720403844048,
-      "price": 4211.9
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 67.99146197636527,
-      "pdi": 38.16604122446374,
-      "ndi": 8.142421870242035,
-      "price": 1315.4
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 57.875233867602546,
-      "pdi": 32.786891780232985,
-      "ndi": 14.870844600598193,
-      "price": 1346.2
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 65.62798267700728,
-      "pdi": 38.86636429411891,
-      "ndi": 15.355916620448124,
-      "price": 1130.0
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 74.6918518362042,
-      "pdi": 50.190056314343835,
-      "ndi": 7.073955688823669,
-      "price": 953.8
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 40.672910437777404,
-      "pdi": 15.977404937363962,
-      "ndi": 13.470296058622413,
-      "price": 1801.4
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 79.26328572466171,
-      "pdi": 39.22201756240909,
-      "ndi": 8.269484957524837,
-      "price": 3134.0
-    },
-    {
-      "time": "10:20 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 75.34780741343866,
-      "pdi": 47.1655629934938,
-      "ndi": 10.863462924183704,
-      "price": 4185.2
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 66.3554809712166,
-      "pdi": 40.063371821140194,
-      "ndi": 8.547202288902678,
-      "price": 1313.8
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 60.18996908897548,
-      "pdi": 34.479938006462426,
-      "ndi": 13.736294848228017,
-      "price": 1346.8
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 63.95828149652555,
-      "pdi": 37.517234643683466,
-      "ndi": 16.297467010980153,
-      "price": 1129.0
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        true,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 79.18161488464966,
-      "pdi": 52.77489798177474,
-      "ndi": 7.438271984934411,
-      "price": 956.0
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 39.23089012126966,
-      "pdi": 16.39171934206124,
-      "ndi": 14.16988918902575,
-      "price": 1801.0
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 79.23803263034415,
-      "pdi": 39.85481577203559,
-      "ndi": 8.54762654366759,
-      "price": 3133.9
-    },
-    {
-      "time": "10:15 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 74.43755800622286,
-      "pdi": 48.9929697805943,
-      "ndi": 11.284362508946563,
-      "price": 4180.5
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 66.39084315862864,
-      "pdi": 40.28239025793252,
-      "ndi": 6.9233200428843045,
-      "price": 1313.5
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 61.59453534856972,
-      "pdi": 37.464976849414825,
-      "ndi": 14.67086287632286,
-      "price": 1347.0
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "INFY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 57.37248115074976,
-      "pdi": 33.913241115218625,
-      "ndi": 18.6749612497939,
-      "price": 1125.5
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "BAJFINANCE",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        false
-      ],
-      "pe_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 78.97761185778965,
-      "pdi": 53.25000741406661,
-      "ndi": 8.110911097262305,
-      "price": 954.0
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "SUNPHARMA",
-      "ce_conditions": [
-        false,
-        true,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 39.908493633060274,
-      "pdi": 17.756991566658147,
-      "ndi": 13.469354286177955,
-      "price": 1801.5
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "M&M",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 78.55895362375726,
-      "pdi": 42.692711549321324,
-      "ndi": 9.230075111041124,
-      "price": 3130.0
-    },
-    {
-      "time": "10:05 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        true,
-        false,
-        false,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": false,
-      "pe_signal": false,
-      "rsi": 81.70490554179275,
-      "pdi": 53.26015199993869,
-      "ndi": 6.995843168847114,
-      "price": 4193.0
+      "rsi": 70.2569217387519,
+      "pdi": 39.36762089837157,
+      "ndi": 12.021150874542045,
+      "price": 4221.0
     }
   ]
 }
