@@ -95,7 +95,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "12:35 IST",
+      "futures_price": 76645.2,
+      "spot_ltp": 76616.64,
+      "fut_spot_spread": 28.6,
+      "tradingsymbol": "SENSEX2661876600CE",
+      "strike": 76600,
+      "expiry": "2026-06-18",
+      "fetch_time": "12:41:36 IST",
+      "atm_ltp": 360.85,
+      "opt_target": 405.71,
+      "opt_sl": 330.94,
+      "spot_tgt": 76704.6,
+      "spot_sl": 76558.0,
+      "raw_risk": 58.6,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 55.66803809459754,
+      "pdi": 30.524533093098956,
+      "ndi": 28.347335843082316,
+      "vwap": 76621.23697078114,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "12:35",
