@@ -1,6 +1,6 @@
 {
   "date": "2026-06-17",
-  "last_run": "2026-06-17T12:41:35.284659+05:30",
+  "last_run": "2026-06-17T12:46:07.354939+05:30",
   "token_valid": true,
   "instruments": [
     {
@@ -21,16 +21,16 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 1328.5,
-      "candle_high": 1329.0,
-      "candle_low": 1327.2,
-      "prev_candle_high": 1328.7,
-      "prev_candle_low": 1327.4,
-      "candle_time": "12:35 IST",
-      "vwap": 1328.0870443530869,
-      "rsi": 46.71873150247604,
-      "pdi": 10.063555364113,
-      "ndi": 22.658125534001165,
+      "futures_price": 1329.0,
+      "candle_high": 1329.9,
+      "candle_low": 1328.1,
+      "prev_candle_high": 1329.0,
+      "prev_candle_low": 1327.2,
+      "candle_time": "12:40 IST",
+      "vwap": 1328.1127888274184,
+      "rsi": 49.1626742924099,
+      "pdi": 13.046754706172846,
+      "ndi": 20.965593667391243,
       "atm_strike": 1350,
       "strike_step": 50
     },
@@ -39,29 +39,29 @@
       "sector": "Private Banking",
       "lot_size": 700,
       "ce": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1335.1,
-      "candle_high": 1336.4,
-      "candle_low": 1334.6,
+      "pe": {
+        "c1": false,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 1335.7,
+      "candle_high": 1336.9,
+      "candle_low": 1334.7,
       "prev_candle_high": 1336.4,
-      "prev_candle_low": 1335.0,
-      "candle_time": "12:35 IST",
-      "vwap": 1340.0016707366638,
-      "rsi": 36.268711036466016,
-      "pdi": 10.69757304294029,
-      "ndi": 26.699273034716793,
+      "prev_candle_low": 1334.6,
+      "candle_time": "12:40 IST",
+      "vwap": 1339.9050809292123,
+      "rsi": 39.18755992414093,
+      "pdi": 11.651649022594352,
+      "ndi": 24.581752585737828,
       "atm_strike": 1340,
       "strike_step": 20
     },
@@ -70,7 +70,7 @@
       "sector": "IT",
       "lot_size": 400,
       "ce": {
-        "c1": false,
+        "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
@@ -83,16 +83,16 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 1154.6,
-      "candle_high": 1155.2,
-      "candle_low": 1153.6,
-      "prev_candle_high": 1155.1,
-      "prev_candle_low": 1154.2,
-      "candle_time": "12:35 IST",
-      "vwap": 1156.9183068684913,
-      "rsi": 45.57193801262657,
-      "pdi": 16.99866349529674,
-      "ndi": 21.55609459401127,
+      "futures_price": 1155.5,
+      "candle_high": 1155.8,
+      "candle_low": 1154.6,
+      "prev_candle_high": 1155.2,
+      "prev_candle_low": 1153.6,
+      "candle_time": "12:40 IST",
+      "vwap": 1156.8984397121162,
+      "rsi": 50.13115669696891,
+      "pdi": 18.572319547040514,
+      "ndi": 20.528200505388455,
       "atm_strike": 1160,
       "strike_step": 20
     },
@@ -114,16 +114,16 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 958.1,
-      "candle_high": 960.4,
-      "candle_low": 957.9,
-      "prev_candle_high": 960.75,
-      "prev_candle_low": 959.05,
-      "candle_time": "12:35 IST",
-      "vwap": 957.7475480671459,
-      "rsi": 46.93676246931608,
-      "pdi": 22.333025089644547,
-      "ndi": 19.893822375768234,
+      "futures_price": 957.9,
+      "candle_high": 958.9,
+      "candle_low": 957.25,
+      "prev_candle_high": 960.4,
+      "prev_candle_low": 957.9,
+      "candle_time": "12:40 IST",
+      "vwap": 957.7523063674457,
+      "rsi": 46.106826129484006,
+      "pdi": 20.855114439270626,
+      "ndi": 21.18426245314292,
       "atm_strike": 1000,
       "strike_step": 100
     },
@@ -132,29 +132,29 @@
       "sector": "Pharma",
       "lot_size": 400,
       "ce": {
-        "c1": true,
-        "c2": false,
-        "c3": false,
-        "c4": true,
-        "signal": false
-      },
-      "pe": {
         "c1": false,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 1809.0,
-      "candle_high": 1809.7,
-      "candle_low": 1806.5,
-      "prev_candle_high": 1807.1,
-      "prev_candle_low": 1806.0,
-      "candle_time": "12:35 IST",
-      "vwap": 1812.502472964757,
-      "rsi": 50.88991948851381,
-      "pdi": 27.07445854846941,
-      "ndi": 16.692601808905852,
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 1808.9,
+      "candle_high": 1809.6,
+      "candle_low": 1807.9,
+      "prev_candle_high": 1809.7,
+      "prev_candle_low": 1806.5,
+      "candle_time": "12:40 IST",
+      "vwap": 1812.4663947079785,
+      "rsi": 50.6175101441149,
+      "pdi": 25.806308445842824,
+      "ndi": 15.91073115176337,
       "atm_strike": 1800,
       "strike_step": 20
     },
@@ -176,16 +176,16 @@
         "c4": false,
         "signal": false
       },
-      "futures_price": 3127.0,
-      "candle_high": 3128.5,
-      "candle_low": 3126.0,
-      "prev_candle_high": 3134.2,
-      "prev_candle_low": 3125.2,
-      "candle_time": "12:35 IST",
-      "vwap": 3144.834263128864,
-      "rsi": 36.95192821427439,
-      "pdi": 18.440296639860623,
-      "ndi": 29.918915185553214,
+      "futures_price": 3129.0,
+      "candle_high": 3130.3,
+      "candle_low": 3126.7,
+      "prev_candle_high": 3128.5,
+      "prev_candle_low": 3126.0,
+      "candle_time": "12:40 IST",
+      "vwap": 3144.629995971838,
+      "rsi": 39.761640786826334,
+      "pdi": 19.87092820349015,
+      "ndi": 28.562662120511163,
       "atm_strike": 3150,
       "strike_step": 50
     },
@@ -194,35 +194,196 @@
       "sector": "Engineering/Infra",
       "lot_size": 175,
       "ce": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "signal": false
-      },
-      "pe": {
         "c1": true,
         "c2": false,
         "c3": false,
         "c4": false,
         "signal": false
       },
-      "futures_price": 4201.9,
-      "candle_high": 4204.0,
-      "candle_low": 4200.4,
-      "prev_candle_high": 4205.0,
-      "prev_candle_low": 4200.8,
-      "candle_time": "12:35 IST",
-      "vwap": 4189.342424950697,
-      "rsi": 57.865941011837286,
-      "pdi": 25.762613473778472,
-      "ndi": 17.26023544705449,
+      "pe": {
+        "c1": false,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "signal": false
+      },
+      "futures_price": 4204.7,
+      "candle_high": 4204.9,
+      "candle_low": 4200.9,
+      "prev_candle_high": 4204.0,
+      "prev_candle_low": 4200.4,
+      "candle_time": "12:40 IST",
+      "vwap": 4189.554414955766,
+      "rsi": 60.555856062311975,
+      "pdi": 25.598059905394805,
+      "ndi": 16.389696121212207,
       "atm_strike": 4200,
       "strike_step": 50
     }
   ],
   "active_signals": [],
   "history": [
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "RELIANCE",
+      "ce_conditions": [
+        true,
+        true,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        true,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 49.1626742924099,
+      "pdi": 13.046754706172846,
+      "ndi": 20.965593667391243,
+      "price": 1329.0
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "ICICIBANK",
+      "ce_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 39.18755992414093,
+      "pdi": 11.651649022594352,
+      "ndi": 24.581752585737828,
+      "price": 1335.7
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "INFY",
+      "ce_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 50.13115669696891,
+      "pdi": 18.572319547040514,
+      "ndi": 20.528200505388455,
+      "price": 1155.5
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "BAJFINANCE",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 46.106826129484006,
+      "pdi": 20.855114439270626,
+      "ndi": 21.18426245314292,
+      "price": 957.9
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "SUNPHARMA",
+      "ce_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 50.6175101441149,
+      "pdi": 25.806308445842824,
+      "ndi": 15.91073115176337,
+      "price": 1808.9
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "M&M",
+      "ce_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 39.761640786826334,
+      "pdi": 19.87092820349015,
+      "ndi": 28.562662120511163,
+      "price": 3129.0
+    },
+    {
+      "time": "12:46",
+      "candle_time": "12:40 IST",
+      "instrument": "LT",
+      "ce_conditions": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "pe_conditions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "ce_signal": false,
+      "pe_signal": false,
+      "rsi": 60.555856062311975,
+      "pdi": 25.598059905394805,
+      "ndi": 16.389696121212207,
+      "price": 4204.7
+    },
     {
       "time": "12:41",
       "candle_time": "12:35 IST",
