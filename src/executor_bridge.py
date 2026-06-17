@@ -41,10 +41,12 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
     """
     instrument = instrument_cfg.get("name", "NIFTY")
 
-    # SENSEX is alert-only — the executor (repo 2) is hardcoded NIFTY/NFO-only.
-    # A SENSEX intent would be mishandled, so never write one.
-    if instrument == "SENSEX":
-        print("[executor_bridge] SENSEX is alert-only — skipping executor intent")
+    # Executor v1 is NIFTY-only (spec §1, §21 — BANKNIFTY deferred to v2,
+    # SENSEX is alert-only and never gets executor support). Any other
+    # instrument must never produce an executor intent.
+    if instrument != "NIFTY":
+        print(f"[executor_bridge] {instrument} not supported by executor v1 "
+              f"(NIFTY only) — skipping intent, alert-only")
         return False
 
     if not REDIS_URL or not REDIS_TOKEN:
