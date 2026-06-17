@@ -71,9 +71,14 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
     atm_strike       = signal_result.get("atm_strike")
     instrument       = instrument_cfg.get("name", "NIFTY")
     strike_step      = instrument_cfg.get("strike_step", 50)
+    tradingsymbol    = signal_result.get("atm_data", {}).get("tradingsymbol")
 
     if futures_price is None or prev_candle_low is None or prev_candle_high is None:
         print("[executor_bridge] Missing price data — skipping intent write")
+        return False
+
+    if not tradingsymbol:
+        print("[executor_bridge] tradingsymbol missing from atm_data — skipping intent write")
         return False
 
     # SL = previous candle structural extreme.
@@ -95,6 +100,7 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         "ts":            datetime.now(timezone.utc).isoformat(),
         "instrument":    instrument,
         "direction":     direction,
+        "tradingsymbol": tradingsymbol,
         "atm_strike":    atm_strike,
         "spot_close":    round(reference, 2),
         "spot_sl":       round(spot_sl, 2),
