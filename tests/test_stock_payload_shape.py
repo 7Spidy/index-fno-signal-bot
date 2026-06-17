@@ -108,12 +108,11 @@ def test_asset_class_is_stock():
 
 def test_tradingsymbol_in_code_block():
     """stock notifier: tradingsymbol must be inside a triple-backtick code block."""
-    _requests_stub.post.reset_mock()
     symbol = "RELIANCE26JUN1300CE"
-
-    notifier.send_signal("RELIANCE", "CE", _make_stock_payload(symbol))
-
-    call_kwargs = _requests_stub.post.call_args[1]
+    with mock.patch.object(notifier, "requests", _requests_stub):
+        _requests_stub.post.reset_mock()
+        notifier.send_signal("RELIANCE", "CE", _make_stock_payload(symbol))
+        call_kwargs = _requests_stub.post.call_args[1]
     buy_field = _get_field(call_kwargs["json"], "Buy this option")
     expected_prefix = f"```\n{symbol}\n```"
     assert buy_field["value"].startswith(expected_prefix), (
@@ -124,14 +123,12 @@ def test_tradingsymbol_in_code_block():
 
 def test_notifier_emits_spot_field_not_futures_spot():
     """stock notifier: must emit 'Spot' field, not 'Futures / Spot'."""
-    _requests_stub.post.reset_mock()
-
-    notifier.send_signal("RELIANCE", "CE", _make_stock_payload())
-
-    call_kwargs = _requests_stub.post.call_args[1]
+    with mock.patch.object(notifier, "requests", _requests_stub):
+        _requests_stub.post.reset_mock()
+        notifier.send_signal("RELIANCE", "CE", _make_stock_payload())
+        call_kwargs = _requests_stub.post.call_args[1]
     embed = call_kwargs["json"]["embeds"][0]
     field_names = [f["name"] for f in embed["fields"]]
-
     assert "Spot" in field_names, f"'Spot' field missing. Fields: {field_names}"
     assert "Futures / Spot" not in field_names, (
         f"'Futures / Spot' field present for STOCK — should be 'Spot'. Fields: {field_names}"
@@ -141,12 +138,11 @@ def test_notifier_emits_spot_field_not_futures_spot():
 
 def test_spot_field_shows_futures_price():
     """The 'Spot' field value should reflect the equity close (futures_price)."""
-    _requests_stub.post.reset_mock()
     payload = _make_stock_payload()
-
-    notifier.send_signal("RELIANCE", "CE", payload)
-
-    call_kwargs = _requests_stub.post.call_args[1]
+    with mock.patch.object(notifier, "requests", _requests_stub):
+        _requests_stub.post.reset_mock()
+        notifier.send_signal("RELIANCE", "CE", payload)
+        call_kwargs = _requests_stub.post.call_args[1]
     spot_field = _get_field(call_kwargs["json"], "Spot")
     # fi() formats as "1,314.4"
     assert "1,314" in spot_field["value"] or "1314" in spot_field["value"], (

@@ -117,3 +117,7 @@ OPTION_CACHE_RANGE = {
     "M&M":        160,
     "LT":         175,
 }
+
+# DI threshold for C4 — lower than the index threshold (25); stocks are
+# individually noisier and a 25 floor was filtering out otherwise-clean signals.
+DI_THRESHOLD = 24
