@@ -138,11 +138,29 @@ def main() -> None:
             rsi = indicators.rsi_wilder(df)
             pdi, ndi, adx = indicators.dmi_wilder(df)
 
+            exchange  = inst.get("fno_exchange", "NFO")
+            live_key  = f"{exchange}:{token_info['tradingsymbol']}"
+            live_quote = kite_client.get_live_quote(live_key)
+            if live_quote is None:
+                print(f"[main] {name}: live quote unavailable — skipping this run")
+                continue
+
+            live_df = indicators.with_live_bar(df, live_quote["ltp"])
+            live_rsi_s = indicators.rsi_wilder(live_df)
+            live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
+
             inst_cfg = dict(cfg)
             inst_cfg["strike_step"] = inst["strike_step"]
             inst_cfg["instrument_name"] = name
 
-            result = signals.evaluate(df, vwap, rsi, pdi, ndi, inst_cfg)
+            result = signals.evaluate(
+                df, vwap, rsi, pdi, ndi, inst_cfg,
+                live_ltp=live_quote["ltp"],
+                live_vwap=live_quote["vwap"],
+                live_rsi=float(live_rsi_s.iloc[-1]),
+                live_pdi=float(live_pdi_s.iloc[-1]),
+                live_ndi=float(live_ndi_s.iloc[-1]),
+            )
             result["name"] = name
             result["symbol"] = token_info["tradingsymbol"]
             result["strike_step"] = inst["strike_step"]

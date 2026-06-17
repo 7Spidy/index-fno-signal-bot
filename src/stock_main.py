@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from src import calendar_nse, config as idx_cfg, indicators, notifier, state
 from src import stock_config as cfg
-from src.kite_client import fetch_ohlcv, get_kite
+from src.kite_client import fetch_ohlcv, get_kite, get_live_quote
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -151,10 +151,10 @@ def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
 
 def _evaluate(stock: dict, df) -> dict:
     """
-    Run C1–C4 on a single stock. Returns a result dict compatible with
-    the dashboard JSON schema used by the index bot.
-
-    C2 includes VWAP proximity (sole risk gate — no separate candle-width gate).
+    Run C1–C4 on a single stock using live quote + live-recomputed indicators
+    against the two most recently closed candles. Raises on a failed live
+    quote fetch — the caller's existing per-stock try/except turns that into a
+    skip-this-stock-this-run, same as every other failure mode in this loop.
     """
     name       = stock["name"]
     step       = stock["strike_step"]
@@ -164,46 +164,44 @@ def _evaluate(stock: dict, df) -> dict:
     rsi_s            = indicators.rsi_wilder(df)
     vwap_s           = indicators.vwap_session(df, today_open)
 
-    # Latest CLOSED candle = iloc[-2]; still-forming candle = iloc[-1]
-    curr = df.iloc[-2]
-    prev = df.iloc[-3]
+    p0 = df.iloc[-2]
+    p1 = df.iloc[-3]
 
-    spot     = float(curr["close"])
-    vwap_now = float(vwap_s.iloc[-2])
-    rsi_now  = float(rsi_s.iloc[-2])
-    pdi_now  = float(pdi_s.iloc[-2])
-    ndi_now  = float(ndi_s.iloc[-2])
-    pdi_prev = float(pdi_s.iloc[-3])
-    ndi_prev = float(ndi_s.iloc[-3])
+    v0         = float(vwap_s.iloc[-2])
+    r0, r1     = float(rsi_s.iloc[-2]),  float(rsi_s.iloc[-3])
+    pdi0, pdi1 = float(pdi_s.iloc[-2]),  float(pdi_s.iloc[-3])
+    ndi0, ndi1 = float(ndi_s.iloc[-2]),  float(ndi_s.iloc[-3])
 
-    # C1 — momentum (close direction vs prior close)
-    ce_c1 = float(curr["close"]) > float(prev["close"])
-    pe_c1 = float(curr["close"]) < float(prev["close"])
+    live_key   = f"{stock['spot_exchange']}:{stock['equity_symbol']}"
+    live_quote = get_live_quote(live_key)
+    if live_quote is None:
+        raise RuntimeError(f"live quote unavailable for {name}")
+    live_ltp  = live_quote["ltp"]
+    live_vwap = live_quote["vwap"]
 
-    # C2 — VWAP cross within 6-candle lookback + proximity filter
-    # Proximity is the sole risk gate — mirrors index bot design exactly.
-    p_window    = df["close"].iloc[-7:-1].values
-    vwap_window = vwap_s.iloc[-7:-1].values
-    ce_cross = any(
-        p_window[i] > vwap_window[i] and p_window[i - 1] <= vwap_window[i - 1]
-        for i in range(1, len(p_window))
-    )
-    pe_cross = any(
-        p_window[i] < vwap_window[i] and p_window[i - 1] >= vwap_window[i - 1]
-        for i in range(1, len(p_window))
-    )
-    prox_ok = abs(spot - vwap_now) <= cfg.VWAP_PROXIMITY_PTS.get(name, 15)
-    ce_c2   = ce_cross and prox_ok
-    pe_c2   = pe_cross and prox_ok
+    live_df  = indicators.with_live_bar(df, live_ltp)
+    live_rsi = float(indicators.rsi_wilder(live_df).iloc[-1])
+    live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
+    live_pdi = float(live_pdi_s.iloc[-1])
+    live_ndi = float(live_ndi_s.iloc[-1])
 
-    # C3 — RSI slope rising/falling over 3 consecutive candles
-    rsi_vals = rsi_s.iloc[-5:-1].values
-    ce_c3 = len(rsi_vals) >= 3 and all(rsi_vals[i] > rsi_vals[i - 1] for i in range(-3, 0))
-    pe_c3 = len(rsi_vals) >= 3 and all(rsi_vals[i] < rsi_vals[i - 1] for i in range(-3, 0))
+    di_threshold = cfg.DI_THRESHOLD   # 24
 
-    # C4 — DMI dominance + rising vs prior candle
-    ce_c4 = pdi_now > 25 and pdi_now > ndi_now and pdi_now > pdi_prev
-    pe_c4 = ndi_now > 25 and ndi_now > pdi_now and ndi_now > ndi_prev
+    # C1 — momentum: live price vs P0's close
+    ce_c1 = live_ltp > float(p0["close"])
+    pe_c1 = live_ltp < float(p0["close"])
+
+    # C2 — VWAP position (live) + P0 dipped/spiked through VWAP
+    ce_c2 = live_ltp > live_vwap and float(p0["low"])  <= v0
+    pe_c2 = live_ltp < live_vwap and float(p0["high"]) >= v0
+
+    # C3 — RSI direction: live > P0 > P1 (or reverse), no threshold
+    ce_c3 = live_rsi > r0 > r1
+    pe_c3 = live_rsi < r0 < r1
+
+    # C4 — DI threshold, dominance, direction: live > P0 > P1 (or reverse)
+    ce_c4 = live_pdi > di_threshold and live_pdi > live_ndi and live_pdi > pdi0 > pdi1
+    pe_c4 = live_ndi > di_threshold and live_ndi > live_pdi and live_ndi > ndi0 > ndi1
 
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
@@ -214,17 +212,22 @@ def _evaluate(stock: dict, df) -> dict:
         "lot_size":         stock["lot_size"],
         "ce":               {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
         "pe":               {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
-        "futures_price":    spot,        # equity close; labelled futures_price for dashboard compat
-        "candle_high":      float(curr["high"]),
-        "candle_low":       float(curr["low"]),
-        "prev_candle_high": float(prev["high"]),
-        "prev_candle_low":  float(prev["low"]),
-        "candle_time":      curr["timestamp"].strftime("%H:%M IST"),
-        "vwap":             vwap_now,
-        "rsi":              rsi_now,
-        "pdi":              pdi_now,
-        "ndi":              ndi_now,
-        "atm_strike":       round(spot / step) * step,
+        "futures_price":    float(p0["close"]),
+        "candle_high":      float(p0["high"]),
+        "candle_low":       float(p0["low"]),
+        "prev_candle_high": float(p1["high"]),
+        "prev_candle_low":  float(p1["low"]),
+        "candle_time":      p0["timestamp"].strftime("%H:%M IST"),
+        "vwap":             v0,
+        "rsi":              r0,
+        "pdi":              pdi0,
+        "ndi":              ndi0,
+        "live_price":       live_ltp,
+        "live_vwap":        live_vwap,
+        "live_rsi":         live_rsi,
+        "live_pdi":         live_pdi,
+        "live_ndi":         live_ndi,
+        "atm_strike":       round(float(p0["close"]) / step) * step,
         "strike_step":      step,
     }
 

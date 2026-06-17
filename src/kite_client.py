@@ -309,6 +309,35 @@ def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
     return df
 
 
+def get_live_quote(key: str) -> dict | None:
+    """
+    Fetches the live LTP and live session VWAP for one instrument via a single
+    kite.quote() call. `key` is "EXCHANGE:TRADINGSYMBOL", e.g.
+    "NFO:NIFTY26JUNFUT" (index futures) or "NSE:INFY" (stock spot).
+
+    VWAP is read from Kite's own 'average_price' field — see spec §2.1.
+
+    Returns {"ltp": float, "vwap": float}, or None on any failure. Callers must
+    treat None as "skip this instrument this run" — never crash the loop.
+    """
+    try:
+        kite = get_kite()
+        data = kite.quote([key])
+        q = data.get(key)
+        if not q:
+            print(f"[kite_client] get_live_quote({key}): no data in response")
+            return None
+        ltp  = q.get("last_price")
+        vwap = q.get("average_price")
+        if ltp is None or vwap is None:
+            print(f"[kite_client] get_live_quote({key}): missing last_price/average_price")
+            return None
+        return {"ltp": float(ltp), "vwap": float(vwap)}
+    except Exception as e:
+        print(f"[kite_client] get_live_quote({key}) failed: {e}")
+        return None
+
+
 if __name__ == "__main__":
     import sys
     if "--cache-instruments" in sys.argv:

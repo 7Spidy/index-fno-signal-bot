@@ -137,3 +137,26 @@ def _dx(pdi: float, ndi: float) -> float:
     if denom == 0:
         return 0.0
     return 100.0 * abs(pdi - ndi) / denom
+
+
+def with_live_bar(df: pd.DataFrame, live_ltp: float) -> pd.DataFrame:
+    """
+    Returns a copy of df with its last row (the possibly-partial candle this
+    codebase never trusts — see signals' P0 = iloc[-2] convention) dropped and
+    replaced by one synthetic OHLC bar built from P0's close through the live
+    price. Feed the result to rsi_wilder()/dmi_wilder() and read .iloc[-1] for
+    a live-updated indicator value.
+
+    Volume is irrelevant to RSI/DMI math (price-range only) and is set to 0.
+    """
+    p0_close = float(df.iloc[-2]["close"])
+    live_bar = {
+        "timestamp": df.iloc[-2]["timestamp"],
+        "open":  p0_close,
+        "high":  max(p0_close, live_ltp),
+        "low":   min(p0_close, live_ltp),
+        "close": live_ltp,
+        "volume": 0,
+    }
+    base = df.iloc[:-1]   # drop the untrusted partial last row
+    return pd.concat([base, pd.DataFrame([live_bar])], ignore_index=True)

@@ -1,4 +1,4 @@
-"""CE/PE signal evaluation — 4 conditions each, per spec §6."""
+"""CE/PE signal evaluation — 4 conditions each, per spec §6 (live evaluation)."""
 import pandas as pd
 from zoneinfo import ZoneInfo
 
@@ -6,12 +6,16 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
-             pdi: pd.Series, ndi: pd.Series, cfg: dict) -> dict:
+             pdi: pd.Series, ndi: pd.Series, cfg: dict,
+             live_ltp: float, live_vwap: float,
+             live_rsi: float, live_pdi: float, live_ndi: float) -> dict:
     """
-    Evaluates CE and PE conditions on the latest fully-closed candle.
+    Evaluates CE and PE conditions against live quote/indicator values
+    (fetched/recomputed by the caller this run — see kite_client.get_live_quote
+    and indicators.with_live_bar) and the two most recently closed candles.
 
-    c[0] = df.iloc[-2] (latest closed candle)
-    c[1] = df.iloc[-3] (prior candle)
+    P0 = df.iloc[-2] (latest closed candle)
+    P1 = df.iloc[-3] (candle before that)
     """
     strike_step = cfg.get("strike_step", 50)
 
@@ -22,98 +26,56 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
         print("[signals] Insufficient non-null indicator values — skipping evaluation")
         return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
 
-    idx0 = len(df) - 2  # latest closed candle index
-    idx1 = len(df) - 3  # prior candle index
+    if any(v is None or pd.isna(v) for v in (live_ltp, live_vwap, live_rsi, live_pdi, live_ndi)):
+        print("[signals] Missing live quote/indicator values — skipping evaluation")
+        return _empty_result(df, vwap, rsi, pdi, ndi, strike_step)
 
-    c0 = df.iloc[idx0]
-    c1 = df.iloc[idx1]
+    idx0 = len(df) - 2  # P0 — latest closed candle index
+    idx1 = len(df) - 3  # P1 — candle before that
+
+    p0 = df.iloc[idx0]
+    p1 = df.iloc[idx1]
 
     v0 = vwap.iloc[idx0]
-    r0 = rsi.iloc[idx0]
-    p0 = pdi.iloc[idx0]
-    n0 = ndi.iloc[idx0]
+    r0, r1 = rsi.iloc[idx0], rsi.iloc[idx1]
+    pdi0, pdi1 = pdi.iloc[idx0], pdi.iloc[idx1]
+    ndi0, ndi1 = ndi.iloc[idx0], ndi.iloc[idx1]
 
-    momentum_rule     = cfg.get("MOMENTUM_RULE", "close_gt_prev_close")
-    rsi_lookback      = cfg.get("RSI_SLOPE_LOOKBACK", 3)
-    vwap_window       = cfg.get("VWAP_CROSS_WINDOW_CANDLES", 6)
     di_threshold      = cfg.get("DI_THRESHOLD", 25)
     require_dominance = cfg.get("REQUIRE_DI_DOMINANCE", True)
     di_trend_check    = cfg.get("DI_TREND_CHECK", True)
-    vwap_proximity_pts = cfg.get("VWAP_PROXIMITY_PTS", {})
 
-    # C1 — Momentum
-    if momentum_rule == "close_gt_prev_close":
-        ce_c1 = bool(c0["close"] > c1["close"])
-        pe_c1 = bool(c0["close"] < c1["close"])
-    else:  # open_gt_prev_close
-        ce_c1 = bool(c0["open"] > c1["close"])
-        pe_c1 = bool(c0["open"] < c1["close"])
+    # C1 — Momentum: live price vs. P0's close
+    ce_c1 = bool(live_ltp > p0["close"])
+    pe_c1 = bool(live_ltp < p0["close"])
 
-    # C2 — VWAP cross within last vwap_window candles AND price within proximity band
+    # C2 — VWAP position (live) + P0 dipped/spiked through VWAP at some point
     ce_c2 = False
     pe_c2 = False
     if pd.notna(v0):
-        currently_above = c0["close"] > v0
-        currently_below = c0["close"] < v0
+        ce_c2 = bool(live_ltp > live_vwap and p0["low"]  <= v0)
+        pe_c2 = bool(live_ltp < live_vwap and p0["high"] >= v0)
 
-        # Sub-condition 1: recent cross (unchanged)
-        ce_cross = False
-        pe_cross = False
-        for k in range(1, vwap_window + 1):
-            past_idx = idx0 - k
-            if past_idx < 0:
-                break
-            past_close = df.iloc[past_idx]["close"]
-            past_vwap = vwap.iloc[past_idx]
-            if pd.isna(past_vwap):
-                continue
-            if currently_above and past_close <= past_vwap:
-                ce_cross = True
-                break
-            if currently_below and past_close >= past_vwap:
-                pe_cross = True
-                break
-
-        # Sub-condition 2: price within proximity band of VWAP
-        instrument_name = cfg.get("instrument_name", "")
-        proximity_limit = vwap_proximity_pts.get(instrument_name, float("inf"))
-        gap = abs(c0["close"] - v0)
-        within_band = gap <= proximity_limit
-
-        ce_c2 = bool(ce_cross and currently_above and within_band)
-        pe_c2 = bool(pe_cross and currently_below and within_band)
-
-    # C3 — RSI slope over rsi_lookback candles
+    # C3 — RSI direction: live > P0 > P1 (or reverse), no threshold
     ce_c3 = False
     pe_c3 = False
-    if idx0 >= rsi_lookback:
-        rsi_vals = [rsi.iloc[idx0 - i] for i in range(rsi_lookback)]
-        if all(pd.notna(v) for v in rsi_vals):
-            ce_c3 = all(rsi_vals[i] > rsi_vals[i + 1] for i in range(rsi_lookback - 1))
-            pe_c3 = all(rsi_vals[i] < rsi_vals[i + 1] for i in range(rsi_lookback - 1))
+    if pd.notna(r0) and pd.notna(r1):
+        ce_c3 = bool(live_rsi > r0 > r1)
+        pe_c3 = bool(live_rsi < r0 < r1)
 
-    # C4 — DI threshold, dominance, and (optionally) the dominant DI rising
+    # C4 — DI threshold, dominance, and the dominant DI rising (live > P0 > P1)
     ce_c4 = False
     pe_c4 = False
-    if pd.notna(p0) and pd.notna(n0):
-        pdi_now, ndi_now = p0, n0
-        ce_c4 = bool(pdi_now > di_threshold and (pdi_now > ndi_now if require_dominance else True))
-        pe_c4 = bool(ndi_now > di_threshold and (ndi_now > pdi_now if require_dominance else True))
+    if pd.notna(pdi0) and pd.notna(ndi0):
+        ce_c4 = bool(live_pdi > di_threshold and (live_pdi > live_ndi if require_dominance else True))
+        pe_c4 = bool(live_ndi > di_threshold and (live_ndi > live_pdi if require_dominance else True))
 
         if di_trend_check:
             pdi_rising = False
             ndi_rising = False
-            idx2 = idx0 - 2   # two candles prior to the latest closed candle
-            if (pdi.dropna().shape[0] >= 3 and ndi.dropna().shape[0] >= 3
-                    and idx2 >= 0 and idx1 >= 0):
-                pdi_p1 = pdi.iloc[idx1]   # one candle back
-                pdi_p2 = pdi.iloc[idx2]   # two candles back
-                ndi_p1 = ndi.iloc[idx1]
-                ndi_p2 = ndi.iloc[idx2]
-                if pd.notna(pdi_p1) and pd.notna(pdi_p2):
-                    pdi_rising = bool(pdi_now > pdi_p1 > pdi_p2)
-                if pd.notna(ndi_p1) and pd.notna(ndi_p2):
-                    ndi_rising = bool(ndi_now > ndi_p1 > ndi_p2)
+            if pd.notna(pdi1) and pd.notna(ndi1):
+                pdi_rising = bool(live_pdi > pdi0 > pdi1)
+                ndi_rising = bool(live_ndi > ndi0 > ndi1)
             ce_c4 = ce_c4 and pdi_rising
             pe_c4 = pe_c4 and ndi_rising
 
@@ -126,22 +88,27 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
         ce_signal = False
         pe_signal = False
 
-    price = float(c0["close"])
+    price = float(p0["close"])
     atm_strike = round(price / strike_step) * strike_step
 
     return {
         "ce": {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
         "pe": {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
         "futures_price":    round(price, 2),
-        "candle_high":      round(float(c0["high"]), 2),
-        "candle_low":       round(float(c0["low"]),  2),
-        "prev_candle_high": round(float(c1["high"]), 2),
-        "prev_candle_low":  round(float(c1["low"]),  2),
-        "candle_time":      _fmt_candle_time(c0["timestamp"]),
+        "candle_high":      round(float(p0["high"]), 2),
+        "candle_low":       round(float(p0["low"]),  2),
+        "prev_candle_high": round(float(p1["high"]), 2),
+        "prev_candle_low":  round(float(p1["low"]),  2),
+        "candle_time":      _fmt_candle_time(p0["timestamp"]),
         "vwap":          float(v0) if pd.notna(v0) else None,
         "rsi":           float(r0) if pd.notna(r0) else None,
-        "pdi":           float(p0) if pd.notna(p0) else None,
-        "ndi":           float(n0) if pd.notna(n0) else None,
+        "pdi":           float(pdi0) if pd.notna(pdi0) else None,
+        "ndi":           float(ndi0) if pd.notna(ndi0) else None,
+        "live_price":    float(live_ltp),
+        "live_vwap":     float(live_vwap),
+        "live_rsi":      float(live_rsi),
+        "live_pdi":      float(live_pdi),
+        "live_ndi":      float(live_ndi),
         "atm_strike":    int(atm_strike),
     }
 
@@ -161,6 +128,11 @@ def _empty_result(df, vwap, rsi, pdi, ndi, strike_step):
         "rsi":           None,
         "pdi":           None,
         "ndi":           None,
+        "live_price":    None,
+        "live_vwap":     None,
+        "live_rsi":      None,
+        "live_pdi":      None,
+        "live_ndi":      None,
         "atm_strike":    None,
     }
 
