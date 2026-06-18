@@ -52,15 +52,9 @@ CE:  live_ltp > live_vwap   AND   P0.low  <= P0.vwap   (candle dipped to/below V
 PE:  live_ltp < live_vwap   AND   P0.high >= P0.vwap   (candle spiked to/above VWAP)
 ```
 
-The "P0 touched VWAP" clause is the recency filter — it ensures the VWAP interaction happened in the last closed candle, not hours ago. A VWAP proximity filter (per-instrument, in config) is also checked to prevent entries where price has already extended far from VWAP.
+The "P0 touched VWAP" clause is the recency filter — it ensures the VWAP interaction happened in the last closed candle, not hours ago.
 
-```python
-VWAP_PROXIMITY_PTS = {
-    "NIFTY":     40,
-    "BANKNIFTY": 200,
-    "SENSEX":    160,
-}
-```
+Note: `VWAP_PROXIMITY_PTS` is defined in `config.py` and passed to the evaluator, but is not currently applied inside `signals.evaluate()`. It is a planned gate, not an active one.
 
 #### C3 — RSI Trend (3 candles)
 
