@@ -110,7 +110,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "12:15 IST",
+      "futures_price": 77180.0,
+      "spot_ltp": 77174.99,
+      "fut_spot_spread": 5.0,
+      "tradingsymbol": "SENSEX2661877200CE",
+      "strike": 77200,
+      "expiry": "2026-06-18",
+      "fetch_time": "12:21:42 IST",
+      "atm_ltp": 90.2,
+      "opt_target": 111.11,
+      "opt_sl": 76.26,
+      "spot_tgt": 77223.3,
+      "spot_sl": 77142.8,
+      "raw_risk": 32.2,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 59.986849460117035,
+      "pdi": 33.422320745003915,
+      "ndi": 21.63101802922137,
+      "vwap": 77141.42210056772,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "12:16",
