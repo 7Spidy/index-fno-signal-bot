@@ -121,3 +121,8 @@ OPTION_CACHE_RANGE = {
 # DI threshold for C4 — lower than the index threshold (25); stocks are
 # individually noisier and a 25 floor was filtering out otherwise-clean signals.
 DI_THRESHOLD = 24
+
+# Event exclusion — stocks with earnings/dividend/corp-action events in the
+# next N calendar days (inclusive of today) are skipped entirely by stock_main.
+EVENT_LOOKAHEAD_DAYS = 3
+REDIS_EVENT_EXCLUDED_PREFIX = "stock:event_excluded"   # + ":{YYYY-MM-DD}"

@@ -256,6 +256,13 @@ def main() -> None:
         return
     equity_tokens: dict[str, int] = json.loads(raw_equity)
 
+    # Event exclusion — skip stocks with an upcoming earnings/dividend/corp-action
+    # event. Written once daily by morning-login's stock_events.py step; a
+    # missing key just means "nothing excluded today."
+    excluded_key   = f"{cfg.REDIS_EVENT_EXCLUDED_PREFIX}:{date.today().isoformat()}"
+    raw_excluded   = state.redis_get(excluded_key)
+    event_excluded: set[str] = set(json.loads(raw_excluded)) if raw_excluded else set()
+
     now                = datetime.now(IST)
     today_open         = now.replace(hour=9, minute=15, second=0, microsecond=0)
     dashboard          = _load_dashboard()
@@ -267,6 +274,12 @@ def main() -> None:
 
     for stock in cfg.STOCKS:
         name = stock["name"]
+
+        if name in event_excluded:
+            print(f"[stock_main] {name}: skipped — event within "
+                  f"{cfg.EVENT_LOOKAHEAD_DAYS}d (earnings/dividend/corp action)")
+            continue
+
         try:
             token_id = equity_tokens.get(name)
             if not token_id:
