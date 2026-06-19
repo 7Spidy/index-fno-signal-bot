@@ -8,7 +8,8 @@ days to Redis. Fails open: any failure results in an empty (or partial)
 exclusion list plus a Discord warning, never a full block of the stock bot.
 
 Replaced NSE top-corp-info scrape (blocked by Akamai from GH Actions IPs)
-with Yahoo Finance quoteSummary (no auth, works from any IP).
+with Yahoo Finance quoteSummary. Auth requires a one-time crumb handshake
+via fc.yahoo.com + /v1/test/getcrumb (standard Yahoo Finance v10 flow).
 
 Called from morning-login.yml as:
     python -m src.stock_events --cache-event-exclusions
@@ -44,6 +45,22 @@ def _yf_ticker(name: str) -> str:
     return _YF_SYMBOL_MAP.get(name, f"{name}.NS")
 
 
+def _get_yf_session_crumb() -> tuple[requests.Session, str]:
+    """One-time handshake: get cookies + crumb required by Yahoo Finance v10 API."""
+    sess = requests.Session()
+    sess.headers.update(_YF_HEADERS)
+    sess.get("https://fc.yahoo.com", timeout=10)          # seeds A1/A3 cookies
+    r = sess.get(
+        "https://query1.finance.yahoo.com/v1/test/getcrumb",
+        timeout=10,
+    )
+    r.raise_for_status()
+    crumb = r.text.strip()
+    if not crumb:
+        raise RuntimeError("Yahoo Finance returned empty crumb")
+    return sess, crumb
+
+
 def _ts_to_date(ts: int | None) -> date | None:
     if ts is None:
         return None
@@ -57,17 +74,16 @@ def _in_window(d: date, today: date) -> bool:
     return today <= d <= today + timedelta(days=cfg.EVENT_LOOKAHEAD_DAYS - 1)
 
 
-def _has_event(symbol: str, today: date) -> bool:
+def _has_event(symbol: str, today: date, sess: requests.Session, crumb: str) -> bool:
     """
     Checks Yahoo Finance calendarEvents for upcoming earnings or dividend
     ex-date within EVENT_LOOKAHEAD_DAYS. Returns True if any event falls
     in the window. Raises on HTTP error or unparseable response.
     """
     ticker = _yf_ticker(symbol)
-    resp = requests.get(
+    resp = sess.get(
         f"{_YF_BASE}/{ticker}",
-        params={"modules": "calendarEvents"},
-        headers=_YF_HEADERS,
+        params={"modules": "calendarEvents", "crumb": crumb},
         timeout=10,
     )
     resp.raise_for_status()
@@ -97,16 +113,23 @@ def _has_event(symbol: str, today: date) -> bool:
 def compute_excluded() -> tuple[list[str], int]:
     """
     Returns (excluded_symbols, failure_count) — one pass over cfg.STOCKS.
-    Small inter-request delay to stay within Yahoo Finance's rate limits.
+    Gets a Yahoo Finance crumb once, reuses the session for all 12 symbols.
     """
     today    = date.today()
     excluded = []
     failures = 0
 
+    try:
+        sess, crumb = _get_yf_session_crumb()
+        print("[stock_events] Yahoo Finance crumb OK")
+    except Exception as e:
+        print(f"[stock_events] Failed to get Yahoo Finance crumb: {e}")
+        return [], len(cfg.STOCKS)
+
     for stock in cfg.STOCKS:
         symbol = stock["name"]
         try:
-            if _has_event(symbol, today):
+            if _has_event(symbol, today, sess, crumb):
                 excluded.append(symbol)
                 print(f"[stock_events] {symbol}: EXCLUDED")
             else:
