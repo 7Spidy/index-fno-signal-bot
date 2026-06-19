@@ -217,6 +217,40 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .status-signal-pe { color: var(--red); }
 .status-none { color: var(--text-muted); }
 
+/* STOCK ROWS (compact, mobile-friendly) */
+.stock-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+.stock-row:hover { background: var(--surface2); }
+.stock-row-left { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.stock-name { font-family: var(--display); font-weight: 700; font-size: 13px; color: #fff; white-space: nowrap; }
+.stock-sector-chip {
+  font-size: 8px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--text-muted); border: 1px solid var(--border2);
+  padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+}
+.stock-row-mid { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.stock-price { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+.stock-dots-group { display: flex; align-items: center; gap: 4px; }
+.stock-dots-label { font-size: 8px; color: var(--text-muted); margin-right: 2px; }
+.stock-row-right { flex-shrink: 0; }
+.stock-status-chip {
+  font-size: 9px; font-weight: 700; letter-spacing: .05em;
+  padding: 2px 7px; border-radius: 10px; white-space: nowrap;
+}
+.stock-status-signal-ce { background: #00e5a015; color: var(--green); }
+.stock-status-signal-pe { background: #f8717115; color: var(--red); }
+.stock-status-none { background: var(--surface2); color: var(--text-muted); }
+
 /* HISTORY */
 .history-section { margin-top: 20px; }
 .section-title {
@@ -384,6 +418,7 @@ let lastFetchTime = null;
 let lastRunISO = null;
 let activeSignalsMap = {};
 let signalRows = [];
+let stockRows = [];
 
 async function fetchData() {
   const t = Date.now();
@@ -421,7 +456,7 @@ function render(indexData, stockData) {
   renderSignalBanners(indexData.active_signals || []);  // index banners only
   renderInstruments(indexData.instruments || []);        // index cards only
   if (stockData) {
-    renderInstruments(stockData.instruments || [], 'stock-area');
+    renderStockRows(stockData.instruments || []);
   } else {
     document.getElementById('stock-area').innerHTML = '<div class="empty-state">Stock dashboard unavailable.</div>';
   }
@@ -688,6 +723,57 @@ function condRow(pass, label) {
     ? '<span class="check-pass">✓</span>'
     : '<span class="check-fail">✗</span>';
   return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
+}
+
+/* ── Stock rows (compact) ───────────────────────────────────── */
+
+function renderStockRows(instruments) {
+  const area = document.getElementById('stock-area');
+  if (!instruments || instruments.length === 0) {
+    area.innerHTML = '<div class="empty-state">Loading stocks…</div>';
+    return;
+  }
+  stockRows = instruments;
+  area.innerHTML = instruments.map((inst, idx) => buildStockRow(inst, idx)).join('');
+}
+
+function buildStockRow(inst, idx) {
+  const price = inst.futures_price;
+  const priceStr = price
+    ? Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '–';
+  const statusCls = inst.ce?.signal ? 'stock-status-signal-ce'
+    : (inst.pe?.signal ? 'stock-status-signal-pe' : 'stock-status-none');
+  const statusTxt = inst.ce?.signal ? 'CE SIGNAL' : (inst.pe?.signal ? 'PE SIGNAL' : '—');
+  const ceDots = buildDots([inst.ce?.c1, inst.ce?.c2, inst.ce?.c3, inst.ce?.c4]);
+  const peDots = buildDots([inst.pe?.c1, inst.pe?.c2, inst.pe?.c3, inst.pe?.c4]);
+
+  return `
+    <div class="stock-row" onclick="openStockDrawer(${idx})" role="button" tabindex="0">
+      <div class="stock-row-left">
+        <span class="stock-name">${escHtml(inst.name || '')}</span>
+        <span class="stock-sector-chip">${escHtml(inst.sector || '')}</span>
+      </div>
+      <div class="stock-row-mid">
+        <span class="stock-price">${priceStr}</span>
+        <div class="stock-dots-group">
+          <span class="stock-dots-label">CE</span>${ceDots}
+          <span class="stock-dots-label">PE</span>${peDots}
+        </div>
+      </div>
+      <div class="stock-row-right">
+        <span class="stock-status-chip ${statusCls}">${statusTxt}</span>
+      </div>
+    </div>`;
+}
+
+function openStockDrawer(idx) {
+  const inst = stockRows[idx];
+  if (!inst) return;
+  document.getElementById('drawer-content').innerHTML = buildInstrumentCard(inst);
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 /* ── History ────────────────────────────────────────────────── */
