@@ -1,11 +1,14 @@
 """
 stock_events.py — NSE corporate-event exclusion list for the stock bot.
 
-Scrapes NSE's top-corp-info endpoint for the 7 tracked stocks once a day
-(morning-login), and writes the set of symbols with an earnings / dividend /
-split / bonus / AGM event in the next EVENT_LOOKAHEAD_DAYS calendar days to
-Redis. Fails open: any scrape failure results in an empty (or partial)
+Checks Yahoo Finance's calendarEvents API for upcoming earnings and dividend
+ex-dates for tracked stocks. Runs once a day from morning-login and writes
+the set of symbols with an event in the next EVENT_LOOKAHEAD_DAYS calendar
+days to Redis. Fails open: any failure results in an empty (or partial)
 exclusion list plus a Discord warning, never a full block of the stock bot.
+
+Replaced NSE top-corp-info scrape (blocked by Akamai from GH Actions IPs)
+with Yahoo Finance quoteSummary (no auth, works from any IP).
 
 Called from morning-login.yml as:
     python -m src.stock_events --cache-event-exclusions
@@ -14,92 +17,79 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timedelta
+import time
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
 from src import notifier, state
 from src import stock_config as cfg
 
-_BASE = "https://www.nseindia.com"
-
-_HEADERS = {
-    "Authority": "www.nseindia.com",
-    "Accept": "application/json, text/plain, */*",
-    "Origin": "https://www.nseindia.com",
-    "Referer": "https://www.nseindia.com/",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
+_YF_BASE = "https://query1.finance.yahoo.com/v10/finance/quoteSummary"
+_YF_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     ),
+    "Accept": "application/json",
+}
+
+# NSE symbol → Yahoo Finance ticker (only non-trivial mappings)
+_YF_SYMBOL_MAP: dict[str, str] = {
+    "M&M": "M%26M.NS",
 }
 
 
-def _session() -> requests.Session:
-    """Cookie handshake against the homepage, returns a ready session."""
-    sess = requests.Session()
-    sess.headers.update(_HEADERS)
-    sess.get(_BASE, timeout=10)
-    return sess
+def _yf_ticker(name: str) -> str:
+    return _YF_SYMBOL_MAP.get(name, f"{name}.NS")
+
+
+def _ts_to_date(ts: int | None) -> date | None:
+    if ts is None:
+        return None
+    try:
+        return datetime.fromtimestamp(ts, tz=timezone.utc).date()
+    except Exception:
+        return None
 
 
 def _in_window(d: date, today: date) -> bool:
     return today <= d <= today + timedelta(days=cfg.EVENT_LOOKAHEAD_DAYS - 1)
 
 
-def _parse_nse_date(raw: str) -> date | None:
-    """Defensive parse — see spec §2. Returns None (and logs) on failure."""
-    try:
-        return datetime.strptime(raw, "%d-%b-%Y").date()
-    except ValueError:
-        print(f"[stock_events] unparseable date: {raw!r}")
-        return None
-
-
-def _has_event(session: requests.Session, symbol: str, today: date) -> bool:
+def _has_event(symbol: str, today: date) -> bool:
     """
-    One GET to /api/top-corp-info for `symbol`. Uses params={...} dict so
-    M&M's "&" is percent-encoded correctly — do NOT use an f-string URL here.
-    Retries once on 401/403 with a fresh session. Returns True if either
-    corporate_actions or borad_meeting has a matching row in the window.
-    Raises on any other error — caller's per-symbol try/except handles it.
+    Checks Yahoo Finance calendarEvents for upcoming earnings or dividend
+    ex-date within EVENT_LOOKAHEAD_DAYS. Returns True if any event falls
+    in the window. Raises on HTTP error or unparseable response.
     """
-    def _fetch(sess: requests.Session) -> requests.Response:
-        return sess.get(
-            f"{_BASE}/api/top-corp-info",
-            params={"symbol": symbol, "market": "equities"},
-            timeout=10,
-        )
-
-    resp = _fetch(session)
-    if resp.status_code in (401, 403):
-        print(f"[stock_events] {symbol}: {resp.status_code} — rebuilding session and retrying")
-        new_sess = _session()
-        session.cookies.update(new_sess.cookies)
-        resp = _fetch(session)
-
+    ticker = _yf_ticker(symbol)
+    resp = requests.get(
+        f"{_YF_BASE}/{ticker}",
+        params={"modules": "calendarEvents"},
+        headers=_YF_HEADERS,
+        timeout=10,
+    )
     resp.raise_for_status()
     data = resp.json()
 
-    # Corporate actions: dividend, bonus, split
-    for row in data.get("corporate_actions", {}).get("data", []):
-        purpose = (row.get("purpose") or "").lower()
-        if not any(kw in purpose for kw in ("dividend", "bonus", "split")):
-            continue
-        d = _parse_nse_date(row.get("exdate", ""))
+    result = (data.get("quoteSummary") or {}).get("result") or []
+    if not result:
+        return False
+    events = result[0].get("calendarEvents") or {}
+
+    # Upcoming earnings dates (Yahoo may return multiple — check all)
+    for ts_obj in (events.get("earnings") or {}).get("earningsDate") or []:
+        d = _ts_to_date(ts_obj.get("raw"))
         if d and _in_window(d, today):
-            print(f"[stock_events] {symbol}: corp-action match — {row.get('purpose')!r} on {d}")
+            print(f"[stock_events] {symbol}: earnings match on {d}")
             return True
 
-    # Board meetings (note: NSE typo "borad_meeting" is intentional)
-    for row in data.get("borad_meeting", {}).get("data", []):
-        d = _parse_nse_date(row.get("meetingdate", ""))
-        if d and _in_window(d, today):
-            print(f"[stock_events] {symbol}: board-meeting match — {row.get('purpose')!r} on {d}")
-            return True
+    # Dividend ex-date
+    ex_div = _ts_to_date((events.get("exDividendDate") or {}).get("raw"))
+    if ex_div and _in_window(ex_div, today):
+        print(f"[stock_events] {symbol}: ex-dividend match on {ex_div}")
+        return True
 
     return False
 
@@ -107,18 +97,16 @@ def _has_event(session: requests.Session, symbol: str, today: date) -> bool:
 def compute_excluded() -> tuple[list[str], int]:
     """
     Returns (excluded_symbols, failure_count) — one pass over cfg.STOCKS.
-    One shared session is reused across all calls; per-symbol failures are
-    caught and counted without killing the other stocks.
+    Small inter-request delay to stay within Yahoo Finance's rate limits.
     """
     today    = date.today()
     excluded = []
     failures = 0
-    session  = _session()
 
     for stock in cfg.STOCKS:
         symbol = stock["name"]
         try:
-            if _has_event(session, symbol, today):
+            if _has_event(symbol, today):
                 excluded.append(symbol)
                 print(f"[stock_events] {symbol}: EXCLUDED")
             else:
@@ -126,14 +114,15 @@ def compute_excluded() -> tuple[list[str], int]:
         except Exception as e:
             print(f"[stock_events] {symbol}: ERROR — {e}")
             failures += 1
+        time.sleep(0.5)  # 12 stocks × 0.5s = 6s total; well within YF limits
 
     return excluded, failures
 
 
 def cache_event_exclusions() -> None:
     """
-    Entry point. Writes the Redis key (spec §6) and sends the tiered Discord
-    warning (spec §5). Always exits 0 — never raises past this function.
+    Entry point. Writes the Redis key and sends a tiered Discord warning on
+    partial or total failure. Always exits cleanly — never raises.
     """
     try:
         excluded, failures = compute_excluded()
@@ -146,12 +135,12 @@ def cache_event_exclusions() -> None:
 
         if failures == total:
             notifier.send_warning(
-                f"⚠️ STOCK EVENT CHECK: NSE scrape failed for all {total} symbols. "
+                f"⚠️ STOCK EVENT CHECK: scrape failed for all {total} symbols. "
                 "No event exclusions applied today — verify upcoming results/dividends manually."
             )
         elif failures > 0:
             notifier.send_warning(
-                f"⚠️ STOCK EVENT CHECK: NSE scrape failed for {failures}/{total} symbols. "
+                f"⚠️ STOCK EVENT CHECK: scrape failed for {failures}/{total} symbols. "
                 f"Exclusion list may be incomplete. Excluded so far: {excluded or 'none'}"
             )
 
