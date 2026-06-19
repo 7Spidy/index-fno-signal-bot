@@ -100,6 +100,16 @@ def main() -> None:
     # 4. Session open for today (09:15 IST)
     today_open = now_ist.replace(hour=9, minute=15, second=0, microsecond=0)
 
+    # 4.5. Batch-fetch live quotes for all instruments in ONE Kite API call
+    live_keys = []
+    for inst in config.INSTRUMENTS:
+        token_info = instrument_tokens.get(inst["name"])
+        if not token_info:
+            continue
+        exchange = inst.get("fno_exchange", "NFO")
+        live_keys.append(f"{exchange}:{token_info['tradingsymbol']}")
+    live_quotes = kite_client.get_live_quotes_batch(live_keys)
+
     # 5. Per-instrument loop
     results = []
     cfg = config.as_dict()
@@ -140,7 +150,7 @@ def main() -> None:
 
             exchange  = inst.get("fno_exchange", "NFO")
             live_key  = f"{exchange}:{token_info['tradingsymbol']}"
-            live_quote = kite_client.get_live_quote(live_key)
+            live_quote = live_quotes.get(live_key)
             if live_quote is None:
                 print(f"[main] {name}: live quote unavailable — skipping this run")
                 continue

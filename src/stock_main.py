@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from src import calendar_nse, config as idx_cfg, indicators, notifier, state
 from src import stock_config as cfg
-from src.kite_client import fetch_ohlcv, get_kite, get_live_quote
+from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -149,12 +149,14 @@ def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
 
 # ── Condition evaluation ─────────────────────────────────────────────────────
 
-def _evaluate(stock: dict, df) -> dict:
+def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     """
-    Run C1–C4 on a single stock using live quote + live-recomputed indicators
-    against the two most recently closed candles. Raises on a failed live
-    quote fetch — the caller's existing per-stock try/except turns that into a
-    skip-this-stock-this-run, same as every other failure mode in this loop.
+    Run C1–C4 on a single stock using a pre-fetched live quote (from the
+    single batched kite.quote() call made once per run in main()) plus
+    live-recomputed indicators against the two most recently closed candles.
+    Raises if this stock's key is missing from live_quotes — the caller's
+    existing per-stock try/except turns that into a skip-this-stock-this-run,
+    same as every other failure mode in this loop.
     """
     name       = stock["name"]
     step       = stock["strike_step"]
@@ -173,7 +175,7 @@ def _evaluate(stock: dict, df) -> dict:
     ndi0, ndi1 = float(ndi_s.iloc[-2]),  float(ndi_s.iloc[-3])
 
     live_key   = f"{stock['spot_exchange']}:{stock['equity_symbol']}"
-    live_quote = get_live_quote(live_key)
+    live_quote = live_quotes.get(live_key)
     if live_quote is None:
         raise RuntimeError(f"live quote unavailable for {name}")
     live_ltp  = live_quote["ltp"]
@@ -272,6 +274,12 @@ def main() -> None:
 
     target_rr = getattr(idx_cfg, "TARGET_RR", 1.5)
 
+    # Batch-fetch live quotes for all 12 stocks in ONE Kite API call instead
+    # of one call per stock — sidesteps the quote endpoint's 1 req/sec limit
+    # entirely regardless of how many stocks are in cfg.STOCKS.
+    live_keys   = [f"{s['spot_exchange']}:{s['equity_symbol']}" for s in cfg.STOCKS]
+    live_quotes = get_live_quotes_batch(live_keys)
+
     for stock in cfg.STOCKS:
         name = stock["name"]
 
@@ -292,7 +300,7 @@ def main() -> None:
                 print(f"[stock_main] {name}: insufficient candles ({len(df)}) — skipping")
                 continue
 
-            result = _evaluate(stock, df)
+            result = _evaluate(stock, df, live_quotes)
             instrument_results.append(result)
 
             ce_signal   = result["ce"]["signal"]

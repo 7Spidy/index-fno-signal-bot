@@ -79,6 +79,51 @@ STOCKS = [
         "fno_exchange":  "NFO",
         "spot_exchange": "NSE",
     },
+    {
+        "name":          "SBIN",
+        "equity_symbol": "SBIN",
+        "sector":        "PSU Banking",
+        "strike_step":   10,
+        "lot_size":      750,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "BHARTIARTL",
+        "equity_symbol": "BHARTIARTL",
+        "sector":        "Telecom",
+        "strike_step":   20,
+        "lot_size":      475,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "ITC",
+        "equity_symbol": "ITC",
+        "sector":        "FMCG",
+        "strike_step":   10,
+        "lot_size":      1600,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "TATASTEEL",
+        "equity_symbol": "TATASTEEL",
+        "sector":        "Metals",
+        "strike_step":   2.5,
+        "lot_size":      2750,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "ASIANPAINT",
+        "equity_symbol": "ASIANPAINT",
+        "sector":        "Paints/Consumer",
+        "strike_step":   20,
+        "lot_size":      250,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
 ]
 
 # Set of NSE equity tradingsymbols used in morning-login token caching.
@@ -86,19 +131,6 @@ STOCK_EQUITY_SYMBOLS = {s["equity_symbol"] for s in STOCKS}
 
 # Lookup dict: name → config row.
 STOCK_BY_NAME = {s["name"]: s for s in STOCKS}
-
-# VWAP proximity filter — sole risk gate, mirrors index bot C2 design.
-# ~0.35% of typical spot price; slightly wider than NIFTY (0.17%) but
-# consistent with BANKNIFTY (0.36%). Stocks have more intraday volatility.
-VWAP_PROXIMITY_PTS = {
-    "RELIANCE":   12,   # ~0.43% of ~₹2,800
-    "ICICIBANK":   5,   # ~0.36% of ~₹1,400
-    "INFY":        6,   # ~0.38% of ~₹1,600
-    "BAJFINANCE": 30,   # ~0.34% of ~₹8,800
-    "SUNPHARMA":   6,   # ~0.35% of ~₹1,700
-    "M&M":        11,   # ~0.34% of ~₹3,200
-    "LT":         12,   # ~0.34% of ~₹3,500
-}
 
 # All stocks: monthly-only expiry. No weekly options post SEBI Nov 2024.
 USE_WEEKLY = False
@@ -116,6 +148,11 @@ OPTION_CACHE_RANGE = {
     "SUNPHARMA":  100,
     "M&M":        160,
     "LT":         175,
+    "SBIN":         50,
+    "BHARTIARTL":  100,
+    "ITC":          20,
+    "TATASTEEL":    10,
+    "ASIANPAINT":  140,
 }
 
 # DI threshold for C4 — lower than the index threshold (25); stocks are

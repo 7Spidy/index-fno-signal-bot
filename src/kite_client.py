@@ -2,6 +2,7 @@
 import json
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -30,13 +31,25 @@ def _instruments_for(kite: KiteConnect, exchange: str) -> list:
     return _INSTRUMENTS_BY_EXCHANGE[exchange]
 
 
+_KITE_SINGLETON: KiteConnect | None = None
+
+
 def get_kite() -> KiteConnect:
+    """Returns a cached KiteConnect client for this process. The access token
+    is read from Redis once per process lifetime (one GHA run = one process),
+    not on every call site. A failed lookup never poisons the cache — only a
+    successful token fetch is stored."""
+    global _KITE_SINGLETON
+    if _KITE_SINGLETON is not None:
+        return _KITE_SINGLETON
+
     api_key = os.environ["KITE_API_KEY"]
     kite = KiteConnect(api_key=api_key)
     token = state.redis_get("kite:access_token")
     if not token:
         raise RuntimeError("No access token in Redis. Run morning-login.yml first.")
     kite.set_access_token(token)
+    _KITE_SINGLETON = kite
     return kite
 
 
@@ -282,7 +295,17 @@ def get_atm_option(instrument_name: str, spot_price: float,
         return {}
 
 
+_LAST_HISTORICAL_CALL = 0.0
+_HISTORICAL_MIN_INTERVAL = 0.35  # seconds; keeps us comfortably under Kite's 3 req/sec cap
+
+
 def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
+    global _LAST_HISTORICAL_CALL
+    elapsed = time.monotonic() - _LAST_HISTORICAL_CALL
+    if elapsed < _HISTORICAL_MIN_INTERVAL:
+        time.sleep(_HISTORICAL_MIN_INTERVAL - elapsed)
+    _LAST_HISTORICAL_CALL = time.monotonic()
+
     kite = get_kite()
     # Go back 5 calendar days so RSI(14) and DMI(14) always have prior-session
     # warm-up candles regardless of weekends/holidays. timedelta(days=1) on a
@@ -336,6 +359,44 @@ def get_live_quote(key: str) -> dict | None:
     except Exception as e:
         print(f"[kite_client] get_live_quote({key}) failed: {e}")
         return None
+
+
+def get_live_quotes_batch(keys: list[str]) -> dict[str, dict]:
+    """
+    Fetches live LTP and live session VWAP for MULTIPLE instruments in a
+    SINGLE kite.quote() call (Kite's quote endpoint supports up to 500
+    instruments per call). `keys` are "EXCHANGE:TRADINGSYMBOL" strings, e.g.
+    ["NFO:NIFTY26JUNFUT", "NSE:INFY", "NSE:SBIN"].
+
+    Returns {key: {"ltp": float, "vwap": float}} — only for keys that had
+    valid last_price AND average_price in the response. A key missing from
+    the result means "skip this instrument this run", same contract as the
+    old per-instrument get_live_quote(). Returns {} (not None) on a total
+    failure so callers can safely use .get(key) without a None-check on the
+    whole dict.
+    """
+    if not keys:
+        return {}
+    try:
+        kite = get_kite()
+        data = kite.quote(keys)
+    except Exception as e:
+        print(f"[kite_client] get_live_quotes_batch({len(keys)} keys) failed: {e}")
+        return {}
+
+    result = {}
+    for key in keys:
+        q = data.get(key)
+        if not q:
+            print(f"[kite_client] get_live_quotes_batch: no data for {key}")
+            continue
+        ltp = q.get("last_price")
+        vwap = q.get("average_price")
+        if ltp is None or vwap is None:
+            print(f"[kite_client] get_live_quotes_batch: missing last_price/average_price for {key}")
+            continue
+        result[key] = {"ltp": float(ltp), "vwap": float(vwap)}
+    return result
 
 
 if __name__ == "__main__":
