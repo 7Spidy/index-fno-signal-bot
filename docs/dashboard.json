@@ -110,7 +110,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "14:00 IST",
+      "futures_price": 76812.0,
+      "spot_ltp": 76708.12,
+      "fut_spot_spread": 103.9,
+      "tradingsymbol": "SENSEX26JUN76700CE",
+      "strike": 76700,
+      "expiry": "2026-06-25",
+      "fetch_time": "14:05:53 IST",
+      "atm_ltp": 560.4,
+      "opt_target": 584.61,
+      "opt_sl": 544.26,
+      "spot_tgt": 76753.1,
+      "spot_sl": 76755.0,
+      "raw_risk": 30,
+      "conviction": "Strong",
+      "rr": 1.5,
+      "rsi": 59.90507841913797,
+      "pdi": 38.91769717085144,
+      "ndi": 18.30622434243703,
+      "vwap": 76790.7359007833,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "14:01",
