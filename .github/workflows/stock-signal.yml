@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: gh-pages-commit
+  group: stock-signal-eval
   cancel-in-progress: false
 
 jobs:

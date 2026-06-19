@@ -5,7 +5,7 @@ import subprocess
 import time
 
 
-def commit_and_push(paths: list[str], message: str, *, retries: int = 3) -> bool:
+def commit_and_push(paths: list[str], message: str, *, retries: int = 5) -> bool:
     """add → commit (skip if no staged diff) → push, retrying through
     `git pull --rebase --autostash` on non-fast-forward. Never raises."""
     try:

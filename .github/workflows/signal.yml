@@ -7,7 +7,7 @@ permissions:
   contents: write                  # needed for git push to docs/dashboard.json
 
 concurrency:
-  group: gh-pages-commit
+  group: signal-eval
   cancel-in-progress: false
 
 jobs:
