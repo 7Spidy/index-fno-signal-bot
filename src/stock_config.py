@@ -62,15 +62,6 @@ STOCKS = [
         "spot_exchange": "NSE",
     },
     {
-        "name":          "M&M",
-        "equity_symbol": "M&M",
-        "sector":        "Auto",
-        "strike_step":   50,
-        "lot_size":      175,
-        "fno_exchange":  "NFO",
-        "spot_exchange": "NSE",
-    },
-    {
         "name":          "LT",
         "equity_symbol": "LT",
         "sector":        "Engineering/Infra",
@@ -146,7 +137,6 @@ OPTION_CACHE_RANGE = {
     "INFY":        80,
     "BAJFINANCE": 450,
     "SUNPHARMA":  100,
-    "M&M":        160,
     "LT":         175,
     "SBIN":         50,
     "BHARTIARTL":  100,
@@ -161,5 +151,5 @@ DI_THRESHOLD = 24
 
 # Event exclusion — stocks with earnings/dividend/corp-action events in the
 # next N calendar days (inclusive of today) are skipped entirely by stock_main.
-EVENT_LOOKAHEAD_DAYS = 3
+EVENT_LOOKAHEAD_DAYS = 1
 REDIS_EVENT_EXCLUDED_PREFIX = "stock:event_excluded"   # + ":{YYYY-MM-DD}"
