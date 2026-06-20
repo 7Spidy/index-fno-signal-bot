@@ -1,9 +1,10 @@
 # Index F&O Signal Bot
 
-A Python service that monitors Indian index futures every 5 minutes during NSE market hours, evaluates a multi-condition technical signal model, and sends Discord alerts when a high-conviction CE (bullish) or PE (bearish) trade setup forms. It never places orders — human decides to trade.
+A Python service that monitors Indian index futures and individual stock options every 5 minutes during NSE market hours, evaluates a multi-condition technical signal model, and sends Discord alerts when a high-conviction CE (bullish) or PE (bearish) trade setup forms. It never places orders — human decides to trade.
 
-**Instruments covered:** NIFTY, BANKNIFTY, SENSEX futures
-**Exchange:** NFO (NIFTY/BANKNIFTY) and BFO (SENSEX)
+**Index instruments:** NIFTY, BANKNIFTY, SENSEX futures
+**Stock instruments:** 11 NSE-listed stocks (see [Stock Signal Bot](#stock-signal-bot) below)
+**Exchange:** NFO (NIFTY/BANKNIFTY/stocks) and BFO (SENSEX)
 **Runs via:** GitHub Actions (morning-login + signal evaluation) with cron-job.org as the 5-min trigger
 
 ---
@@ -11,8 +12,13 @@ A Python service that monitors Indian index futures every 5 minutes during NSE m
 ## How It Works — Top Level
 
 ```
-09:05 IST  morning-login.yml   →  Kite TOTP login → Redis token → instrument + option cache → dashboard reset
-09:40 IST  signal.yml (every 5 min until 14:45)
+09:05 IST  morning-login.yml   →  Kite TOTP login → Redis token
+                                   → index instrument + option cache
+                                   → stock equity + option token cache
+                                   → stock event exclusion check (Marketaux)
+                                   → dashboard reset
+
+09:40 IST  signal.yml (every 5 min until 14:45)          ← index bot
                │
                ├─ Gate: trading day? eval window?
                ├─ Fetch 5-min OHLCV candles (today + 5-day warm-up tail)
@@ -22,6 +28,16 @@ A Python service that monitors Indian index futures every 5 minutes during NSE m
                ├─ Evaluate 4-condition CE/PE model
                ├─ On signal: dedup + cooldown → Discord alert → dashboard → Notion journal
                └─ Always: write docs/dashboard.json → git push → GitHub Pages
+
+09:40 IST  stock-signal.yml (every 5 min until 14:45)    ← stock bot
+               │
+               ├─ Gate: trading day? eval window? event-excluded?
+               ├─ Fetch 5-min equity OHLCV candles (today + 5-day warm-up)
+               ├─ Compute VWAP, RSI(14), DMI(14)
+               ├─ Fetch live LTP + VWAP from Kite quote API
+               ├─ Evaluate 4-condition CE/PE model per stock
+               ├─ On signal: dedup + cooldown → Discord alert (#signals-stocks)
+               └─ Always: write docs/stock-dashboard.json → git push
 ```
 
 ---
@@ -248,6 +264,38 @@ Two mechanisms prevent duplicate alerts:
 
 ---
 
+## Stock Signal Bot
+
+A parallel signal bot running the same 4-condition model on 11 individual NSE stocks. Signal logic, indicator math, and trade computation are identical to the index bot — same `indicators.py`, same `signals.py`. The stock bot uses equity OHLCV data (NSE tokens, real volume) but resolves ATM strikes and option tokens from the NFO monthly chain.
+
+### Stock Universe (11 stocks)
+
+| Stock | Sector | Strike Step | Lot Size |
+|---|---|---|---|
+| RELIANCE | Energy/Conglomerate | 50 | 250 |
+| ICICIBANK | Private Banking | 20 | 700 |
+| INFY | IT | 20 | 400 |
+| BAJFINANCE | NBFC | 100 | 125 |
+| SUNPHARMA | Pharma | 20 | 400 |
+| LT | Engineering/Infra | 50 | 175 |
+| SBIN | PSU Banking | 10 | 750 |
+| BHARTIARTL | Telecom | 20 | 475 |
+| ITC | FMCG | 10 | 1600 |
+| TATASTEEL | Metals | 2.5 | 2750 |
+| ASIANPAINT | Paints/Consumer | 20 | 250 |
+
+All stocks use **monthly expiry only** (no weekly — post SEBI Nov 2024 restriction). Lot sizes should be verified quarterly from `kite.instruments("NFO")` as NSE revises them.
+
+### Corporate Event Exclusion (Marketaux)
+
+Each morning, `stock_events.py` queries the [Marketaux](https://www.marketaux.com/) `news/all` API for recent news matching event-language keywords (board meeting, AGM, demerger, buyback, bonus/rights issue, M&A, stock split, IPO, delisting). Any stock with a matching article published within the last calendar day is written to a Redis exclusion list and skipped by `stock_main.py` for that trading day.
+
+**Known limitation:** Marketaux's search is backward-looking — it surfaces news already published, not a structured forward calendar date. A board-meeting announcement in yesterday's article is a proxy for an upcoming event, not a guarantee. This is an accepted trade-off after both prior data sources became unusable (NSE `top-corp-info` blocked by Akamai; Yahoo Finance crumb handshake returns 406 as of 2026-06-20).
+
+Redis key: `stock:event_excluded:{YYYY-MM-DD}` → JSON list of excluded stock names. A summary embed is posted to `#signals-stocks` after every morning run — success, partial, or failure — visually distinct from live trading alerts by its `"Stock Event News"` title and `stock_events (marketaux)` footer.
+
+---
+
 ## Data Pipeline
 
 ### Morning Login (~09:05 IST)
@@ -255,12 +303,15 @@ Two mechanisms prevent duplicate alerts:
 `morning-login.yml` runs once per trading day before market open:
 
 1. **TOTP login** — `src/auth.py` automates the Zerodha 3-step login (password → TOTP 2FA → request token extraction) using `requests.Session`. The access token is stored in Upstash Redis with a 12-hour TTL.
-2. **Futures instrument cache** — Resolves the nearest-expiry futures contract for each instrument from the Kite NFO/BFO dump and stores the token map in Redis (24-hour TTL). Expiry logic: NIFTY uses weekly (Tuesday), BANKNIFTY and SENSEX use monthly (nearest calendar resolution).
-3. **Option token cache** — Pre-caches ATM ± range option tokens around current spot for each instrument:
+2. **Index futures instrument cache** — Resolves the nearest-expiry futures contract for each index instrument from the Kite NFO/BFO dump and stores the token map in Redis (24-hour TTL). Expiry logic: NIFTY uses weekly (Tuesday), BANKNIFTY and SENSEX use monthly (nearest calendar resolution).
+3. **Index option token cache** — Pre-caches ATM ± range option tokens around current spot for each index instrument:
    - NIFTY: ±500 pts from spot
    - BANKNIFTY: ±1,500 pts
    - SENSEX: ±2,000 pts
 4. **Dashboard reset** — Clears today's history in `docs/dashboard.json` and pushes a clean slate to git.
+5. **Stock equity token cache** — `src/stock_kite_client.py --cache-equity-tokens` resolves NSE equity instrument tokens for all 11 tracked stocks and stores them in Redis.
+6. **Stock option token cache** — `src/stock_kite_client.py --cache-stock-options` pre-caches monthly ATM ± range option tokens for each stock.
+7. **Stock event exclusion** — `src/stock_events.py --cache-event-exclusions` queries Marketaux for corporate event news and writes the exclusion list to Redis. Runs with `continue-on-error: true` — a Marketaux failure is reported to Discord but never blocks the rest of morning-login.
 
 ### Signal Evaluation (~09:40–14:45 IST, every 5 min)
 
@@ -322,7 +373,10 @@ All ephemeral state lives in Upstash Redis (REST API — no redis-py, no persist
 | `kite:access_token` | Kite access token string | 12 hours |
 | `kite:token_refreshed_at` | ISO timestamp of last login | none |
 | `kite:instrument_tokens` | JSON dict: name → {token, tradingsymbol} | 24 hours |
-| `kite:option_tokens:{name}` | JSON list of pre-cached option contracts | 24 hours |
+| `kite:option_tokens:{name}` | JSON list of pre-cached index option contracts | 24 hours |
+| `kite:stock_equity_tokens` | JSON dict: symbol → instrument_token | 24 hours |
+| `kite:stock_option_tokens` | JSON dict: NAME_STRIKE_CE → {token, ...} | 24 hours |
+| `stock:event_excluded:{date}` | JSON list of event-excluded stock names | 18 hours |
 | `fired:{name}:{dir}:{ts}` | Dedup sentinel (value "1") | 24 hours |
 | `cooldown:{name}:{dir}` | ISO timestamp of last fired candle | none |
 
@@ -333,24 +387,30 @@ All ephemeral state lives in Upstash Redis (REST API — no redis-py, no persist
 ```
 index-fno-signal-bot/
 ├── .github/workflows/
-│   ├── morning-login.yml      daily ~09:05 IST — login + cache + reset
-│   └── signal.yml             5-min evaluation loop via workflow_dispatch
+│   ├── morning-login.yml      daily ~09:05 IST — login + cache + reset (index + stock)
+│   ├── signal.yml             5-min index evaluation loop via workflow_dispatch
+│   └── stock-signal.yml       5-min stock evaluation loop via workflow_dispatch
 ├── docs/
-│   ├── index.html             live dashboard (GitHub Pages)
-│   ├── dashboard.json         live data written every run
-│   └── _headers               cache-control: no-cache for dashboard.json
+│   ├── index.html             live index dashboard (GitHub Pages)
+│   ├── dashboard.json         index live data written every run
+│   ├── stock-dashboard.json   stock live data written every run
+│   └── _headers               cache-control: no-cache for dashboard files
 ├── src/
-│   ├── config.py              instruments, thresholds, R:R, VWAP proximity
+│   ├── config.py              index instruments, thresholds, R:R, VWAP proximity
+│   ├── stock_config.py        stock universe (11 stocks), thresholds, event exclusion config
 │   ├── auth.py                Kite TOTP automated login
-│   ├── kite_client.py         OHLCV fetch, live quote, option resolution
+│   ├── kite_client.py         index OHLCV fetch, live quote, option resolution
+│   ├── stock_kite_client.py   stock equity + option token cache
 │   ├── indicators.py          VWAP, RSI(14), DMI(14) from scratch
-│   ├── signals.py             4-condition CE/PE evaluator
+│   ├── signals.py             4-condition CE/PE evaluator (shared by index + stock)
 │   ├── state.py               Upstash Redis REST client
-│   ├── dashboard_writer.py    JSON write + git commit/push
-│   ├── notifier.py            Discord webhook
+│   ├── dashboard_writer.py    JSON write + git commit/push (index)
+│   ├── notifier.py            Discord webhook (index signals)
+│   ├── stock_events.py        Marketaux corporate event exclusion
+│   ├── stock_main.py          stock bot orchestrator
 │   ├── journal.py             optional Notion logging
 │   ├── calendar_nse.py        trading day + eval window gates
-│   └── main.py                orchestrator
+│   └── main.py                index bot orchestrator
 ├── holidays_2026.json
 ├── requirements.txt
 └── verify_setup.py
@@ -379,7 +439,9 @@ Repo Settings → Secrets and variables → Actions:
 | `KITE_TOTP_SECRET` | Base32 TOTP seed from the 2FA QR code |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST bearer token |
-| `DISCORD_WEBHOOK_URL` | Discord channel webhook URL |
+| `DISCORD_WEBHOOK_URL` | Discord webhook for index CE/PE signal alerts |
+| `DISCORD_STOCK_WEBHOOK_URL` | Discord webhook for stock CE/PE alerts + event exclusion reports |
+| `MARKETAUX_API_TOKEN` | Marketaux free-tier API token (stock event exclusion) |
 | `NOTION_TOKEN` | (Optional) Notion integration token |
 | `NOTION_DB_ID` | (Optional) Notion signals database ID |
 
