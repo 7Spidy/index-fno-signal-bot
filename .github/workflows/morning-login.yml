@@ -1,8 +1,6 @@
 name: Morning Login
 
 on:
-  schedule:
-    - cron: "35 3 * * 1-5"    # ≈09:05 IST (UTC+5:30 = UTC+3:35 before midnight offset)
   workflow_dispatch: {}
 
 permissions:
