@@ -1,7 +1,6 @@
 name: Morning Login
 
 on:
-  schedule:
   workflow_dispatch: {}
 
 permissions:
