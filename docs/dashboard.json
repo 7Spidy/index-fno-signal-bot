@@ -110,7 +110,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "CE",
+      "candle_time": "09:45 IST",
+      "futures_price": 24172.0,
+      "spot_ltp": 24167.9,
+      "fut_spot_spread": 4.1,
+      "tradingsymbol": "NIFTY26JUN24150CE",
+      "strike": 24150,
+      "expiry": "2026-06-30",
+      "fetch_time": "09:50:56 IST",
+      "atm_ltp": 123.4,
+      "opt_target": 155.55,
+      "opt_sl": 101.97,
+      "spot_tgt": 24225.2,
+      "spot_sl": 24129.7,
+      "raw_risk": 38.2,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 71.02388278313296,
+      "pdi": 29.04449156489107,
+      "ndi": 11.565413865295998,
+      "vwap": 24145.40914191989,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [
     {
       "time": "09:45",
