@@ -64,6 +64,9 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
         or s.get("instrument") not in evaluated
     ]
 
+    # History log only records runs where a CE or PE signal actually fired —
+    # "no signal" rows are no longer written (was every 5-min check before).
+    # The "current status" instrument cards are unaffected by this filter.
     new_rows = [
         {
             "time": now.strftime("%H:%M"),
@@ -78,6 +81,7 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
             "price": r.get("futures_price"),
         }
         for r in instruments_results
+        if r["ce"]["signal"] or r["pe"]["signal"]
     ]
     data["history"] = (new_rows + data["history"])[:MAX_HISTORY]
 

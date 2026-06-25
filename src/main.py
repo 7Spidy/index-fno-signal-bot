@@ -2,6 +2,7 @@
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -69,6 +70,70 @@ def _latest_closed_ts(df):
     return ts
 
 
+def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg):
+    """Fetch candles, compute indicators, and run signal evaluation for one
+    instrument. Pure read + compute — no Redis writes, no Discord, no git.
+    Safe to run concurrently across instruments. Returns (result, df) on
+    success, or None if this instrument should be skipped this run."""
+    name = inst["name"]
+    try:
+        df = kite_client.fetch_ohlcv(token_info["token"], today_open)
+        print(f"[main] {name}: {len(df)} candles fetched")
+
+        if len(df) < 2:
+            print(f"[main] {name}: <2 candles — skip")
+            return None
+        expected_ts = expected_closed_candle_ts(now_ist)
+        closed_ts = _latest_closed_ts(df)
+        if closed_ts < expected_ts:
+            print(f"[main] {name}: candle lag (have {closed_ts}, want {expected_ts}) — retry in 5s")
+            time.sleep(5)
+            df = kite_client.fetch_ohlcv(token_info["token"], today_open)
+            if len(df) < 2:
+                print(f"[main] {name}: <2 candles after retry — skip")
+                return None
+            closed_ts = _latest_closed_ts(df)
+        if closed_ts != expected_ts:
+            print(f"[main] {name}: stale candle (have {closed_ts}, want {expected_ts}) — skip")
+            return None
+
+        vwap = indicators.vwap_session(df, today_open)
+        rsi = indicators.rsi_wilder(df)
+        pdi, ndi, adx = indicators.dmi_wilder(df)
+
+        exchange = inst.get("fno_exchange", "NFO")
+        live_key = f"{exchange}:{token_info['tradingsymbol']}"
+        live_quote = live_quotes.get(live_key)
+        if live_quote is None:
+            print(f"[main] {name}: live quote unavailable — skipping this run")
+            return None
+
+        live_df = indicators.with_live_bar(df, live_quote["ltp"])
+        live_rsi_s = indicators.rsi_wilder(live_df)
+        live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
+
+        inst_cfg = dict(cfg)
+        inst_cfg["strike_step"] = inst["strike_step"]
+        inst_cfg["instrument_name"] = name
+
+        result = signals.evaluate(
+            df, vwap, rsi, pdi, ndi, inst_cfg,
+            live_ltp=live_quote["ltp"],
+            live_vwap=live_quote["vwap"],
+            live_rsi=float(live_rsi_s.iloc[-1]),
+            live_pdi=float(live_pdi_s.iloc[-1]),
+            live_ndi=float(live_ndi_s.iloc[-1]),
+        )
+        result["name"] = name
+        result["symbol"] = token_info["tradingsymbol"]
+        result["strike_step"] = inst["strike_step"]
+        return (result, df)
+
+    except Exception as e:
+        print(f"[main] ERROR processing {name}: {e}")
+        return None
+
+
 def main() -> None:
     now_ist = datetime.now(IST)
     print(f"[main] Run at {now_ist.isoformat()}")
@@ -110,84 +175,58 @@ def main() -> None:
         live_keys.append(f"{exchange}:{token_info['tradingsymbol']}")
     live_quotes = kite_client.get_live_quotes_batch(live_keys)
 
-    # 5. Per-instrument loop
+    # 5. Per-instrument evaluation. Fetch + indicator compute run
+    # concurrently across instruments (bounded by Kite's 3 req/sec limit
+    # inside fetch_ohlcv via _throttle_historical_call). Signal firing below
+    # stays strictly sequential, in original instrument order, so dedup/
+    # cooldown/Discord/git behavior is unchanged.
     results = []
     cfg = config.as_dict()
 
+    pending = []
     for inst in config.INSTRUMENTS:
         name = inst["name"]
         token_info = instrument_tokens.get(name)
         if not token_info:
             print(f"[main] No token for {name} — skipping")
             continue
+        pending.append((inst, token_info))
 
+    outcomes = {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        future_to_name = {
+            pool.submit(
+                _evaluate_instrument, inst, token_info, live_quotes,
+                today_open, now_ist, cfg,
+            ): inst["name"]
+            for inst, token_info in pending
+        }
+        for future in future_to_name:
+            outcomes[future_to_name[future]] = future.result()
+
+    for inst, token_info in pending:
+        name = inst["name"]
+        outcome = outcomes.get(name)
+        if outcome is None:
+            continue
+        result, df = outcome
+        results.append(result)
+
+        rsi_str = f"{result.get('rsi'):.1f}" if result.get("rsi") is not None else "n/a"
+        vwap_val = result.get("vwap")
+        vwap_gap = (
+            f"{abs(result.get('futures_price', 0) - vwap_val):.1f}pts from VWAP"
+            if vwap_val else "vwap=n/a"
+        )
+        print(
+            f"[main] {name}: CE={result['ce']['signal']} PE={result['pe']['signal']} "
+            f"price={result.get('futures_price')} rsi={rsi_str} {vwap_gap}"
+        )
+
+        # Signal + dedup + cooldown — wrapped in its own try/except so a
+        # failure firing one instrument's alert can never crash the loop or
+        # block the remaining instruments, matching the original guarantee.
         try:
-            df = kite_client.fetch_ohlcv(token_info["token"], today_open)
-            print(f"[main] {name}: {len(df)} candles fetched")
-
-            # ── Freshness guard: act only on the candle that just closed ──────────────
-            if len(df) < 2:
-                print(f"[main] {name}: <2 candles — skip")
-                continue
-            expected_ts = expected_closed_candle_ts(now_ist)
-            closed_ts = _latest_closed_ts(df)
-            if closed_ts < expected_ts:                       # Kite lagging — one retry
-                print(f"[main] {name}: candle lag (have {closed_ts}, want {expected_ts}) — retry in 5s")
-                time.sleep(5)
-                df = kite_client.fetch_ohlcv(token_info["token"], today_open)
-                if len(df) < 2:
-                    print(f"[main] {name}: <2 candles after retry — skip")
-                    continue
-                closed_ts = _latest_closed_ts(df)
-            if closed_ts != expected_ts:
-                print(f"[main] {name}: stale candle (have {closed_ts}, want {expected_ts}) — skip")
-                continue
-            # ──────────────────────────────────────────────────────────────────────────
-
-            vwap = indicators.vwap_session(df, today_open)
-            rsi = indicators.rsi_wilder(df)
-            pdi, ndi, adx = indicators.dmi_wilder(df)
-
-            exchange  = inst.get("fno_exchange", "NFO")
-            live_key  = f"{exchange}:{token_info['tradingsymbol']}"
-            live_quote = live_quotes.get(live_key)
-            if live_quote is None:
-                print(f"[main] {name}: live quote unavailable — skipping this run")
-                continue
-
-            live_df = indicators.with_live_bar(df, live_quote["ltp"])
-            live_rsi_s = indicators.rsi_wilder(live_df)
-            live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
-
-            inst_cfg = dict(cfg)
-            inst_cfg["strike_step"] = inst["strike_step"]
-            inst_cfg["instrument_name"] = name
-
-            result = signals.evaluate(
-                df, vwap, rsi, pdi, ndi, inst_cfg,
-                live_ltp=live_quote["ltp"],
-                live_vwap=live_quote["vwap"],
-                live_rsi=float(live_rsi_s.iloc[-1]),
-                live_pdi=float(live_pdi_s.iloc[-1]),
-                live_ndi=float(live_ndi_s.iloc[-1]),
-            )
-            result["name"] = name
-            result["symbol"] = token_info["tradingsymbol"]
-            result["strike_step"] = inst["strike_step"]
-            results.append(result)
-
-            rsi_str = f"{result.get('rsi'):.1f}" if result.get("rsi") is not None else "n/a"
-            vwap_val = result.get("vwap")
-            vwap_gap = (
-                f"{abs(result.get('futures_price', 0) - vwap_val):.1f}pts from VWAP"
-                if vwap_val else "vwap=n/a"
-            )
-            print(
-                f"[main] {name}: CE={result['ce']['signal']} PE={result['pe']['signal']} "
-                f"price={result.get('futures_price')} rsi={rsi_str} {vwap_gap}"
-            )
-
-            # Signal + dedup + cooldown
             for direction in ("ce", "pe"):
                 if result[direction]["signal"]:
                     raw_ts = df.iloc[-2]["timestamp"]
@@ -207,7 +246,6 @@ def main() -> None:
 
                     dir_up = direction.upper()
 
-                    # ── 3. Fetch live SPOT LTP ───────────────────────────────────────────
                     spot_ltp  = kite_client.get_spot_ltp(name)
                     reference = spot_ltp if spot_ltp is not None \
                                 else result["futures_price"]
@@ -215,7 +253,6 @@ def main() -> None:
                         print(f"[main] {name}: spot LTP unavailable, "
                               f"using futures close as fallback")
 
-                    # ── 4. Conviction label + uniform R:R ────────────────────────────────
                     spread = (result["pdi"] - result["ndi"]) if dir_up == "CE" \
                              else (result["ndi"] - result["pdi"])
                     if   spread >= 18: conv = "Strong"
@@ -223,7 +260,6 @@ def main() -> None:
                     else:              conv = "Building"
                     rr = config.TARGET_RR
 
-                    # ── 5. SL = prev candle structural extreme; risk = spot → SL ─────────
                     if dir_up == "CE":
                         spot_sl  = round(result["prev_candle_low"],  1)
                         raw_risk = max(reference - spot_sl, inst["min_risk"])
@@ -233,7 +269,6 @@ def main() -> None:
                         raw_risk = max(spot_sl - reference, inst["min_risk"])
                         spot_tgt = round(reference - rr * raw_risk,  1)
 
-                    # ── 6. Fetch ATM option + live LTP ───────────────────────
                     atm_data = kite_client.get_atm_option(
                         instrument_name=name,
                         spot_price=reference,
@@ -241,7 +276,6 @@ def main() -> None:
                         step=inst["strike_step"],
                     )
 
-                    # ── 7. Option premium SL and Target ──────────────────────
                     atm_ltp    = atm_data.get("ltp")
                     opt_sl     = None
                     opt_target = None
@@ -255,7 +289,6 @@ def main() -> None:
                         opt_sl     = round(atm_ltp - raw_risk * delta,      2)
                         opt_target = round(atm_ltp + raw_risk * rr * delta, 2)
 
-                    # ── 8. Attach everything to result ───────────────────────
                     result["c1"] = result[direction]["c1"]
                     result["c2"] = result[direction]["c2"]
                     result["c3"] = result[direction]["c3"]
@@ -276,7 +309,6 @@ def main() -> None:
                                            if spot_ltp else None,
                     })
 
-                    # ── 9. Fire alert and record ─────────────────────────────
                     notifier.send_signal(name, dir_up, result)
                     try:
                         write_executor_intent(result, inst)
@@ -288,7 +320,7 @@ def main() -> None:
                     state.redis_set(cooldown_key, candle_ts_str)
 
         except Exception as e:
-            print(f"[main] ERROR processing {name}: {e}")
+            print(f"[main] ERROR firing signal for {name}: {e}")
             # Always continue to next instrument — never crash the loop
 
     # 6. Update dashboard (every run, signal or not)

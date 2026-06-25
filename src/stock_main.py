@@ -1,6 +1,6 @@
 """
 stock_main.py — Stock F&O signal evaluation loop.
-Seven Nifty 50 stocks evaluated through C1–C4. Alert-only.
+14 NSE-listed stocks evaluated through C1–C4. Alert-only.
 Called by stock-signal.yml every 5 minutes during market hours.
 
 Risk gate: VWAP proximity only (C2). No candle-width gate.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -126,7 +127,15 @@ def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
         tk_key    = f"{name}_{int(atm)}_{direction}"
         info      = token_map.get(tk_key)
         if not info:
-            print(f"[stock_main] ATM token not cached: {tk_key} — live NFO fallback")
+            print(f"[stock_main] ATM token not cached: {tk_key} — refreshing cache")
+            from src.stock_kite_client import cache_stock_option_tokens
+            cache_stock_option_tokens()
+            raw = state.redis_get(cfg.REDIS_OPTION_TOKENS_KEY)
+            token_map = json.loads(raw) if raw else {}
+            info = token_map.get(tk_key)
+        if not info:
+            print(f"[stock_main] ATM token still not cached after refresh: "
+                  f"{tk_key} — live NFO fallback")
             return _live_atm_fallback(name, spot, step, direction)
 
         kite     = get_kite()
@@ -236,6 +245,32 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def _fetch_and_evaluate(stock, equity_tokens, live_quotes, today_open):
+    """Fetch candles and run C1–C4 for one stock. Pure read + compute — no
+    Redis writes, no Discord, no git. Safe to run concurrently across
+    stocks. Returns (stock, result, df) on success, or None if this stock
+    should be skipped this run."""
+    name = stock["name"]
+    try:
+        token_id = equity_tokens.get(name)
+        if not token_id:
+            print(f"[stock_main] ERROR: no equity token for {name} — skipping")
+            return None
+
+        df = fetch_ohlcv(token_id, today_open)
+
+        if len(df) < 20:
+            print(f"[stock_main] {name}: insufficient candles ({len(df)}) — skipping")
+            return None
+
+        result = _evaluate(stock, df, live_quotes)
+        return (stock, result, df)
+
+    except Exception as e:
+        print(f"[stock_main] ERROR processing {name}: {e}")
+        return None
+
+
 def main() -> None:
     # Gate 1: trading day + eval window
     if not (calendar_nse.is_trading_day() and calendar_nse.in_eval_window()):
@@ -280,27 +315,35 @@ def main() -> None:
     live_keys   = [f"{s['spot_exchange']}:{s['equity_symbol']}" for s in cfg.STOCKS]
     live_quotes = get_live_quotes_batch(live_keys)
 
+    # Per-stock fetch + evaluation runs concurrently (bounded by Kite's 3
+    # req/sec limit inside fetch_ohlcv). History rows, dedup, and alert
+    # firing below stay strictly sequential and in original stock order.
+    pending = []
     for stock in cfg.STOCKS:
         name = stock["name"]
-
         if name in event_excluded:
             print(f"[stock_main] {name}: skipped — event within "
                   f"{cfg.EVENT_LOOKAHEAD_DAYS}d (earnings/dividend/corp action)")
             continue
+        pending.append(stock)
+
+    outcomes = {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        future_to_name = {
+            pool.submit(_fetch_and_evaluate, stock, equity_tokens, live_quotes, today_open): stock["name"]
+            for stock in pending
+        }
+        for future in future_to_name:
+            outcomes[future_to_name[future]] = future.result()
+
+    for stock in pending:
+        name = stock["name"]
+        outcome = outcomes.get(name)
+        if outcome is None:
+            continue
+        _, result, df = outcome
 
         try:
-            token_id = equity_tokens.get(name)
-            if not token_id:
-                print(f"[stock_main] ERROR: no equity token for {name} — skipping")
-                continue
-
-            df = fetch_ohlcv(token_id, today_open)
-
-            if len(df) < 20:
-                print(f"[stock_main] {name}: insufficient candles ({len(df)}) — skipping")
-                continue
-
-            result = _evaluate(stock, df, live_quotes)
             instrument_results.append(result)
 
             ce_signal   = result["ce"]["signal"]
@@ -308,6 +351,13 @@ def main() -> None:
             direction   = "CE" if ce_signal else ("PE" if pe_signal else None)
             candle_time = result["candle_time"]
 
+            if not direction:
+                print(f"[stock_main] {name}: no signal")
+                continue
+
+            # History log only records candles where a signal actually fired —
+            # "no signal" rows are no longer written (was every 5-min check
+            # before). The "current status" cards above are unaffected.
             new_history_rows.append({
                 "time":          now.strftime("%H:%M"),
                 "candle_time":   candle_time,
@@ -323,10 +373,6 @@ def main() -> None:
                 "ndi":           result["ndi"],
                 "price":         result["futures_price"],
             })
-
-            if not direction:
-                print(f"[stock_main] {name}: no signal")
-                continue
 
             # Deduplication
             if _is_duplicate(name, direction, candle_time):
@@ -346,16 +392,12 @@ def main() -> None:
                 "instrument":  name,
                 "direction":   direction,
                 "asset_class": "STOCK",
-
-                # --- contract identity the NOTIFIER reads (nested) ---
                 "atm_data": {
                     "tradingsymbol": opt.get("tradingsymbol"),
                     "strike":        opt.get("strike"),
                     "expiry":        opt.get("expiry"),
                     "fetch_time":    opt.get("fetch_time"),
                 },
-
-                # --- premium + spot levels (read top-level by notifier) ---
                 "atm_ltp":    opt.get("ltp"),
                 "opt_sl":     (opt["ltp"] - round(risk_pts * 0.50, 2))             if opt.get("ltp") else None,
                 "opt_target": (opt["ltp"] + round(risk_pts * 0.50 * target_rr, 2)) if opt.get("ltp") else None,
@@ -364,8 +406,6 @@ def main() -> None:
                 "spot_tgt":   round(spot + risk_pts * target_rr, 2) if direction == "CE"
                               else round(spot - risk_pts * target_rr, 2),
                 "raw_risk":   round(risk_pts, 1),
-
-                # --- context fields ---
                 "conviction": "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
                 "rr":         target_rr,
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
@@ -375,7 +415,6 @@ def main() -> None:
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED")
 
-            # Rich flat entry for the dashboard drawer
             fired_signals.append({
                 "instrument":      name,
                 "direction":       direction,

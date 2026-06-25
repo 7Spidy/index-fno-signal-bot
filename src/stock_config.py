@@ -1,5 +1,5 @@
 """
-stock_config.py — Configuration for the 7-stock F&O signal bot.
+stock_config.py — Configuration for the 14-stock F&O signal bot.
 
 All stocks use monthly expiry only (no weekly — SEBI post-Nov 2024).
 OHLCV source: NSE equity tokens (real volume, accurate VWAP).
@@ -89,15 +89,6 @@ STOCKS = [
         "spot_exchange": "NSE",
     },
     {
-        "name":          "ITC",
-        "equity_symbol": "ITC",
-        "sector":        "FMCG",
-        "strike_step":   10,
-        "lot_size":      1600,
-        "fno_exchange":  "NFO",
-        "spot_exchange": "NSE",
-    },
-    {
         "name":          "TATASTEEL",
         "equity_symbol": "TATASTEEL",
         "sector":        "Metals",
@@ -112,6 +103,42 @@ STOCKS = [
         "sector":        "Paints/Consumer",
         "strike_step":   20,
         "lot_size":      250,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "AXISBANK",
+        "equity_symbol": "AXISBANK",
+        "sector":        "Private Banking",
+        "strike_step":   10,
+        "lot_size":      625,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "MARUTI",
+        "equity_symbol": "MARUTI",
+        "sector":        "Auto",
+        "strike_step":   100,
+        "lot_size":      50,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "CIPLA",
+        "equity_symbol": "CIPLA",
+        "sector":        "Pharma",
+        "strike_step":   10,
+        "lot_size":      375,
+        "fno_exchange":  "NFO",
+        "spot_exchange": "NSE",
+    },
+    {
+        "name":          "HINDALCO",
+        "equity_symbol": "HINDALCO",
+        "sector":        "Metals",
+        "strike_step":   10,
+        "lot_size":      700,
         "fno_exchange":  "NFO",
         "spot_exchange": "NSE",
     },
@@ -137,12 +164,15 @@ OPTION_CACHE_RANGE = {
     "INFY":        80,
     "BAJFINANCE": 450,
     "SUNPHARMA":  100,
-    "LT":         175,
+    "LT":         260,
     "SBIN":         50,
     "BHARTIARTL":  100,
-    "ITC":          20,
-    "TATASTEEL":    10,
+    "TATASTEEL":    15,
     "ASIANPAINT":  140,
+    "AXISBANK":     60,
+    "MARUTI":      800,
+    "CIPLA":        80,
+    "HINDALCO":     50,
 }
 
 # DI threshold for C4 — lower than the index threshold (25); stocks are

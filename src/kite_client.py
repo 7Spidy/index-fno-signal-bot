@@ -2,7 +2,9 @@
 import json
 import os
 import sys
+import threading
 import time
+from collections import deque
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -32,25 +34,30 @@ def _instruments_for(kite: KiteConnect, exchange: str) -> list:
 
 
 _KITE_SINGLETON: KiteConnect | None = None
+_KITE_LOCK = threading.Lock()
 
 
 def get_kite() -> KiteConnect:
     """Returns a cached KiteConnect client for this process. The access token
     is read from Redis once per process lifetime (one GHA run = one process),
     not on every call site. A failed lookup never poisons the cache — only a
-    successful token fetch is stored."""
+    successful token fetch is stored. Double-checked lock: safe to call from
+    multiple threads (the per-instrument fetch loop now runs concurrently)."""
     global _KITE_SINGLETON
     if _KITE_SINGLETON is not None:
         return _KITE_SINGLETON
 
-    api_key = os.environ["KITE_API_KEY"]
-    kite = KiteConnect(api_key=api_key)
-    token = state.redis_get("kite:access_token")
-    if not token:
-        raise RuntimeError("No access token in Redis. Run morning-login.yml first.")
-    kite.set_access_token(token)
-    _KITE_SINGLETON = kite
-    return kite
+    with _KITE_LOCK:
+        if _KITE_SINGLETON is not None:
+            return _KITE_SINGLETON
+        api_key = os.environ["KITE_API_KEY"]
+        kite = KiteConnect(api_key=api_key)
+        token = state.redis_get("kite:access_token")
+        if not token:
+            raise RuntimeError("No access token in Redis. Run morning-login.yml first.")
+        kite.set_access_token(token)
+        _KITE_SINGLETON = kite
+        return kite
 
 
 def resolve_futures_tokens(kite: KiteConnect | None = None) -> dict:
@@ -272,7 +279,16 @@ def get_atm_option(instrument_name: str, spot_price: float,
         tk_key    = f"{instrument_name}_{int(atm)}_{direction}"
         info      = token_map.get(tk_key)
         if not info:
-            print(f"[kite_client] ATM token not cached: {tk_key}")
+            # Cache built at 09:05 IST may no longer cover this strike if the
+            # instrument has drifted since morning-login. Rebuild once and
+            # retry before giving up — this is the LT_4250_PE fix.
+            print(f"[kite_client] ATM token not cached: {tk_key} — refreshing cache")
+            cache_option_tokens()
+            raw = redis_get("kite:option_tokens")
+            token_map = json.loads(raw) if raw else {}
+            info = token_map.get(tk_key)
+        if not info:
+            print(f"[kite_client] ATM token still not cached after refresh: {tk_key}")
             return {}
 
         exchange = config.fno_exchange_for(instrument_name)
@@ -295,16 +311,29 @@ def get_atm_option(instrument_name: str, spot_price: float,
         return {}
 
 
-_LAST_HISTORICAL_CALL = 0.0
-_HISTORICAL_MIN_INTERVAL = 0.35  # seconds; keeps us comfortably under Kite's 3 req/sec cap
+_HISTORICAL_RATE_LOCK = threading.Lock()
+_HISTORICAL_CALL_TIMES: deque = deque()
+_HISTORICAL_MAX_PER_SECOND = 3   # Kite's real cap for the historical-data endpoint
+
+
+def _throttle_historical_call() -> None:
+    """Thread-safe limiter: blocks until fewer than 3 historical_data calls
+    have started in the trailing 1-second window, across ALL threads. This
+    replaces the old per-thread sleep-based throttle, which only worked
+    correctly for a single sequential caller."""
+    while True:
+        with _HISTORICAL_RATE_LOCK:
+            now = time.monotonic()
+            while _HISTORICAL_CALL_TIMES and now - _HISTORICAL_CALL_TIMES[0] >= 1.0:
+                _HISTORICAL_CALL_TIMES.popleft()
+            if len(_HISTORICAL_CALL_TIMES) < _HISTORICAL_MAX_PER_SECOND:
+                _HISTORICAL_CALL_TIMES.append(now)
+                return
+        time.sleep(0.05)
 
 
 def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
-    global _LAST_HISTORICAL_CALL
-    elapsed = time.monotonic() - _LAST_HISTORICAL_CALL
-    if elapsed < _HISTORICAL_MIN_INTERVAL:
-        time.sleep(_HISTORICAL_MIN_INTERVAL - elapsed)
-    _LAST_HISTORICAL_CALL = time.monotonic()
+    _throttle_historical_call()
 
     kite = get_kite()
     # Go back 5 calendar days so RSI(14) and DMI(14) always have prior-session
