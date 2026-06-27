@@ -1,0 +1,38 @@
+name: Trade Position Tracker
+
+on:
+  workflow_dispatch: {}            # cron-job.org is the sole external trigger
+
+permissions:
+  contents: read                   # read-only — no git push needed
+
+concurrency:
+  group: trade-tracker
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run position tracker
+        run: python -m src.position_tracker
+        env:
+          KITE_API_KEY:                        ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:              ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN:            ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          DISCORD_BOT_TOKEN:                   ${{ secrets.DISCORD_BOT_TOKEN }}
+          TRADE_TRACKER_CHANNEL_ID:            ${{ secrets.TRADE_TRACKER_CHANNEL_ID }}
+          DISCORD_TRADE_TRACKER_WEBHOOK_URL:   ${{ secrets.DISCORD_TRADE_TRACKER_WEBHOOK_URL }}
