@@ -13,9 +13,11 @@ except ImportError:
 
 IST = ZoneInfo("Asia/Kolkata")
 
-FYI_COLOR    = 0x4FC3F7
-ACTION_COLOR = 0xFF9F43
-EXIT_COLOR   = 0x4FC3F7
+FYI_COLOR            = 0x4FC3F7
+ACTION_COLOR         = 0xFF9F43
+EXIT_COLOR           = 0x4FC3F7
+TARGET_RAISED_COLOR  = 0x00E5A0
+TARGET_TRIMMED_COLOR = 0x9AA3B2
 
 
 def _webhook() -> str | None:
@@ -86,6 +88,58 @@ def send_action(
             {"name": "Required SL",   "value": f"**₹{required_sl:,.2f}**",  "inline": True},
         ],
         "footer":    {"text": "Alert only · move SL in Kite manually"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return _post(embed)
+
+
+def send_target_raised(
+    instrument: str,
+    direction: str,
+    old_T: float,
+    new_T: float,
+    reason_summary: str,
+) -> bool:
+    """Prominent alert — target raised due to confirmed momentum. Title: '🟢 TARGET RAISED'."""
+    arrow = "↑" if direction.upper() == "CE" else "↓"
+    pct   = ((new_T - old_T) / old_T * 100) if old_T else 0.0
+    embed = {
+        "title":       f"🟢 TARGET RAISED — {instrument} {direction.upper()}",
+        "color":       TARGET_RAISED_COLOR,
+        "description": f"Momentum confirmed — target revised upward by {pct:.1f}%.",
+        "fields": [
+            {"name": "Old T",     "value": f"₹{old_T:,.2f}",              "inline": True},
+            {"name": "New T",     "value": f"**₹{new_T:,.2f}**",          "inline": True},
+            {"name": "Direction", "value": f"{direction.upper()} {arrow}", "inline": True},
+            {"name": "Reason",    "value": reason_summary,                 "inline": False},
+        ],
+        "footer":    {"text": "Alert only · verify before trading"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return _post(embed)
+
+
+def send_target_trimmed(
+    instrument: str,
+    direction: str,
+    old_T: float,
+    new_T: float,
+    reason_summary: str,
+) -> bool:
+    """Quiet lower-priority alert — target trimmed due to cooling momentum. Title: '⚪ TARGET TRIMMED'.
+    Fires once per actual revision, not every heartbeat."""
+    arrow = "↑" if direction.upper() == "CE" else "↓"
+    pct   = ((old_T - new_T) / old_T * 100) if old_T else 0.0
+    embed = {
+        "title":  f"⚪ TARGET TRIMMED — {instrument} {direction.upper()}",
+        "color":  TARGET_TRIMMED_COLOR,
+        "fields": [
+            {"name": "Old T",     "value": f"₹{old_T:,.2f}",              "inline": True},
+            {"name": "New T",     "value": f"₹{new_T:,.2f}",              "inline": True},
+            {"name": "Direction", "value": f"{direction.upper()} {arrow}", "inline": True},
+            {"name": "Reason",    "value": f"{reason_summary} (−{pct:.1f}%)", "inline": False},
+        ],
+        "footer":    {"text": "Alert only · verify before trading"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return _post(embed)

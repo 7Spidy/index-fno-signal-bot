@@ -2,6 +2,7 @@
 import pytest
 
 from src.position_tracker import (
+    compute_ai_adjusted_target,
     compute_final_sl,
     compute_ladder_sl,
 )
@@ -196,3 +197,217 @@ class TestEdgeCases:
         r1 = compute_ladder_sl(100.0, 100.0, 160.0, "ce", 0.0)
         r2 = compute_ladder_sl(100.0, 100.0, 160.0, "CE", 0.0)
         assert r1 == r2
+
+
+# ──────────────────────────────────────────────────────────────
+# compute_final_sl — backward compatibility and sl_history
+# ──────────────────────────────────────────────────────────────
+
+class TestComputeFinalSlHistory:
+    def test_backward_compat_no_sl_history_ce(self):
+        # 3-arg call (old signature) must still work unchanged
+        result = compute_final_sl(150.0, 160.0, "CE")
+        assert result == 160.0
+
+    def test_backward_compat_no_sl_history_pe(self):
+        result = compute_final_sl(50.0, 40.0, "PE")
+        assert result == 40.0
+
+    def test_sl_history_prevents_regression_ce(self):
+        # Historical best (130.0) exceeds both fresh ladder and AI values
+        result = compute_final_sl(125.0, 126.0, "CE", [100.0, 130.0])
+        assert result == 130.0
+
+    def test_sl_history_prevents_regression_pe(self):
+        # Historical tightest (70.0) is below both fresh values
+        result = compute_final_sl(75.0, 74.0, "PE", [90.0, 70.0])
+        assert result == 70.0
+
+    def test_empty_sl_history_behaves_like_no_history(self):
+        r1 = compute_final_sl(150.0, 160.0, "CE", [])
+        r2 = compute_final_sl(150.0, 160.0, "CE")
+        assert r1 == r2
+
+    def test_none_sl_history_behaves_like_no_history(self):
+        r1 = compute_final_sl(150.0, 160.0, "CE", None)
+        r2 = compute_final_sl(150.0, 160.0, "CE")
+        assert r1 == r2
+
+
+# ──────────────────────────────────────────────────────────────
+# compute_ai_adjusted_target
+# ──────────────────────────────────────────────────────────────
+
+_SNAPSHOT_UP = {
+    "rsi_last3":  [40.0, 45.0, 50.0],   # RSI rising  → favoring CE
+    "dmi_last": {
+        "pdi": [20.0, 26.0, 28.0],       # +DI rising and > 25
+        "ndi": [28.0, 22.0, 18.0],
+        "adx": 26.0,
+    },
+    "progress":      0.95,
+    "current_price": 195.0,
+    "T":             100.0,
+    "instrument":    "NIFTY",
+}
+
+_SNAPSHOT_DOWN = {
+    "rsi_last3":  [50.0, 45.0, 40.0],   # RSI falling → reversing against CE
+    "dmi_last": {
+        "pdi": [28.0, 22.0, 18.0],       # +DI falling
+        "ndi": [18.0, 22.0, 30.0],       # -DI rising and flipped above +DI
+        "adx": 22.0,
+    },
+    "progress":      0.95,
+    "current_price": 195.0,
+    "T":             115.0,
+    "instrument":    "NIFTY",
+}
+
+
+class TestComputeAiAdjustedTarget:
+    def test_upward_revision_when_momentum_confirmed(self):
+        result = compute_ai_adjusted_target("CE", _SNAPSHOT_UP, 100.0, 100.0, 0.95)
+        assert abs(result - 115.0) < 1e-9   # 100 * 1.15
+
+    def test_upward_revision_pe(self):
+        snap = dict(_SNAPSHOT_UP)
+        snap["rsi_last3"] = [50.0, 45.0, 40.0]  # RSI falling → favoring PE
+        snap["dmi_last"] = {
+            "pdi": [28.0, 22.0, 18.0],
+            "ndi": [20.0, 26.0, 29.0],           # -DI rising and > 25
+            "adx": 26.0,
+        }
+        result = compute_ai_adjusted_target("PE", snap, 100.0, 100.0, 0.95)
+        assert abs(result - 115.0) < 1e-9
+
+    def test_downward_revision_when_momentum_reversed(self):
+        result = compute_ai_adjusted_target("CE", _SNAPSHOT_DOWN, 115.0, 100.0, 0.95)
+        expected = max(115.0 * 0.9, 100.0)  # 103.5
+        assert abs(result - expected) < 1e-9
+
+    def test_never_below_original_t_on_repeated_reversal(self):
+        T = 100.0
+        original_T = 100.0
+        snap = dict(_SNAPSHOT_DOWN)
+        snap["T"] = T
+        for _ in range(10):
+            snap["T"] = T
+            T = compute_ai_adjusted_target("CE", snap, T, original_T, 0.95)
+            assert T >= original_T, f"T={T} fell below original_T={original_T}"
+
+    def test_unchanged_when_progress_below_0_9(self):
+        snap = dict(_SNAPSHOT_UP)
+        snap["progress"] = 0.89
+        result = compute_ai_adjusted_target("CE", snap, 100.0, 100.0, 0.89)
+        assert result == 100.0
+
+    def test_unchanged_when_neither_condition_met(self):
+        # RSI flat (no staircase), DI below threshold
+        snap = {
+            "rsi_last3":  [45.0, 45.0, 45.0],
+            "dmi_last": {
+                "pdi": [20.0, 20.0, 20.0],   # not rising, below threshold
+                "ndi": [20.0, 20.0, 20.0],
+                "adx": 18.0,
+            },
+            "progress":      0.95,
+            "current_price": 195.0,
+            "T":             100.0,
+            "instrument":    "NIFTY",
+        }
+        result = compute_ai_adjusted_target("CE", snap, 100.0, 100.0, 0.95)
+        assert result == 100.0
+
+    def test_missing_dmi_returns_unchanged(self):
+        snap = dict(_SNAPSHOT_UP)
+        snap = {k: v for k, v in snap.items() if k != "dmi_last"}
+        result = compute_ai_adjusted_target("CE", snap, 100.0, 100.0, 0.95)
+        assert result == 100.0
+
+    def test_missing_rsi_returns_unchanged(self):
+        snap = {k: v for k, v in _SNAPSHOT_UP.items() if k != "rsi_last3"}
+        result = compute_ai_adjusted_target("CE", snap, 100.0, 100.0, 0.95)
+        assert result == 100.0
+
+
+# ──────────────────────────────────────────────────────────────
+# Critical invariant: SL never regresses after T cycle (up → down)
+# ──────────────────────────────────────────────────────────────
+
+class TestSlInvariantAfterTRevision:
+    """Show that compute_final_sl with sl_history protects against regression
+    even when T falls back and ladder_sl computes a weaker value."""
+
+    def test_sl_invariant_ce(self):
+        entry = 100.0
+        original_T = 100.0
+        ltp = 185.0
+
+        # Step 1: T raised
+        T_raised = compute_ai_adjusted_target("CE", _SNAPSHOT_UP, original_T, original_T, 0.95)
+        assert T_raised > original_T
+
+        # Step 2: compute sl with raised T (progress = 85/115 ≈ 0.739 → fraction 0.25)
+        ladder_1 = compute_ladder_sl(entry, T_raised, ltp, "CE", 0.0)
+        final_1  = compute_final_sl(ladder_1, ladder_1, "CE", [0.0])
+        sl_history = [0.0, final_1]
+
+        # Step 3: T trimmed back
+        T_trimmed = compute_ai_adjusted_target("CE", _SNAPSHOT_DOWN, T_raised, original_T, 0.95)
+        assert T_trimmed < T_raised
+        assert T_trimmed >= original_T   # original_T floor
+
+        # Step 4: ladder with lower T and a stale/reset prior_sl (demonstrating regression risk)
+        ladder_regressed = compute_ladder_sl(entry, T_trimmed, ltp, "CE", 0.0)
+        # This may be weaker than final_1 because T is smaller → sl_price = entry + 0.25*T_trimmed
+        # is less than entry + 0.25*T_raised
+
+        # Step 5: compute_final_sl with sl_history must return at least final_1
+        final_2 = compute_final_sl(ladder_regressed, ladder_regressed, "CE", sl_history)
+        assert final_2 >= final_1, (
+            f"SL regressed: final_2={final_2} < final_1={final_1}. "
+            "sl_history invariant failed."
+        )
+
+    def test_sl_invariant_pe(self):
+        entry = 100.0
+        original_T = 100.0
+        ltp = 15.0   # deep in-the-money for PE
+
+        snap_up_pe = {
+            "rsi_last3":  [50.0, 45.0, 40.0],
+            "dmi_last": {
+                "pdi": [28.0, 22.0, 18.0],
+                "ndi": [20.0, 26.0, 29.0],
+                "adx": 26.0,
+            },
+            "progress": 0.95, "current_price": ltp, "T": original_T, "instrument": "NIFTY",
+        }
+        snap_down_pe = {
+            "rsi_last3":  [40.0, 45.0, 50.0],   # RSI rising → reversing against PE
+            "dmi_last": {
+                "pdi": [18.0, 22.0, 30.0],       # +DI rising and flipped above -DI
+                "ndi": [28.0, 22.0, 18.0],
+                "adx": 22.0,
+            },
+            "progress": 0.95, "current_price": ltp, "T": original_T, "instrument": "NIFTY",
+        }
+
+        T_raised  = compute_ai_adjusted_target("PE", snap_up_pe, original_T, original_T, 0.95)
+        assert T_raised > original_T
+
+        ladder_1  = compute_ladder_sl(entry, T_raised, ltp, "PE", 9999.0)
+        final_1   = compute_final_sl(ladder_1, ladder_1, "PE", [9999.0])
+        sl_history = [9999.0, final_1]
+
+        T_trimmed = compute_ai_adjusted_target("PE", snap_down_pe, T_raised, original_T, 0.95)
+        assert T_trimmed < T_raised
+        assert T_trimmed >= original_T
+
+        ladder_regressed = compute_ladder_sl(entry, T_trimmed, ltp, "PE", 9999.0)
+        final_2 = compute_final_sl(ladder_regressed, ladder_regressed, "PE", sl_history)
+        assert final_2 <= final_1, (
+            f"SL regressed (PE): final_2={final_2} > final_1={final_1}. "
+            "sl_history invariant failed."
+        )
