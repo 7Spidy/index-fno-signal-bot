@@ -38,6 +38,15 @@ A Python service that monitors Indian index futures and individual stock options
                ├─ Evaluate 4-condition CE/PE model per stock
                ├─ On signal: dedup + cooldown → Discord alert (#signals-stocks)
                └─ Always: write docs/stock-dashboard.json → git push
+
+Every 1 min  trade-tracker.yml (triggered by cron-job.org → workflow_dispatch)
+               │
+               ├─ Poll Discord for /enter or /exit messages (Bot token REST API)
+               ├─ /enter → snapshot open Kite positions → init track:* Redis keys
+               ├─ /exit  → detect closed positions → post Exit summary → delete keys
+               └─ Heartbeat (always): for each track:* key → fetch LTP → compute
+                  trailing SL (mechanical ladder + RSI-based tightening) →
+                  compare vs. actual Kite SL order → post FYI or ACTION embed
 ```
 
 ---
@@ -264,6 +273,61 @@ Two mechanisms prevent duplicate alerts:
 
 ---
 
+## Trailing SL Position Tracker
+
+An advisory-only monitoring module that tracks manually-executed trades in real time. It never places, modifies, or cancels orders — you always act in the Kite app; this system only observes and informs.
+
+**Trigger:** cron-job.org fires `trade-tracker.yml` via `workflow_dispatch` every minute.
+
+### How to use it
+
+1. Take a trade manually in Kite after a signal fires.
+2. Type `/enter` in the designated Discord channel — the tracker snapshots all open positions from Kite and starts monitoring.
+3. Every minute: receive a **FYI** (blue) embed if your Kite SL is already at the required level, or an **ACTION** (amber) embed telling you exactly what to move your SL to and why.
+4. When you exit the trade in Kite, type `/exit` — the tracker detects the closed position and posts an **Exit summary** (P&L, R-multiple, SL compliance ratio).
+
+### Trailing SL ladder
+
+Progress toward target T determines the SL floor. The ladder is monotonic — once the SL is raised (CE) or lowered (PE), it never reverses.
+
+| Progress toward T | SL fraction of T locked in |
+|---|---|
+| < 0.5 T | No change — hold original SL |
+| ≥ 0.5 T | 0.25 T above entry |
+| ≥ 0.9 T | 0.60 T above entry |
+| ≥ 1.0 T | 0.90 T above entry |
+| ≥ 1.0 T + 0.1·n | (0.90 + 0.10·n) T above entry — locks in further profit every +0.1T step |
+
+For PE positions, "above entry" is reversed to "below entry".
+
+### AI-adjusted tightening (v1 — rule-based)
+
+After the ladder SL is computed, a deterministic heuristic may tighten it further — but can **never loosen** it:
+
+- If RSI shows a 3-point reversal against the position's direction **and** progress ≥ 0.7T, the SL is tightened to `current_price ∓ 0.05T`.
+- Otherwise, the ladder SL is used unchanged.
+
+This is explicitly v1. A multi-factor scoring version is a planned future iteration.
+
+### Redis keys (position tracker)
+
+| Key | Content | TTL |
+|---|---|---|
+| `track:{instrument}:{date}` | JSON: entry, T, direction, prior\_sl, last\_alert\_sl, compliance counters | 24 hours |
+| `trade:last_seen_msg_id` | Discord message ID — poll cursor for /enter / /exit detection | none |
+
+### New GitHub Secrets required (manual setup — not part of the code)
+
+| Secret | Description |
+|---|---|
+| `DISCORD_BOT_TOKEN` | Discord Bot token for reading messages via REST API |
+| `TRADE_TRACKER_CHANNEL_ID` | Discord channel ID where /enter and /exit are typed |
+| `DISCORD_TRADE_TRACKER_WEBHOOK_URL` | Webhook URL for posting FYI / ACTION / Exit embeds |
+
+Note: reading messages requires a Bot token; posting embeds uses a plain webhook. These are intentionally separate so the tracker never needs message-send permission scoping on the bot.
+
+---
+
 ## Stock Signal Bot
 
 A parallel signal bot running the same 4-condition model on 11 individual NSE stocks. Signal logic, indicator math, and trade computation are identical to the index bot — same `indicators.py`, same `signals.py`. The stock bot uses equity OHLCV data (NSE tokens, real volume) but resolves ATM strikes and option tokens from the NFO monthly chain.
@@ -379,6 +443,8 @@ All ephemeral state lives in Upstash Redis (REST API — no redis-py, no persist
 | `stock:event_excluded:{date}` | JSON list of event-excluded stock names | 18 hours |
 | `fired:{name}:{dir}:{ts}` | Dedup sentinel (value "1") | 24 hours |
 | `cooldown:{name}:{dir}` | ISO timestamp of last fired candle | none |
+| `track:{instrument}:{date}` | Position tracker state: entry, T, direction, prior\_sl, last\_alert\_sl, compliance counters | 24 hours |
+| `trade:last_seen_msg_id` | Discord poll cursor — last processed message ID for /enter / /exit | none |
 
 ---
 
@@ -389,7 +455,8 @@ index-fno-signal-bot/
 ├── .github/workflows/
 │   ├── morning-login.yml      daily ~09:05 IST — login + cache + reset (index + stock)
 │   ├── signal.yml             5-min index evaluation loop via workflow_dispatch
-│   └── stock-signal.yml       5-min stock evaluation loop via workflow_dispatch
+│   ├── stock-signal.yml       5-min stock evaluation loop via workflow_dispatch
+│   └── trade-tracker.yml      1-min position tracker via workflow_dispatch (cron-job.org)
 ├── docs/
 │   ├── index.html             live index dashboard (GitHub Pages)
 │   ├── dashboard.json         index live data written every run
@@ -410,7 +477,10 @@ index-fno-signal-bot/
 │   ├── stock_main.py          stock bot orchestrator
 │   ├── journal.py             optional Notion logging
 │   ├── calendar_nse.py        trading day + eval window gates
-│   └── main.py                index bot orchestrator
+│   ├── main.py                index bot orchestrator
+│   ├── position_tracker.py    trailing SL tracker — ladder, AI tightening, heartbeat
+│   ├── trade_notifier.py      Discord FYI / ACTION / Exit embeds (tracker-only)
+│   └── discord_listener.py    Discord REST polling for /enter and /exit triggers
 ├── holidays_2026.json
 ├── requirements.txt
 └── verify_setup.py
@@ -441,6 +511,9 @@ Repo Settings → Secrets and variables → Actions:
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST bearer token |
 | `DISCORD_WEBHOOK_URL` | Discord webhook for index CE/PE signal alerts |
 | `DISCORD_STOCK_WEBHOOK_URL` | Discord webhook for stock CE/PE alerts + event exclusion reports |
+| `DISCORD_TRADE_TRACKER_WEBHOOK_URL` | Discord webhook for FYI / ACTION / Exit trade tracker embeds |
+| `DISCORD_BOT_TOKEN` | Discord Bot token (read messages) for /enter and /exit detection |
+| `TRADE_TRACKER_CHANNEL_ID` | Discord channel ID where /enter and /exit are typed |
 | `MARKETAUX_API_TOKEN` | Marketaux free-tier API token (stock event exclusion) |
 | `NOTION_TOKEN` | (Optional) Notion integration token |
 | `NOTION_DB_ID` | (Optional) Notion signals database ID |
