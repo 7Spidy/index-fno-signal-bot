@@ -100,14 +100,6 @@ def compute_ladder_sl(
         return min(sl_price, prior_sl)
 
 
-def _rsi_favoring(direction: str, rsi_values: list) -> bool:
-    """Return True if the RSI 3-point staircase is moving in the trade's favor."""
-    r0, r1, r2 = rsi_values[0], rsi_values[1], rsi_values[2]
-    if direction.upper() == "CE":
-        return r0 < r1 and r1 < r2
-    return r0 > r1 and r1 > r2
-
-
 def _rsi_reversing(direction: str, rsi_values: list) -> bool:
     """Return True if the RSI 3-point staircase is reversing against the trade."""
     r0, r1, r2 = rsi_values[0], rsi_values[1], rsi_values[2]
@@ -163,106 +155,12 @@ def compute_ai_adjusted_sl(
         return min(tightened, ladder_sl)   # may only tighten (i.e. lower)
 
 
-def compute_final_sl(
-    ladder_sl: float,
-    ai_sl: float,
-    direction: str,
-    sl_history: "list[float] | None" = None,
-) -> float:
-    """Combine ladder SL and AI-adjusted SL, always taking the tighter side,
-    AND never regressing below any previously-returned final_sl for this
-    position — this is the critical invariant that protects against T falling
-    back down and recomputing a weaker ladder_sl. sl_history defaults to []
-    for backward compatibility with any direct unit-test calls that predate
-    this change."""
+def compute_final_sl(ladder_sl: float, ai_sl: float, direction: str) -> float:
+    """Combine ladder SL and AI-adjusted SL, always taking the tighter side."""
     direction = direction.upper()
-    candidates = [ladder_sl, ai_sl] + list(sl_history or [])
     if direction == "CE":
-        return max(candidates)
-    return min(candidates)
-
-
-def compute_ai_adjusted_target(
-    direction: str,
-    market_snapshot: dict,
-    current_T: float,
-    original_T: float,
-    progress: float,
-) -> float:
-    """Bi-directional T revision. Only evaluated when progress >= 0.9 (caller's
-    responsibility to gate this).
-
-    Upward revision — requires 2 of these 3:
-      (a) RSI 3-point staircase still rising in trade's favor
-      (b) Dominant DI rising and > threshold (25 for indices, 24 for stocks)
-      (c) progress >= 0.9 (always True here — gated by caller)
-    If 2-of-3 hold: return current_T * 1.15
-
-    Downward revision — RSI staircase broken in OPPOSITE direction AND dominant
-    DI has flipped to the other side:
-      return max(current_T * 0.9, original_T)
-      — NEVER below original_T
-
-    Otherwise: return current_T unchanged.
-    No upper cap — can compound upward across heartbeats as long as 2-of-3
-    re-confirms each time.
-    """
-    direction = direction.upper()
-    if direction not in ("CE", "PE"):
-        raise ValueError(f"direction must be 'CE' or 'PE', got {direction!r}")
-
-    if progress < 0.9:
-        return current_T
-
-    rsi_values   = market_snapshot.get("rsi_last3")
-    dmi_snapshot = market_snapshot.get("dmi_last")
-
-    if rsi_values is None or len(rsi_values) < 3 or dmi_snapshot is None:
-        return current_T
-
-    pdi_vals = dmi_snapshot.get("pdi", [])
-    ndi_vals = dmi_snapshot.get("ndi", [])
-    if len(pdi_vals) < 2 or len(ndi_vals) < 2:
-        return current_T
-
-    # DI threshold: 25 for indices, 24 for stocks
-    from src import config as _cfg
-    instrument = market_snapshot.get("instrument", "")
-    index_names = {i["name"] for i in _cfg.INSTRUMENTS}
-    if instrument.upper() in index_names:
-        di_threshold = _cfg.as_dict()["DI_THRESHOLD"]
-    else:
-        try:
-            from src import stock_config as _sc
-            di_threshold = _sc.DI_THRESHOLD
-        except Exception:
-            di_threshold = 25
-
-    # Dominant DI for this direction and its trend
-    if direction == "CE":
-        dom_di_now  = pdi_vals[-1]
-        dom_di_prev = pdi_vals[-2]
-    else:
-        dom_di_now  = ndi_vals[-1]
-        dom_di_prev = ndi_vals[-2]
-
-    cond_a = _rsi_favoring(direction, rsi_values)
-    cond_b = dom_di_now > dom_di_prev and dom_di_now > di_threshold
-    # cond_c = progress >= 0.9 — always True here (gated above)
-
-    if cond_a or cond_b:
-        return current_T * 1.15
-
-    # Downward revision: RSI reversing AND dominant DI has flipped sides
-    if direction == "CE":
-        di_flipped = ndi_vals[-1] > pdi_vals[-1]
-    else:
-        di_flipped = pdi_vals[-1] > ndi_vals[-1]
-
-    if _rsi_reversing(direction, rsi_values) and di_flipped:
-        return max(current_T * 0.9, original_T)
-
-    return current_T
+        return max(ladder_sl, ai_sl)
+    return min(ladder_sl, ai_sl)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -436,13 +334,10 @@ def handle_enter() -> None:
         track_data = {
             "entry":          entry,
             "T":              T,
-            "original_T":     T,
             "direction":      direction,
             "tradingsymbol":  tradingsymbol,
             "prior_sl":       prior_sl,
             "last_alert_sl":  prior_sl,
-            "sl_history":     [prior_sl],
-            "T_history":      [T] if T is not None else [],
             "opened_at":      datetime.now(IST).isoformat(),
             "action_alerts_sent":   0,
             "action_alerts_acked":  0,
@@ -500,38 +395,6 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime) -> list[float] | No
         return list(last3)
     except Exception as e:
         print(f"[position_tracker] _get_rsi_snapshot({instrument}): {e}")
-        return None
-
-
-def _get_dmi_snapshot(instrument: str, today_open: datetime) -> dict | None:
-    """Fetch latest +DI, -DI, ADX for the instrument's futures.
-
-    Returns {"pdi": [p0, p1, p2], "ndi": [n0, n1, n2], "adx": float} or None on failure.
-    Mirrors the _get_rsi_snapshot pattern — looks up kite:instrument_tokens (index futures).
-    """
-    try:
-        from src import kite_client, indicators, state as st
-        raw = st.redis_get("kite:instrument_tokens")
-        if not raw:
-            return None
-        tokens = json.loads(raw)
-        token_info = tokens.get(instrument)
-        if not token_info:
-            return None
-        df = kite_client.fetch_ohlcv(token_info["token"], today_open)
-        pdi, ndi, adx = indicators.dmi_wilder(df)
-        pdi_vals = pdi.dropna().iloc[-3:]
-        ndi_vals = ndi.dropna().iloc[-3:]
-        adx_vals = adx.dropna()
-        if len(pdi_vals) < 3 or len(ndi_vals) < 3 or len(adx_vals) == 0:
-            return None
-        return {
-            "pdi": list(pdi_vals),
-            "ndi": list(ndi_vals),
-            "adx": float(adx_vals.iloc[-1]),
-        }
-    except Exception as e:
-        print(f"[position_tracker] _get_dmi_snapshot({instrument}): {e}")
         return None
 
 
@@ -596,36 +459,14 @@ def run_heartbeat() -> None:
             "instrument":    instrument,
         }
 
-        sl_history = track.get("sl_history", [last_alert_sl])
-        T_history  = track.get("T_history", [T] if T is not None else [])
-        original_T = track.get("original_T", T)
-
-        raw_progress_for_T_check = raw_progress  # already computed earlier in the loop, reuse
-
-        if T and T > 0 and raw_progress_for_T_check >= 0.9:
-            dmi3 = _get_dmi_snapshot(instrument, today_open)
-            market_snapshot["dmi_last"] = dmi3
-            new_T = compute_ai_adjusted_target(direction, market_snapshot, T, original_T, raw_progress_for_T_check)
-            if new_T != T:
-                T_history.append(new_T)
-                if new_T > T:
-                    trade_notifier.send_target_raised(instrument, direction, T, new_T, reason_summary="momentum confirmed (RSI+DMI)")
-                else:
-                    trade_notifier.send_target_trimmed(instrument, direction, T, new_T, reason_summary="momentum cooling")
-                T = new_T
-                track["T"] = T
-
         if T and T > 0:
             ladder_sl = compute_ladder_sl(entry, T, ltp, direction, last_alert_sl)
             ai_sl     = compute_ai_adjusted_sl(ladder_sl, direction, market_snapshot)
-            final_sl  = compute_final_sl(ladder_sl, ai_sl, direction, sl_history)
+            final_sl  = compute_final_sl(ladder_sl, ai_sl, direction)
         else:
             # T unknown — can't ladder; hold at last_alert_sl
             final_sl = last_alert_sl
 
-        sl_history.append(final_sl)
-        track["sl_history"] = sl_history
-        track["T_history"]  = T_history
         track["last_alert_sl"] = final_sl
 
         # Check current Kite SL order
