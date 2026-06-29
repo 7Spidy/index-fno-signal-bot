@@ -69,6 +69,8 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     spot_ref  = spot_ltp or 0
     vwap_dir  = "↑ above" if spot_ref > (vwap_val or 0) else "↓ below"
 
+    expiry_note = " (rolled forward)" if atm.get("rolled_forward") else ""
+
     fields = [
         {
             "name":   "Buy this option",
@@ -77,7 +79,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
         },
         {
             "name":   "Contract",
-            "value":  f"{strike} {direction.upper()}  ·  {expiry} expiry",
+            "value":  f"{strike} {direction.upper()}  ·  {expiry} expiry{expiry_note}",
             "inline": False,
         },
         {

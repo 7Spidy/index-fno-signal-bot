@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from src import calendar_nse, config as idx_cfg, indicators, notifier, state
@@ -76,34 +76,66 @@ def _is_duplicate(name: str, direction: str, candle_time: str) -> bool:
 # ── Option lookup ─────────────────────────────────────────────────────────────
 
 def _live_atm_fallback(name: str, spot: float, step: int, direction: str) -> dict:
-    """Resolve ATM contract from live NFO instruments dump when cache misses."""
+    """Resolve ATM contract from live NFO instruments dump when cache misses.
+    Applies the same monthly rollover check as _get_nearest_monthly_expiry()."""
     try:
         today = date.today()
-        kite = get_kite()
+        kite  = get_kite()
         instruments = kite.instruments("NFO")
         atm = round(spot / step) * step
+
+        # Compute rollover-aware expiry (same logic as stock_kite_client)
+        all_expiries = sorted({
+            i["expiry"] for i in instruments
+            if i.get("name") == name
+            and i.get("instrument_type") in ("CE", "PE")
+            and i.get("expiry") and i["expiry"] >= today
+        })
+        if not all_expiries:
+            print(f"[stock_main] live fallback: no expiries for {name} in NFO")
+            return {}
+
+        candidate = all_expiries[0]
+        next_td   = today + timedelta(days=1)
+        while not calendar_nse.is_trading_day(next_td):
+            next_td += timedelta(days=1)
+
+        if candidate == today or candidate == next_td:
+            if len(all_expiries) > 1:
+                resolved_expiry = all_expiries[1]
+            else:
+                print(f"[stock_main] WARNING: {name} rollover wanted but "
+                      f"only one expiry in dump — using {candidate}")
+                resolved_expiry = candidate
+        else:
+            resolved_expiry = candidate
+
+        rolled = (resolved_expiry != candidate)
+
         candidates = [
             i for i in instruments
             if i["name"] == name
             and i["instrument_type"] == direction
-            and i["expiry"] >= today
+            and i["expiry"] == resolved_expiry
             and i["strike"] == atm
         ]
         if not candidates:
-            print(f"[stock_main] live fallback: no {name} {direction} {atm} in NFO")
+            print(f"[stock_main] live fallback: no {name} {direction} {atm} "
+                  f"in NFO for expiry {resolved_expiry}")
             return {}
-        nearest = min(candidates, key=lambda x: x["expiry"])
+        nearest = candidates[0]
         ts = nearest["tradingsymbol"]
         ltp_key = f"NFO:{ts}"
         ltp_data = kite.ltp([ltp_key])
         ltp_val = ltp_data.get(ltp_key, {}).get("last_price")
         return {
-            "tradingsymbol": ts,
-            "strike":        atm,
-            "ltp":           round(ltp_val, 2) if ltp_val else None,
-            "expiry":        nearest["expiry"],
-            "lot_size":      nearest.get("lot_size"),
-            "fetch_time":    datetime.now(IST).strftime("%H:%M:%S IST"),
+            "tradingsymbol":  ts,
+            "strike":         atm,
+            "ltp":            round(ltp_val, 2) if ltp_val else None,
+            "expiry":         nearest["expiry"],
+            "lot_size":       nearest.get("lot_size"),
+            "fetch_time":     datetime.now(IST).strftime("%H:%M:%S IST"),
+            "rolled_forward": rolled,
         }
     except Exception as e:
         print(f"[stock_main] live fallback for {name} failed: {e}")
@@ -144,12 +176,13 @@ def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
         ltp_val  = ltp_data.get(opt_key, {}).get("last_price")
 
         return {
-            "tradingsymbol": info["tradingsymbol"],
-            "strike":        atm,
-            "ltp":           round(ltp_val, 2) if ltp_val else None,
-            "expiry":        info.get("expiry"),
-            "lot_size":      info.get("lot_size"),
-            "fetch_time":    datetime.now(IST).strftime("%H:%M:%S IST"),
+            "tradingsymbol":  info["tradingsymbol"],
+            "strike":         atm,
+            "ltp":            round(ltp_val, 2) if ltp_val else None,
+            "expiry":         info.get("expiry"),
+            "lot_size":       info.get("lot_size"),
+            "fetch_time":     datetime.now(IST).strftime("%H:%M:%S IST"),
+            "rolled_forward": info.get("rolled_forward", False),
         }
     except Exception as e:
         print(f"[stock_main] _get_atm_option({name}) failed: {e}")
@@ -393,10 +426,11 @@ def main() -> None:
                 "direction":   direction,
                 "asset_class": "STOCK",
                 "atm_data": {
-                    "tradingsymbol": opt.get("tradingsymbol"),
-                    "strike":        opt.get("strike"),
-                    "expiry":        opt.get("expiry"),
-                    "fetch_time":    opt.get("fetch_time"),
+                    "tradingsymbol":  opt.get("tradingsymbol"),
+                    "strike":         opt.get("strike"),
+                    "expiry":         opt.get("expiry"),
+                    "fetch_time":     opt.get("fetch_time"),
+                    "rolled_forward": opt.get("rolled_forward", False),
                 },
                 "atm_ltp":    opt.get("ltp"),
                 "opt_sl":     (opt["ltp"] - round(risk_pts * 0.50, 2))             if opt.get("ltp") else None,

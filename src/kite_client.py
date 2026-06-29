@@ -107,24 +107,36 @@ def get_spot_ltp(instrument_name: str) -> float | None:
         return None
 
 
-def get_nearest_expiry(instrument_name: str) -> date:
-    """Nearest valid option expiry. Resolved from the LIVE instrument dump for
-    all instruments — survives NSE holiday shifts and expiry-day rule changes.
-    Calendar-aware fallback only when the dump is unreachable.
-    """
-    from datetime import time as dtime
-    now_ist     = datetime.now(IST)
-    today       = now_ist.date()
-    after_close = now_ist.time() >= dtime(15, 30)   # fixed: true for all of 15:30→23:59
+def get_nearest_expiry(instrument_name: str) -> tuple[date, bool]:
+    """Active option expiry, with rollover applied. Returns (expiry, rolled_forward).
 
+    Weekly instruments (USE_WEEKLY=True): if the nearest expiry is today,
+    roll to the next available weekly expiry — checked from market open,
+    not gated by time of day.
+
+    Monthly instruments (USE_WEEKLY=False): if the nearest expiry is today
+    OR the next NSE trading day, roll to the next monthly expiry.
+    """
+    import json as _json
     from src.state import redis_get, redis_set
+    now_ist = datetime.now(IST)
+    today   = now_ist.date()
+
     cache_key = f"kite:expiry:{instrument_name}"
     cached = redis_get(cache_key)
     if cached:
         try:
-            exp = date.fromisoformat(cached)
-            if exp > today or (exp == today and not after_close):
-                return exp
+            # New format: JSON {"date": "...", "rolled": bool}
+            # Old format: plain ISO date string — treat rolled as False.
+            try:
+                c      = _json.loads(cached)
+                exp    = date.fromisoformat(c["date"])
+                rolled = bool(c.get("rolled", False))
+            except (ValueError, KeyError, TypeError):
+                exp    = date.fromisoformat(cached)
+                rolled = False
+            if exp >= today:
+                return exp, rolled
         except ValueError:
             pass
 
@@ -137,14 +149,47 @@ def get_nearest_expiry(instrument_name: str) -> date:
                 if i["name"] == instrument_name
                 and i["instrument_type"] in ("CE", "PE")
                 and i["expiry"] >= today]
-        if after_close:                       # post-close on expiry day → roll forward
-            opts = [i for i in opts if i["expiry"] > today] or opts
         if not opts:
             raise ValueError(f"no options for {instrument_name} on {exchange}")
-        exp = min(opts, key=lambda x: x["expiry"])["expiry"]
-        redis_set(cache_key, exp.isoformat(), ex=21600)
-        print(f"[kite_client] {instrument_name} nearest expiry (live): {exp}")
-        return exp
+
+        distinct_expiries = sorted({o["expiry"] for o in opts})
+        candidate = distinct_expiries[0]
+
+        is_weekly = config.USE_WEEKLY.get(instrument_name, False)
+        if is_weekly:
+            if candidate == today:
+                if len(distinct_expiries) > 1:
+                    exp = distinct_expiries[1]
+                else:
+                    print(f"[kite_client] WARNING: {instrument_name} weekly rollover "
+                          f"wanted but only one expiry in dump — using {candidate}")
+                    exp = candidate
+            else:
+                exp = candidate
+        else:
+            # Monthly: roll if today OR the next NSE trading day is expiry
+            from src import calendar_nse
+            next_td = today + timedelta(days=1)
+            while not calendar_nse.is_trading_day(next_td):
+                next_td += timedelta(days=1)
+            if candidate == today or candidate == next_td:
+                if len(distinct_expiries) > 1:
+                    exp = distinct_expiries[1]
+                else:
+                    print(f"[kite_client] WARNING: {instrument_name} monthly rollover "
+                          f"wanted but only one expiry in dump — using {candidate}")
+                    exp = candidate
+            else:
+                exp = candidate
+
+        rolled = (exp != candidate)
+        redis_set(cache_key,
+                  _json.dumps({"date": exp.isoformat(), "rolled": rolled}),
+                  ex=21600)
+        print(f"[kite_client] {instrument_name} nearest expiry (live): {exp}"
+              + (" [rolled forward]" if rolled else ""))
+        return exp, rolled
+
     except Exception as e:
         print(f"[kite_client] live expiry resolve failed for {instrument_name}: {e}")
 
@@ -153,18 +198,21 @@ def get_nearest_expiry(instrument_name: str) -> date:
     if weekday is not None:
         from src import calendar_nse
         days_ahead = (weekday - today.weekday()) % 7
-        if days_ahead == 0 and after_close:
-            days_ahead = 7
         cand = today + timedelta(days=days_ahead)
         while not calendar_nse.is_trading_day(cand):   # holiday → previous trading day
             cand -= timedelta(days=1)
+        if cand == today:
+            print(f"[kite_client] WARNING: {instrument_name} rollover would apply "
+                  f"(expiry day) but live dump unavailable — using today's expiry")
         print(f"[kite_client] {instrument_name} nearest expiry (calendar fallback): {cand}")
-        return cand
+        return cand, False
 
     # ── Monthly fallback ──
     import calendar as _cal
     last = _cal.monthrange(today.year, today.month)[1]
-    return date(today.year, today.month, last)
+    cand = date(today.year, today.month, last)
+    print(f"[kite_client] {instrument_name} nearest expiry (monthly calendar fallback): {cand}")
+    return cand, False
 
 
 def cache_option_tokens() -> None:
@@ -178,9 +226,9 @@ def cache_option_tokens() -> None:
             name     = inst_cfg["name"]
             exchange = inst_cfg.get("fno_exchange", "NFO")
             instruments = _instruments_for(kite, exchange)
-            spot   = get_spot_ltp(name) or 0
-            expiry = get_nearest_expiry(name)
-            rng    = config.OPTION_CACHE_RANGE[name]
+            spot          = get_spot_ltp(name) or 0
+            expiry, rolled = get_nearest_expiry(name)
+            rng           = config.OPTION_CACHE_RANGE[name]
 
             matches = [
                 i for i in instruments
@@ -199,6 +247,7 @@ def cache_option_tokens() -> None:
             print(
                 f"[kite_client] {name}: cached {len(matches)} strikes "
                 f"around {spot:.0f}, expiry {expiry}"
+                + (" [rolled forward]" if rolled else "")
             )
 
         from src.state import redis_set
@@ -291,19 +340,20 @@ def get_atm_option(instrument_name: str, spot_price: float,
             print(f"[kite_client] ATM token still not cached after refresh: {tk_key}")
             return {}
 
-        exchange = config.fno_exchange_for(instrument_name)
-        opt_key  = f"{exchange}:{info['tradingsymbol']}"
-        kite     = get_kite()
-        ltp_data = kite.ltp([opt_key])
-        ltp_val  = ltp_data.get(opt_key, {}).get("last_price")
-        expiry   = get_nearest_expiry(instrument_name)
+        exchange        = config.fno_exchange_for(instrument_name)
+        opt_key         = f"{exchange}:{info['tradingsymbol']}"
+        kite            = get_kite()
+        ltp_data        = kite.ltp([opt_key])
+        ltp_val         = ltp_data.get(opt_key, {}).get("last_price")
+        expiry, rolled  = get_nearest_expiry(instrument_name)
 
         return {
-            "tradingsymbol": info["tradingsymbol"],
-            "strike":        atm,
-            "ltp":           round(ltp_val, 2) if ltp_val else None,
-            "expiry":        expiry.isoformat(),
-            "fetch_time":    datetime.now(IST).strftime("%H:%M:%S IST"),
+            "tradingsymbol":  info["tradingsymbol"],
+            "strike":         atm,
+            "ltp":            round(ltp_val, 2) if ltp_val else None,
+            "expiry":         expiry.isoformat(),
+            "fetch_time":     datetime.now(IST).strftime("%H:%M:%S IST"),
+            "rolled_forward": rolled,
         }
 
     except Exception as e:

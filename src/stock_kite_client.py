@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 from src import stock_config as cfg
 from src.kite_client import get_kite
@@ -44,11 +44,16 @@ def cache_stock_equity_tokens() -> None:
     print(f"[stock_kite] Cached {len(result)} equity tokens → {cfg.REDIS_EQUITY_TOKENS_KEY}")
 
 
-def _get_nearest_monthly_expiry(name: str, instruments: list[dict]) -> date | None:
+def _get_nearest_monthly_expiry(name: str, instruments: list[dict]) -> tuple[date | None, bool]:
     """
-    Find the nearest monthly expiry for a stock from the NFO dump.
-    Returns None if no future expiry found.
+    Find the nearest monthly expiry for a stock, with rollover applied.
+    Returns (expiry, rolled_forward). All stocks are monthly-only.
+
+    Rolls to the next available expiry when the nearest is today OR the
+    next NSE trading day — matching the index monthly-branch logic in
+    kite_client.get_nearest_expiry(), kept deliberately independent.
     """
+    from src import calendar_nse
     today = date.today()
     candidates = [
         i["expiry"] for i in instruments
@@ -56,7 +61,28 @@ def _get_nearest_monthly_expiry(name: str, instruments: list[dict]) -> date | No
         and i.get("instrument_type") in ("CE", "PE")
         and i.get("expiry") and i["expiry"] >= today
     ]
-    return min(candidates) if candidates else None
+    if not candidates:
+        return None, False
+
+    distinct_expiries = sorted(set(candidates))
+    candidate = distinct_expiries[0]
+
+    next_td = today + timedelta(days=1)
+    while not calendar_nse.is_trading_day(next_td):
+        next_td += timedelta(days=1)
+
+    if candidate == today or candidate == next_td:
+        if len(distinct_expiries) > 1:
+            exp = distinct_expiries[1]
+        else:
+            print(f"[stock_kite] WARNING: {name} monthly rollover wanted but "
+                  f"only one expiry in dump — using {candidate}")
+            exp = candidate
+    else:
+        exp = candidate
+
+    rolled = (exp != candidate)
+    return exp, rolled
 
 
 def cache_stock_option_tokens() -> None:
@@ -74,7 +100,7 @@ def cache_stock_option_tokens() -> None:
         step  = stock["strike_step"]
         rng   = cfg.OPTION_CACHE_RANGE[name]
 
-        expiry = _get_nearest_monthly_expiry(name, instruments)
+        expiry, rolled = _get_nearest_monthly_expiry(name, instruments)
         if not expiry:
             print(f"[stock_kite] WARNING — no monthly expiry found for {name}")
             continue
@@ -98,15 +124,17 @@ def cache_stock_option_tokens() -> None:
         for m in matches:
             key = f"{name}_{int(m['strike'])}_{m['instrument_type']}"
             result[key] = {
-                "token":         m["instrument_token"],
-                "tradingsymbol": m["tradingsymbol"],
-                "lot_size":      m["lot_size"],
-                "expiry":        expiry.isoformat(),
+                "token":          m["instrument_token"],
+                "tradingsymbol":  m["tradingsymbol"],
+                "lot_size":       m["lot_size"],
+                "expiry":         expiry.isoformat(),
+                "rolled_forward": rolled,
             }
 
         print(
             f"[stock_kite] {name}: cached {len(matches)} strikes "
             f"around {spot:.0f}, expiry {expiry} (monthly)"
+            + (" [rolled forward]" if rolled else "")
         )
 
     redis_set(cfg.REDIS_OPTION_TOKENS_KEY, json.dumps(result), ex=93600)
