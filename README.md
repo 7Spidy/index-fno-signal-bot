@@ -3,7 +3,7 @@
 A Python service that monitors Indian index futures and individual stock options every 5 minutes during NSE market hours, evaluates a multi-condition technical signal model, and sends Discord alerts when a high-conviction CE (bullish) or PE (bearish) trade setup forms. It never places orders — human decides to trade.
 
 **Index instruments:** NIFTY, BANKNIFTY, SENSEX futures
-**Stock instruments:** 11 NSE-listed stocks (see [Stock Signal Bot](#stock-signal-bot) below)
+**Stock instruments:** 14 NSE-listed stocks (see [Stock Signal Bot](#stock-signal-bot) below)
 **Exchange:** NFO (NIFTY/BANKNIFTY/stocks) and BFO (SENSEX)
 **Runs via:** GitHub Actions (morning-login + signal evaluation) with cron-job.org as the 5-min trigger
 
@@ -330,9 +330,9 @@ Note: reading messages requires a Bot token; posting embeds uses a plain webhook
 
 ## Stock Signal Bot
 
-A parallel signal bot running the same 4-condition model on 11 individual NSE stocks. Signal logic, indicator math, and trade computation are identical to the index bot — same `indicators.py`, same `signals.py`. The stock bot uses equity OHLCV data (NSE tokens, real volume) but resolves ATM strikes and option tokens from the NFO monthly chain.
+A parallel signal bot running the same 4-condition model on 14 individual NSE stocks. Signal logic, indicator math, and trade computation are identical to the index bot — same `indicators.py`, same `signals.py`. The stock bot uses equity OHLCV data (NSE tokens, real volume) but resolves ATM strikes and option tokens from the NFO monthly chain.
 
-### Stock Universe (11 stocks)
+### Stock Universe (14 stocks)
 
 | Stock | Sector | Strike Step | Lot Size |
 |---|---|---|---|
@@ -373,7 +373,7 @@ Redis key: `stock:event_excluded:{YYYY-MM-DD}` → JSON list of excluded stock n
    - BANKNIFTY: ±1,500 pts
    - SENSEX: ±2,000 pts
 4. **Dashboard reset** — Clears today's history in `docs/dashboard.json` and pushes a clean slate to git.
-5. **Stock equity token cache** — `src/stock_kite_client.py --cache-equity-tokens` resolves NSE equity instrument tokens for all 11 tracked stocks and stores them in Redis.
+5. **Stock equity token cache** — `src/stock_kite_client.py --cache-equity-tokens` resolves NSE equity instrument tokens for all 14 tracked stocks and stores them in Redis.
 6. **Stock option token cache** — `src/stock_kite_client.py --cache-stock-options` pre-caches monthly ATM ± range option tokens for each stock.
 7. **Stock event exclusion** — `src/stock_events.py --cache-event-exclusions` queries Marketaux for corporate event news and writes the exclusion list to Redis. Runs with `continue-on-error: true` — a Marketaux failure is reported to Discord but never blocks the rest of morning-login.
 
@@ -464,7 +464,7 @@ index-fno-signal-bot/
 │   └── _headers               cache-control: no-cache for dashboard files
 ├── src/
 │   ├── config.py              index instruments, thresholds, R:R, VWAP proximity
-│   ├── stock_config.py        stock universe (11 stocks), thresholds, event exclusion config
+│   ├── stock_config.py        stock universe (14 stocks), thresholds, event exclusion config
 │   ├── auth.py                Kite TOTP automated login
 │   ├── kite_client.py         index OHLCV fetch, live quote, option resolution
 │   ├── stock_kite_client.py   stock equity + option token cache
