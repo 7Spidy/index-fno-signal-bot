@@ -611,6 +611,7 @@ def _try_exit() -> bool:
         for p in all_positions
         if p.get("quantity", 0) != 0
     }
+    pos_by_symbol = {p["tradingsymbol"]: p for p in all_positions}
 
     found_closed = False
     for instrument in tracked:
@@ -631,23 +632,16 @@ def _try_exit() -> bool:
         action_sent  = track.get("action_alerts_sent", 0)
         action_acked = track.get("action_alerts_acked", 0)
 
-        # Find fill details
-        exit_price = 0.0
-        try:
-            trades = kite.trades()
-            for t in reversed(trades):
-                if t.get("tradingsymbol") == tradingsymbol:
-                    exit_price = float(t.get("average_price") or t.get("price") or 0)
-                    break
-        except Exception as e:
-            print(f"[position_tracker] _try_exit: trades() failed: {e}")
+        # Find fill details from already-fetched positions (no extra API call)
+        pos_data   = pos_by_symbol.get(tradingsymbol, {})
+        exit_price = float(pos_data.get("sell_price") or pos_data.get("average_price") or 0)
+        pnl_total  = float(pos_data.get("realised") or 0.0)
 
-        if direction == "CE":
-            pnl = exit_price - entry
-        else:
-            pnl = entry - exit_price
-
-        r_multiple = (pnl / T) if T > 0 else 0.0
+        # Both CE and PE are long options — buy low, sell high
+        pnl_per_unit = exit_price - entry
+        # Prefer Kite's realised total (includes lot size); fall back to per-unit
+        pnl = pnl_total if pnl_total != 0.0 else pnl_per_unit
+        r_multiple = (pnl_per_unit / T) if T > 0 else None
         compliance_ratio = (action_acked / action_sent) if action_sent > 0 else 1.0
 
         market_note = (

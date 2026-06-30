@@ -125,21 +125,25 @@ def send_exit_summary(
     entry: float,
     exit_price: float,
     pnl: float,
-    r_multiple: float,
+    r_multiple: float | None,
     compliance_ratio: float,
     market_note: str,
 ) -> bool:
     """Post a blue Exit summary with trade stats."""
-    pnl_sign  = "+" if pnl >= 0 else ""
-    r_sign    = "+" if r_multiple >= 0 else ""
+    pnl_sign = "+" if pnl >= 0 else ""
+    if r_multiple is not None:
+        r_sign  = "+" if r_multiple >= 0 else ""
+        r_field = f"{r_sign}{r_multiple:.2f}R"
+    else:
+        r_field = "—"
     embed = {
         "title":  f"🏁 {instrument} {direction.upper()} — Position Closed",
         "color":  EXIT_COLOR,
         "fields": [
-            {"name": "Entry",      "value": f"₹{entry:,.2f}",           "inline": True},
-            {"name": "Exit",       "value": f"₹{exit_price:,.2f}",       "inline": True},
-            {"name": "P&L",        "value": f"{pnl_sign}₹{pnl:,.2f}",   "inline": True},
-            {"name": "R-Multiple", "value": f"{r_sign}{r_multiple:.2f}R", "inline": True},
+            {"name": "Entry",      "value": f"₹{entry:,.2f}",          "inline": True},
+            {"name": "Exit",       "value": f"₹{exit_price:,.2f}",      "inline": True},
+            {"name": "P&L",        "value": f"{pnl_sign}₹{pnl:,.2f}",  "inline": True},
+            {"name": "R-Multiple", "value": r_field,                    "inline": True},
             {
                 "name":   "SL Compliance",
                 "value":  f"{compliance_ratio:.0%} of action alerts acknowledged",
