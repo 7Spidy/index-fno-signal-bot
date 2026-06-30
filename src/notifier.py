@@ -13,9 +13,10 @@ except ImportError:
 
 IST = ZoneInfo("Asia/Kolkata")
 
-CE_COLOR = 0x00E5A0
-PE_COLOR = 0xF87171
-WARN_COLOR = 0xF59E0B
+CE_COLOR         = 0x00E5A0
+PE_COLOR         = 0xF87171
+WARN_COLOR       = 0xF59E0B
+SUPPRESSED_COLOR = 0x6B7280   # gray — visually distinct from CE/PE/warning colors
 
 
 def send_signal(instrument: str, direction: str, result: dict) -> bool:
@@ -186,6 +187,72 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
             print(f"[notifier] Discord returned {resp.status_code}: {resp.text[:200]}")
         else:
             print(f"[notifier] ✓ Discord signal sent: {instrument} {direction}")
+        return ok
+    except Exception as e:
+        print(f"[notifier] Discord POST failed: {e}")
+        return False
+
+
+def send_suppressed_signal(instrument: str, direction: str, result: dict) -> bool:
+    """
+    Post a Discord embed for a signal that fired all C1-C4 conditions but
+    was suppressed because the ATR-capped target produces an R:R below
+    cfg.MIN_RR. Visibility-only — no trade is implied actionable.
+    """
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook:
+        print("[notifier] DISCORD_WEBHOOK_URL not set")
+        return False
+
+    is_ce      = direction.upper() == "CE"
+    arrow      = "↑" if is_ce else "↓"
+    raw_risk   = result.get("raw_risk")
+    target_pts = result.get("target_pts")
+    rr         = result.get("rr")
+    atr        = result.get("daily_atr")
+
+    embed = {
+        "title":  f"⚪ {direction.upper()} Signal SUPPRESSED — {instrument} (low R:R)",
+        "color":  SUPPRESSED_COLOR,
+        "fields": [
+            {
+                "name":   "Reason",
+                "value":  (f"R:R {rr} below minimum {result.get('rr_floor', 0.8)} — "
+                           "target capped by ATR/option-range, not worth the risk"),
+                "inline": False,
+            },
+            {
+                "name":   "Risk (pts)",
+                "value":  f"{raw_risk}" if raw_risk is not None else "—",
+                "inline": True,
+            },
+            {
+                "name":   "Capped target (pts)",
+                "value":  f"{target_pts}" if target_pts is not None else "—",
+                "inline": True,
+            },
+            {
+                "name":   "Daily ATR(14)",
+                "value":  f"{atr:.1f}" if atr is not None else "unavailable",
+                "inline": True,
+            },
+            {
+                "name":   "Candle",
+                "value":  result.get("candle_time", "—"),
+                "inline": True,
+            },
+        ],
+        "footer":    {"text": "Visibility only — no trade implied · not logged to journal"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        resp = requests.post(webhook, json={"embeds": [embed]}, timeout=10)
+        ok = resp.status_code in (200, 204)
+        if not ok:
+            print(f"[notifier] Discord returned {resp.status_code}: {resp.text[:200]}")
+        else:
+            print(f"[notifier] ✓ Discord suppressed-signal sent: {instrument} {direction}")
         return ok
     except Exception as e:
         print(f"[notifier] Discord POST failed: {e}")

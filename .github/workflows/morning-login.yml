@@ -67,6 +67,13 @@ jobs:
           UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
+      - name: Cache stock daily ATR
+        run: python -m src.stock_kite_client --cache-daily-atr
+        env:
+          KITE_API_KEY:             ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
       - name: Cache stock event exclusions
         run: python -m src.stock_events --cache-event-exclusions
         continue-on-error: true

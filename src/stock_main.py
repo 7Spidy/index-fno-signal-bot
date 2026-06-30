@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, config as idx_cfg, indicators, notifier, sector_config, state
+from src import calendar_nse, indicators, notifier, sector_config, state
 from src import stock_config as cfg
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
@@ -376,7 +376,11 @@ def main() -> None:
     new_history_rows   = []
     fired_signals      = []
 
-    target_rr = getattr(idx_cfg, "TARGET_RR", 1.5)
+    raw_daily_atr = state.redis_get(cfg.REDIS_DAILY_ATR_KEY)
+    daily_atr_map: dict[str, float] = json.loads(raw_daily_atr) if raw_daily_atr else {}
+    if not daily_atr_map:
+        print("[stock_main] WARNING — no cached daily ATR, falling back to "
+              "flat 1.5R target for all stocks this run")
 
     # Batch-fetch live quotes for all 12 stocks in ONE Kite API call instead
     # of one call per stock — sidesteps the quote endpoint's 1 req/sec limit
@@ -454,7 +458,7 @@ def main() -> None:
             # Option data
             opt = _get_atm_option(name, result["futures_price"], stock["strike_step"], direction)
 
-            # SL / target (delta-scaled)
+            # SL (unchanged — anchored to prior candle structural extreme)
             spot     = result["futures_price"]
             sl_spot  = result["prev_candle_low"] if direction == "CE" else result["prev_candle_high"]
             risk_pts = abs(spot - sl_spot)
@@ -463,6 +467,25 @@ def main() -> None:
             delta_used, delta_fallback = _lookup_delta(
                 spot, opt.get("strike"), direction
             )
+
+            # Target: ATR-anchored, decoupled from 1.5R. Falls back to the
+            # old flat-1.5R formula only if this stock's ATR is missing from
+            # the cache (e.g. morning-login ATR step failed or stock was
+            # newly added without a cache refresh yet).
+            stock_atr = daily_atr_map.get(name)
+            if stock_atr:
+                raw_target_pts = cfg.ATR_TARGET_K * stock_atr
+                floor_pts      = max(0.0015 * spot, 2 * cfg.SLIPPAGE_PTS_EST)
+                ceiling_pts    = 0.8 * cfg.OPTION_CACHE_RANGE[name]
+                target_pts     = max(floor_pts, min(raw_target_pts, ceiling_pts))
+                rr_effective   = round(target_pts / risk_pts, 2) if risk_pts else 0
+                target_source  = "atr"
+            else:
+                target_pts    = risk_pts * 1.5
+                rr_effective  = 1.5
+                target_source = "fallback_1.5R"
+
+            rr_suppressed = stock_atr is not None and rr_effective < cfg.MIN_RR
 
             sector_key  = sector_config.STOCK_SECTOR.get(name)
             sector_data = sector_perf.get(sector_key) if sector_key else None
@@ -478,9 +501,9 @@ def main() -> None:
 
             signal_payload = {
                 **result,
-                "instrument":       name,
-                "direction":        direction,
-                "asset_class":      "STOCK",
+                "instrument":        name,
+                "direction":         direction,
+                "asset_class":       "STOCK",
                 "sector_conviction": conviction_tag,
                 "atm_data": {
                     "tradingsymbol":  opt.get("tradingsymbol"),
@@ -490,23 +513,33 @@ def main() -> None:
                     "rolled_forward": opt.get("rolled_forward", False),
                 },
                 "atm_ltp":        opt.get("ltp"),
-                "opt_sl":         (opt["ltp"] - round(risk_pts * delta_used, 2))             if opt.get("ltp") else None,
-                "opt_target":     (opt["ltp"] + round(risk_pts * delta_used * target_rr, 2)) if opt.get("ltp") else None,
+                "opt_sl":         (opt["ltp"] - round(risk_pts  * delta_used, 2))          if opt.get("ltp") else None,
+                "opt_target":     (opt["ltp"] + round(target_pts * delta_used, 2))          if opt.get("ltp") else None,
                 "delta_used":     delta_used,
                 "delta_fallback": delta_fallback,
-                "spot_ltp":   spot,
-                "spot_sl":    round(sl_spot, 2),
-                "spot_tgt":   round(spot + risk_pts * target_rr, 2) if direction == "CE"
-                              else round(spot - risk_pts * target_rr, 2),
-                "raw_risk":   round(risk_pts, 1),
-                "conviction": "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
-                "rr":         target_rr,
+                "spot_ltp":      spot,
+                "spot_sl":       round(sl_spot, 2),
+                "spot_tgt":      round(spot + target_pts, 2) if direction == "CE"
+                                 else round(spot - target_pts, 2),
+                "raw_risk":      round(risk_pts, 1),
+                "target_pts":    round(target_pts, 1),
+                "target_source": target_source,
+                "daily_atr":     stock_atr,
+                "conviction":    "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
+                "rr":            rr_effective,
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
                 "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
             }
 
+            if rr_suppressed:
+                notifier.send_suppressed_signal(name, direction, signal_payload)
+                print(f"[stock_main] {name}: {direction} SIGNAL SUPPRESSED "
+                      f"(RR {rr_effective} < {cfg.MIN_RR})")
+                continue   # do not log to history/journal as a fired trade
+
             notifier.send_signal(name, direction, signal_payload)
-            print(f"[stock_main] {name}: {direction} SIGNAL FIRED")
+            print(f"[stock_main] {name}: {direction} SIGNAL FIRED "
+                  f"(target={target_source}, RR={rr_effective})")
 
             fired_signals.append({
                 "instrument":      name,
@@ -525,10 +558,13 @@ def main() -> None:
                 "spot_tgt":        signal_payload["spot_tgt"],
                 "spot_sl":         signal_payload["spot_sl"],
                 "raw_risk":        signal_payload["raw_risk"],
+                "target_pts":      signal_payload["target_pts"],
+                "target_source":   signal_payload["target_source"],
+                "daily_atr":       signal_payload["daily_atr"],
                 "conviction":      signal_payload["conviction"],
                 "delta_used":      signal_payload["delta_used"],
                 "delta_fallback":  signal_payload["delta_fallback"],
-                "rr":              target_rr,
+                "rr":              signal_payload["rr"],
                 "rsi":             result["rsi"],
                 "pdi":             result["pdi"],
                 "ndi":             result["ndi"],

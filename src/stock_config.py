@@ -201,6 +201,17 @@ OPTION_CACHE_RANGE = {
     "HINDALCO":     50,
 }
 
+# ── ATR-based stock target (replaces flat 1.5R target for stocks only) ──────
+# Stocks move 2-5% daily — a flat 1.5x-risk target overstates what a 5-min
+# signal can realistically capture. Target is instead anchored to each
+# stock's own 14-day daily ATR, refreshed once per morning by morning-login.
+ATR_TARGET_K        = 0.40   # fraction of daily ATR used as intraday target
+ATR_PERIOD_DAYS      = 14
+MIN_RR               = 0.8   # below this, suppress signal (target/risk too thin)
+SLIPPAGE_PTS_EST     = 1.0   # conservative per-leg slippage estimate, in spot pts
+
+REDIS_DAILY_ATR_KEY = "stock:daily_atr"   # {NAME: atr_value}, refreshed daily
+
 # DI threshold for C4 — lower than the index threshold (25); stocks are
 # individually noisier and a 25 floor was filtering out otherwise-clean signals.
 DI_THRESHOLD = 24
