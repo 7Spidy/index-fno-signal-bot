@@ -210,6 +210,40 @@ def _all_tracked_instruments() -> list[str]:
 
 
 # ──────────────────────────────────────────────────────────────
+# Pending-command state (deferred-ack retry for /enter and /exit)
+# ──────────────────────────────────────────────────────────────
+
+def _pending_key(kind: str) -> str:
+    return f"pending:{kind}:{date.today().isoformat()}"
+
+
+def _load_pending(kind: str) -> dict | None:
+    raw = state.redis_get(_pending_key(kind))
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def _save_pending(kind: str, msg_id: str, attempts: int) -> None:
+    state.redis_set(
+        _pending_key(kind),
+        json.dumps({
+            "msg_id": msg_id,
+            "attempts": attempts,
+            "first_seen_at": datetime.now(IST).isoformat(),
+        }),
+        ex=300,
+    )
+
+
+def _clear_pending(kind: str) -> None:
+    state.redis_delete(_pending_key(kind))
+
+
+# ──────────────────────────────────────────────────────────────
 # Instrument name extraction from tradingsymbol
 # ──────────────────────────────────────────────────────────────
 
@@ -257,19 +291,22 @@ def _load_intent(instrument: str) -> dict | None:
 # /enter handler
 # ──────────────────────────────────────────────────────────────
 
-def handle_enter() -> None:
-    """Process /enter: snapshot open Kite positions and initialise Redis tracking."""
-    print("[position_tracker] /enter detected — scanning open positions")
+def _try_enter() -> bool:
+    """Snapshot open Kite positions and initialise Redis tracking.
+
+    Returns True if at least one open position was found, False otherwise.
+    """
+    print("[position_tracker] _try_enter: scanning open positions")
     try:
         from src import kite_client
         kite = kite_client.get_kite()
         positions_data = kite.positions()
     except Exception as e:
-        print(f"[position_tracker] handle_enter: kite.positions() failed: {e}")
+        print(f"[position_tracker] _try_enter: kite.positions() failed: {e}")
         trade_notifier.send_fyi(
             "Unknown", "?", 0.0, 0.0, 0.0
         )
-        return
+        return False
 
     all_positions = (
         positions_data.get("net", []) or []
@@ -277,20 +314,20 @@ def handle_enter() -> None:
     open_positions = [p for p in all_positions if p.get("quantity", 0) != 0]
 
     if not open_positions:
-        print("[position_tracker] handle_enter: no open positions found in Kite")
-        return
+        print("[position_tracker] _try_enter: no open positions found in Kite")
+        return False
 
     for pos in open_positions:
         tradingsymbol = pos.get("tradingsymbol", "")
         instrument = _underlying_from_tradingsymbol(tradingsymbol)
         if not instrument:
-            print(f"[position_tracker] handle_enter: unrecognised symbol {tradingsymbol!r} — skip")
+            print(f"[position_tracker] _try_enter: unrecognised symbol {tradingsymbol!r} — skip")
             continue
 
         # Idempotent: skip if already tracked
         existing = _load_track(instrument)
         if existing:
-            print(f"[position_tracker] handle_enter: {instrument} already tracked — leave untouched")
+            print(f"[position_tracker] _try_enter: {instrument} already tracked — leave untouched")
             continue
 
         # Determine direction from tradingsymbol (CE/PE suffix)
@@ -299,7 +336,7 @@ def handle_enter() -> None:
         elif tradingsymbol.upper().endswith("PE"):
             direction = "PE"
         else:
-            print(f"[position_tracker] handle_enter: cannot determine direction for {tradingsymbol!r} — skip")
+            print(f"[position_tracker] _try_enter: cannot determine direction for {tradingsymbol!r} — skip")
             continue
 
         entry = pos.get("average_price") or pos.get("buy_price") or 0.0
@@ -315,11 +352,11 @@ def handle_enter() -> None:
             if risk_pts and target_rr:
                 T = risk_pts * target_rr
             original_sl = intent.get("spot_sl")
-            print(f"[position_tracker] handle_enter: {instrument} intent found — "
+            print(f"[position_tracker] _try_enter: {instrument} intent found — "
                   f"T={T}, original_sl={original_sl}")
         else:
             print(
-                f"[position_tracker] handle_enter: no intent payload for {instrument} — "
+                f"[position_tracker] _try_enter: no intent payload for {instrument} — "
                 "T unavailable. Tracking limited to raw P&L."
             )
             trade_notifier.send_fyi(
@@ -344,8 +381,37 @@ def handle_enter() -> None:
             "instrument":     instrument,
         }
         _save_track(instrument, track_data)
-        print(f"[position_tracker] handle_enter: tracking {instrument} {direction} "
+        print(f"[position_tracker] _try_enter: tracking {instrument} {direction} "
               f"entry={entry} T={T} prior_sl={prior_sl}")
+
+    return True
+
+
+def handle_enter(msg_id: str) -> bool:
+    """Retry-safe /enter handler.
+
+    Returns True when the command is resolved (position found or all attempts
+    exhausted). Returns False to signal the caller to not advance
+    last_seen_msg_id — the same message should be re-delivered next cycle.
+    """
+    pending = _load_pending("enter")
+
+    found = _try_enter()
+    if found:
+        _clear_pending("enter")
+        return True
+
+    attempts = (pending["attempts"] + 1) if pending else 1
+
+    if attempts >= 3:
+        print(f"[position_tracker] handle_enter: giving up after {attempts} attempts — no open position found")
+        trade_notifier.send_enter_failed(attempts)
+        _clear_pending("enter")
+        return True  # resolved (given up) — allow message to be marked seen
+
+    print(f"[position_tracker] handle_enter: attempt {attempts}/3 — no open position yet, will retry")
+    _save_pending("enter", msg_id, attempts)
+    return False  # not resolved — do not advance last_seen past this message
 
 
 # ──────────────────────────────────────────────────────────────
@@ -515,21 +581,23 @@ def run_heartbeat() -> None:
 # /exit handler
 # ──────────────────────────────────────────────────────────────
 
-def handle_exit() -> None:
-    """Process /exit: close out any positions no longer open in Kite."""
-    print("[position_tracker] /exit detected — checking for closed positions")
+def _try_exit() -> bool:
+    """Check whether any tracked positions are now closed in Kite and clean them up.
+
+    Returns True if at least one tracked position was found closed, False if all
+    tracked positions are still open or Kite could not be reached.
+    """
     tracked = _all_tracked_instruments()
     if not tracked:
-        print("[position_tracker] handle_exit: no tracked positions to close")
-        return
+        return True  # nothing to close — consider resolved
 
     try:
         from src import kite_client
         kite = kite_client.get_kite()
         positions_data = kite.positions()
     except Exception as e:
-        print(f"[position_tracker] handle_exit: kite.positions() failed: {e}")
-        return
+        print(f"[position_tracker] _try_exit: kite.positions() failed: {e}")
+        return False
 
     all_positions = positions_data.get("net", []) or []
     open_syms = {
@@ -538,6 +606,7 @@ def handle_exit() -> None:
         if p.get("quantity", 0) != 0
     }
 
+    found_closed = False
     for instrument in tracked:
         track = _load_track(instrument)
         if not track:
@@ -545,10 +614,11 @@ def handle_exit() -> None:
 
         tradingsymbol = track["tradingsymbol"]
         if tradingsymbol in open_syms:
-            print(f"[position_tracker] handle_exit: {instrument} still open — skip")
+            print(f"[position_tracker] _try_exit: {instrument} still open — skip")
             continue
 
         # Position closed — build exit summary
+        found_closed = True
         entry     = track["entry"]
         direction = track["direction"]
         T         = track.get("T") or 0.0
@@ -564,7 +634,7 @@ def handle_exit() -> None:
                     exit_price = float(t.get("average_price") or t.get("price") or 0)
                     break
         except Exception as e:
-            print(f"[position_tracker] handle_exit: trades() failed: {e}")
+            print(f"[position_tracker] _try_exit: trades() failed: {e}")
 
         if direction == "CE":
             pnl = exit_price - entry
@@ -574,7 +644,6 @@ def handle_exit() -> None:
         r_multiple = (pnl / T) if T > 0 else 0.0
         compliance_ratio = (action_acked / action_sent) if action_sent > 0 else 1.0
 
-        # Quick market context note
         market_note = (
             f"Closed at {datetime.now(IST).strftime('%H:%M IST')} · "
             f"entry={entry:.2f} exit={exit_price:.2f}"
@@ -592,9 +661,43 @@ def handle_exit() -> None:
         )
 
         state.redis_delete(_track_key(instrument))
-        print(f"[position_tracker] handle_exit: {instrument} closed and tracking removed")
+        print(f"[position_tracker] _try_exit: {instrument} closed and tracking removed")
 
-    # Update last_seen_msg_id after /exit processing handled in main()
+    return found_closed
+
+
+def handle_exit(msg_id: str) -> bool:
+    """Retry-safe /exit handler.
+
+    Returns True when the command is resolved (position closed, nothing to close,
+    or all attempts exhausted). Returns False to signal the caller to not advance
+    last_seen_msg_id — the same message should be re-delivered next cycle.
+    """
+    print("[position_tracker] /exit detected — checking for closed positions")
+
+    # Fast path: no tracked positions — not a race condition, just a no-op
+    if not _all_tracked_instruments():
+        print("[position_tracker] handle_exit: no tracked positions to close")
+        return True
+
+    pending = _load_pending("exit")
+
+    found = _try_exit()
+    if found:
+        _clear_pending("exit")
+        return True
+
+    attempts = (pending["attempts"] + 1) if pending else 1
+
+    if attempts >= 3:
+        print(f"[position_tracker] handle_exit: giving up after {attempts} attempts — position still shows open")
+        trade_notifier.send_exit_failed(attempts)
+        _clear_pending("exit")
+        return True  # resolved (given up) — allow message to be marked seen
+
+    print(f"[position_tracker] handle_exit: attempt {attempts}/3 — position still open in Kite, will retry")
+    _save_pending("exit", msg_id, attempts)
+    return False  # not resolved — do not advance last_seen past this message
 
 
 # ──────────────────────────────────────────────────────────────
@@ -616,20 +719,39 @@ def main() -> None:
         messages  = discord_listener.fetch_new_messages(channel_id, bot_token, last_seen)
         commands  = discord_listener.extract_commands(messages)
 
-    # Dispatch commands in order
-    latest_msg_id: str | None = None
-    for msg_id, cmd in commands:
-        latest_msg_id = msg_id
-        if cmd == "/enter":
-            handle_enter()
-        elif cmd == "/exit":
-            handle_exit()
+    # Dispatch commands in order; stop at first unresolved command
+    latest_resolved_msg_id: str | None = None
+    unresolved = False
 
-    # Persist the latest seen message ID (even if no command)
-    if messages:
-        latest_msg_id = messages[-1]["id"]
-    if latest_msg_id:
-        state.redis_set("trade:last_seen_msg_id", latest_msg_id)
+    for msg_id, cmd in commands:
+        if cmd == "/enter":
+            resolved = handle_enter(msg_id)
+        elif cmd == "/exit":
+            resolved = handle_exit(msg_id)
+        else:
+            resolved = True
+
+        if resolved:
+            latest_resolved_msg_id = msg_id
+        else:
+            unresolved = True
+            break  # retry this command next cycle
+
+    # Advance last_seen_msg_id only as far as resolved commands allow
+    if not unresolved:
+        # All commands resolved — advance to last fetched message (normal behaviour)
+        latest_msg_id: str | None = None
+        if messages:
+            latest_msg_id = messages[-1]["id"]
+        elif latest_resolved_msg_id:
+            latest_msg_id = latest_resolved_msg_id
+        if latest_msg_id:
+            state.redis_set("trade:last_seen_msg_id", latest_msg_id)
+    else:
+        # Unresolved command — only advance up to the last message that did resolve
+        if latest_resolved_msg_id:
+            state.redis_set("trade:last_seen_msg_id", latest_resolved_msg_id)
+        # else: nothing resolved — leave cursor unchanged so the command is re-delivered
 
     # Always run heartbeat — it exits immediately if no tracked positions
     run_heartbeat()

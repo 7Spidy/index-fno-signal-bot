@@ -1,9 +1,14 @@
-"""Unit tests for position_tracker.py — ladder function and SL invariants."""
+"""Unit tests for position_tracker.py — ladder function, SL invariants, and retry logic."""
+import json
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from src.position_tracker import (
     compute_final_sl,
     compute_ladder_sl,
+    handle_enter,
+    handle_exit,
 )
 
 
@@ -229,3 +234,169 @@ class TestSlExceedsOriginalT:
         sl = compute_ladder_sl(entry, T, price_at_1_8T, "PE", 9999.0)
         assert sl < entry - T, f"Expected SL {sl} < entry-T {entry - T}"
         assert abs(sl - (-70.0)) < 1e-9
+
+
+# ──────────────────────────────────────────────────────────────
+# handle_enter retry / deferred-ack logic
+# ──────────────────────────────────────────────────────────────
+
+_ENTER_PATCHES = [
+    "src.position_tracker.state.redis_get",
+    "src.position_tracker.state.redis_set",
+    "src.position_tracker.state.redis_delete",
+    "src.position_tracker._try_enter",
+    "src.position_tracker.trade_notifier.send_enter_failed",
+]
+
+_EXIT_PATCHES = [
+    "src.position_tracker.state.redis_get",
+    "src.position_tracker.state.redis_set",
+    "src.position_tracker.state.redis_delete",
+    "src.position_tracker._try_exit",
+    "src.position_tracker._all_tracked_instruments",
+    "src.position_tracker.trade_notifier.send_exit_failed",
+]
+
+
+class TestHandleEnterRetry:
+    """handle_enter() retry / deferred-ack wrapper."""
+
+    def _make_pending(self, attempts: int) -> str:
+        return json.dumps({"msg_id": "100", "attempts": attempts, "first_seen_at": "2026-06-30T09:00:00"})
+
+    def test_attempt1_no_position_saves_pending_returns_false(self):
+        with patch("src.position_tracker._try_enter", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=None) as mock_load, \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
+            result = handle_enter("101")
+        assert result is False
+        mock_save.assert_called_once_with("enter", "101", 1)
+        mock_clear.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_attempt2_no_position_saves_attempts2_returns_false(self):
+        pending = {"msg_id": "101", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._try_enter", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
+            result = handle_enter("101")
+        assert result is False
+        mock_save.assert_called_once_with("enter", "101", 2)
+        mock_clear.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_attempt3_no_position_sends_alert_clears_returns_true(self):
+        pending = {"msg_id": "101", "attempts": 2, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._try_enter", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
+            result = handle_enter("101")
+        assert result is True
+        mock_alert.assert_called_once_with(3)
+        mock_clear.assert_called_once_with("enter")
+        mock_save.assert_not_called()
+
+    def test_position_found_on_attempt2_clears_pending_returns_true(self):
+        pending = {"msg_id": "101", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._try_enter", return_value=True), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
+            result = handle_enter("101")
+        assert result is True
+        mock_clear.assert_called_once_with("enter")
+        mock_save.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_position_found_on_first_attempt_no_pending_returns_true(self):
+        with patch("src.position_tracker._try_enter", return_value=True), \
+             patch("src.position_tracker._load_pending", return_value=None), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
+            result = handle_enter("102")
+        assert result is True
+        mock_clear.assert_called_once_with("enter")
+        mock_save.assert_not_called()
+        mock_alert.assert_not_called()
+
+
+# ──────────────────────────────────────────────────────────────
+# handle_exit retry / deferred-ack logic
+# ──────────────────────────────────────────────────────────────
+
+class TestHandleExitRetry:
+    """handle_exit() retry / deferred-ack wrapper."""
+
+    def test_no_tracked_positions_resolves_immediately_no_retry(self):
+        with patch("src.position_tracker._all_tracked_instruments", return_value=[]), \
+             patch("src.position_tracker._try_exit") as mock_try, \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
+            result = handle_exit("200")
+        assert result is True
+        mock_try.assert_not_called()
+        mock_save.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_attempt1_position_still_open_saves_pending_returns_false(self):
+        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
+             patch("src.position_tracker._try_exit", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=None), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
+            result = handle_exit("201")
+        assert result is False
+        mock_save.assert_called_once_with("exit", "201", 1)
+        mock_clear.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_attempt2_position_still_open_saves_attempts2_returns_false(self):
+        pending = {"msg_id": "201", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
+             patch("src.position_tracker._try_exit", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
+            result = handle_exit("201")
+        assert result is False
+        mock_save.assert_called_once_with("exit", "201", 2)
+        mock_clear.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_attempt3_position_still_open_sends_alert_clears_returns_true(self):
+        pending = {"msg_id": "201", "attempts": 2, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
+             patch("src.position_tracker._try_exit", return_value=False), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
+            result = handle_exit("201")
+        assert result is True
+        mock_alert.assert_called_once_with(3)
+        mock_clear.assert_called_once_with("exit")
+        mock_save.assert_not_called()
+
+    def test_position_found_closed_clears_pending_returns_true(self):
+        pending = {"msg_id": "201", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
+        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
+             patch("src.position_tracker._try_exit", return_value=True), \
+             patch("src.position_tracker._load_pending", return_value=pending), \
+             patch("src.position_tracker._save_pending") as mock_save, \
+             patch("src.position_tracker._clear_pending") as mock_clear, \
+             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
+            result = handle_exit("201")
+        assert result is True
+        mock_clear.assert_called_once_with("exit")
+        mock_save.assert_not_called()
+        mock_alert.assert_not_called()

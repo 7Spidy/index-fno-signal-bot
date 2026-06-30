@@ -91,6 +91,34 @@ def send_action(
     return _post(embed)
 
 
+def send_enter_failed(attempts: int) -> bool:
+    """Post an amber alert — /enter could not find a matching open position after retries."""
+    embed = {
+        "title": "⚠️ /enter failed",
+        "color": ACTION_COLOR,
+        "description": (
+            f"No open F&O position found in Kite after {attempts} attempts "
+            f"(~{attempts * 1} min). Please confirm the order filled and resend /enter."
+        ),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return _post(embed)
+
+
+def send_exit_failed(attempts: int) -> bool:
+    """Post an amber alert — /exit could not find a tracked position to close after retries."""
+    embed = {
+        "title": "⚠️ /exit failed",
+        "color": ACTION_COLOR,
+        "description": (
+            f"Tracked position still shows open in Kite after {attempts} attempts "
+            f"(~{attempts * 1} min). Please confirm the order filled and resend /exit."
+        ),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return _post(embed)
+
+
 def send_exit_summary(
     instrument: str,
     direction: str,
