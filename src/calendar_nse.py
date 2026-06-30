@@ -47,6 +47,72 @@ def in_eval_window(now: datetime | None = None) -> bool:
     return window_start <= current_time <= window_end
 
 
+def is_last_trading_thursday(d: date | None = None) -> bool:
+    """True if d is the last Thursday of its month that is also a trading
+    day (weekend/holiday-adjusted backward to the prior trading day, per
+    standard NSE monthly-expiry convention)."""
+    if d is None:
+        d = datetime.now(IST).date()
+    # Find the last Thursday of d's month
+    import calendar as _cal
+    last_day = _cal.monthrange(d.year, d.month)[1]
+    last_thu = date(d.year, d.month, last_day)
+    while last_thu.weekday() != 3:  # 3 = Thursday
+        last_thu -= __import__("datetime").timedelta(days=1)
+    # Adjust backward past holidays/weekends to the prior trading day
+    candidate = last_thu
+    while not is_trading_day(candidate):
+        candidate -= __import__("datetime").timedelta(days=1)
+    return d == candidate
+
+
+def is_expiry_day(instrument_name: str, d: date | None = None) -> bool:
+    """True if instrument_name's contract expires on date d (today by default).
+    Weekly instruments (NIFTY, SENSEX): d.weekday() == WEEKLY_EXPIRY_WEEKDAY.
+    Monthly instruments (BANKNIFTY, all 14 stocks): is_last_trading_thursday(d).
+    Unknown instrument name → False (fail open)."""
+    if d is None:
+        d = datetime.now(IST).date()
+    if not is_trading_day(d):
+        return False
+
+    # Weekly expiry check
+    if instrument_name in config.WEEKLY_EXPIRY_WEEKDAY:
+        return d.weekday() == config.WEEKLY_EXPIRY_WEEKDAY[instrument_name]
+
+    # Monthly expiry: BANKNIFTY + all 14 stocks
+    from src import stock_config
+    monthly_names = config.MONTHLY_EXPIRY_INSTRUMENTS | {s["name"] for s in stock_config.STOCKS}
+    if instrument_name in monthly_names:
+        return is_last_trading_thursday(d)
+
+    return False  # unknown instrument — never cut off
+
+
+def in_eval_window_for(instrument_name: str, now: datetime | None = None) -> bool:
+    """Per-instrument eval-window gate. Same as in_eval_window(), but if
+    is_expiry_day(instrument_name, now.date()) is True, the window's effective
+    end becomes config.EXPIRY_DAY_CUTOFF (13:30) instead of the normal
+    EVAL_WINDOW_END. Other instruments not expiring today are unaffected."""
+    if now is None:
+        now = datetime.now(IST)
+    now_ist = now.astimezone(IST)
+
+    start_str, _ = config.EVAL_WINDOW_IST
+    h0, m0 = map(int, start_str.split(":"))
+    window_start = time(h0, m0)
+
+    if is_expiry_day(instrument_name, now_ist.date()):
+        h1, m1 = map(int, config.EXPIRY_DAY_CUTOFF.split(":"))
+    else:
+        end_str = config.EVAL_WINDOW_IST[1]
+        h1, m1 = map(int, end_str.split(":"))
+    window_end = time(h1, m1)
+
+    current_time = now_ist.time()
+    return window_start <= current_time <= window_end
+
+
 if __name__ == "__main__":
     d = datetime.now(IST)
     print(f"Today ({d.date()}): trading_day={is_trading_day()}, in_window={in_eval_window()}")

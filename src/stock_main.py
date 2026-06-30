@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, config as idx_cfg, indicators, notifier, state
+from src import calendar_nse, config as idx_cfg, indicators, notifier, sector_config, state
 from src import stock_config as cfg
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
@@ -335,9 +335,9 @@ def _fetch_and_evaluate(stock, equity_tokens, live_quotes, today_open):
 
 
 def main() -> None:
-    # Gate 1: trading day + eval window
-    if not (calendar_nse.is_trading_day() and calendar_nse.in_eval_window()):
-        print("[stock_main] Outside trading window — exiting")
+    # Gate 1: trading day (global — no instruments trade on a holiday)
+    if not calendar_nse.is_trading_day():
+        print("[stock_main] Not a trading day — exiting")
         return
 
     # Gate 2: access token present
@@ -363,6 +363,12 @@ def main() -> None:
     raw_excluded   = state.redis_get(excluded_key)
     event_excluded: set[str] = set(json.loads(raw_excluded)) if raw_excluded else set()
 
+    # Sector-relative-strength conviction tag — informational only. Missing key
+    # (morning step failed, or sector unresolved) = no tag, never a blocker.
+    sector_perf_key = f"{cfg.REDIS_SECTOR_PERF_PREFIX}:{date.today().isoformat()}"
+    raw_sector_perf = state.redis_get(sector_perf_key)
+    sector_perf: dict = json.loads(raw_sector_perf) if raw_sector_perf else {}
+
     now                = datetime.now(IST)
     today_open         = now.replace(hour=9, minute=15, second=0, microsecond=0)
     dashboard          = _load_dashboard()
@@ -387,6 +393,10 @@ def main() -> None:
         if name in event_excluded:
             print(f"[stock_main] {name}: skipped — event within "
                   f"{cfg.EVENT_LOOKAHEAD_DAYS}d (earnings/dividend/corp action)")
+            continue
+        if not calendar_nse.in_eval_window_for(name):
+            print(f"[stock_main] {name}: outside eval window "
+                  f"(expiry-day cutoff applies: {calendar_nse.is_expiry_day(name)})")
             continue
         pending.append(stock)
 
@@ -454,11 +464,24 @@ def main() -> None:
                 spot, opt.get("strike"), direction
             )
 
+            sector_key  = sector_config.STOCK_SECTOR.get(name)
+            sector_data = sector_perf.get(sector_key) if sector_key else None
+
+            conviction_tag = None
+            if sector_data and sector_data["tag"] != "NEUTRAL":
+                is_ce      = direction == "CE"
+                sector_out = sector_data["tag"] == "OUT"
+                if (is_ce and sector_out) or (not is_ce and not sector_out):
+                    conviction_tag = "HIGH"
+                else:
+                    conviction_tag = "LOW"
+
             signal_payload = {
                 **result,
-                "instrument":  name,
-                "direction":   direction,
-                "asset_class": "STOCK",
+                "instrument":       name,
+                "direction":        direction,
+                "asset_class":      "STOCK",
+                "sector_conviction": conviction_tag,
                 "atm_data": {
                     "tradingsymbol":  opt.get("tradingsymbol"),
                     "strike":         opt.get("strike"),

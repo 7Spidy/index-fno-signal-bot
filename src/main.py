@@ -138,12 +138,9 @@ def main() -> None:
     now_ist = datetime.now(IST)
     print(f"[main] Run at {now_ist.isoformat()}")
 
-    # 1. Gate: trading day + eval window
+    # 1. Gate: trading day (global — no instruments trade on a holiday)
     if not calendar_nse.is_trading_day():
         print("[main] Not a trading day — exiting")
-        return
-    if not calendar_nse.in_eval_window():
-        print(f"[main] Outside eval window {config.EVAL_WINDOW_IST} — exiting")
         return
 
     # 2. Read access token
@@ -186,6 +183,10 @@ def main() -> None:
     pending = []
     for inst in config.INSTRUMENTS:
         name = inst["name"]
+        if not calendar_nse.in_eval_window_for(name):
+            print(f"[main] {name}: outside eval window "
+                  f"(expiry-day cutoff applies: {calendar_nse.is_expiry_day(name)})")
+            continue
         token_info = instrument_tokens.get(name)
         if not token_info:
             print(f"[main] No token for {name} — skipping")

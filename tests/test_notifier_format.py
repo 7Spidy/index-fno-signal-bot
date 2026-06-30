@@ -123,3 +123,152 @@ def test_strike_and_expiry_line_still_present():
     assert "55400" in contract_field["value"], "Strike missing from Contract field"
     assert "2026-06-30" in contract_field["value"], "Expiry missing from Contract field"
     print("✅ Strike and expiry found in Contract field")
+
+
+# ── Sector conviction tag tests ───────────────────────────────────────────────
+
+HIGH_CONVICTION_COLOR = 0x3498DB
+LOW_CONVICTION_COLOR  = 0xE74C3C
+CE_COLOR = 0x00E5A0
+PE_COLOR = 0xF87171
+
+
+def _make_stock_result(symbol: str = "RELIANCE26JUN1500CE", conviction: str | None = None) -> dict:
+    r = {
+        "atm_data": {
+            "tradingsymbol": symbol,
+            "strike": 1500,
+            "expiry": "2026-06-30",
+            "fetch_time": "11:05:00 IST",
+        },
+        "atm_ltp": 45.50,
+        "opt_target": 55.20,
+        "opt_sl": 38.00,
+        "spot_ltp": 1502.0,
+        "spot_tgt": 1540.0,
+        "spot_sl": 1480.0,
+        "futures_price": 1502.0,
+        "fut_spot_spread": 0.0,
+        "vwap": 1498.0,
+        "rsi": 58.4,
+        "pdi": 28.1,
+        "ndi": 18.3,
+        "conviction": "MED",
+        "rr": 1.5,
+        "candle_time": "11:00 IST",
+        "c1": True, "c2": True, "c3": True, "c4": True,
+        "asset_class": "STOCK",
+        "delta_used": 0.50,
+        "delta_fallback": False,
+    }
+    if conviction is not None:
+        r["sector_conviction"] = conviction
+    return r
+
+
+def test_sector_conviction_high_produces_blue_color():
+    """HIGH conviction → embed color must be 0x3498DB (blue)."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result(conviction="HIGH")
+
+    notifier.send_signal("RELIANCE", "CE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    embed = call_kwargs["json"]["embeds"][0]
+    assert embed["color"] == HIGH_CONVICTION_COLOR, (
+        f"Expected blue ({HIGH_CONVICTION_COLOR:#x}), got {embed['color']:#x}"
+    )
+    print("✅ HIGH conviction → blue color")
+
+
+def test_sector_conviction_high_field_text():
+    """HIGH conviction → 'Sector Signal' field with correct text."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result(conviction="HIGH")
+
+    notifier.send_signal("RELIANCE", "CE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    fields = call_kwargs["json"]["embeds"][0]["fields"]
+    sector_field = next((f for f in fields if f["name"] == "Sector Signal"), None)
+    assert sector_field is not None, "Sector Signal field missing for HIGH conviction"
+    assert sector_field["value"] == "High Conviction with Sector Performance", (
+        f"Unexpected field text: {sector_field['value']!r}"
+    )
+    print("✅ HIGH conviction → correct field text")
+
+
+def test_sector_conviction_low_produces_red_color():
+    """LOW conviction → embed color must be 0xE74C3C (red)."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result(conviction="LOW")
+
+    notifier.send_signal("RELIANCE", "PE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    embed = call_kwargs["json"]["embeds"][0]
+    assert embed["color"] == LOW_CONVICTION_COLOR, (
+        f"Expected red ({LOW_CONVICTION_COLOR:#x}), got {embed['color']:#x}"
+    )
+    print("✅ LOW conviction → red color")
+
+
+def test_sector_conviction_low_field_text():
+    """LOW conviction → 'Sector Signal' field with correct text."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result(conviction="LOW")
+
+    notifier.send_signal("RELIANCE", "PE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    fields = call_kwargs["json"]["embeds"][0]["fields"]
+    sector_field = next((f for f in fields if f["name"] == "Sector Signal"), None)
+    assert sector_field is not None, "Sector Signal field missing for LOW conviction"
+    assert sector_field["value"] == "Low Conviction with Sector Performance", (
+        f"Unexpected field text: {sector_field['value']!r}"
+    )
+    print("✅ LOW conviction → correct field text")
+
+
+def test_sector_conviction_none_no_field():
+    """None conviction → no 'Sector Signal' field present."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result()  # no sector_conviction key
+
+    notifier.send_signal("RELIANCE", "CE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    fields = call_kwargs["json"]["embeds"][0]["fields"]
+    sector_field = next((f for f in fields if f["name"] == "Sector Signal"), None)
+    assert sector_field is None, "Unexpected Sector Signal field for None conviction"
+    print("✅ None conviction → no Sector Signal field")
+
+
+def test_sector_conviction_none_color_unchanged_ce():
+    """None conviction CE → color is standard CE green."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result()
+
+    notifier.send_signal("RELIANCE", "CE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    embed = call_kwargs["json"]["embeds"][0]
+    assert embed["color"] == CE_COLOR, (
+        f"Expected CE green ({CE_COLOR:#x}), got {embed['color']:#x}"
+    )
+    print("✅ None conviction CE → standard green color")
+
+
+def test_sector_conviction_none_color_unchanged_pe():
+    """None conviction PE → color is standard PE red."""
+    _requests_stub.post.reset_mock()
+    result = _make_stock_result(symbol="RELIANCE26JUN1500PE")
+
+    notifier.send_signal("RELIANCE", "PE", result)
+
+    call_kwargs = _requests_stub.post.call_args[1]
+    embed = call_kwargs["json"]["embeds"][0]
+    assert embed["color"] == PE_COLOR, (
+        f"Expected PE red ({PE_COLOR:#x}), got {embed['color']:#x}"
+    )
+    print("✅ None conviction PE → standard red color")

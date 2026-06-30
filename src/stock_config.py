@@ -209,3 +209,8 @@ DI_THRESHOLD = 24
 # next N calendar days (inclusive of today) are skipped entirely by stock_main.
 EVENT_LOOKAHEAD_DAYS = 1
 REDIS_EVENT_EXCLUDED_PREFIX = "stock:event_excluded"   # + ":{YYYY-MM-DD}"
+
+# Sector-relative-strength conviction tagging (informational only — see
+# sector_performance.py and notifier.py). Static Redis key, written once
+# daily by morning-login.yml, read read-only by stock_main.py.
+REDIS_SECTOR_PERF_PREFIX = "stock:sector_perf"   # + ":{YYYY-MM-DD}"

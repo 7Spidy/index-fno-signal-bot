@@ -30,6 +30,14 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     emoji  = "🟢" if is_ce else "🔴"
     arrow  = "↑" if is_ce else "↓"
 
+    HIGH_CONVICTION_COLOR = 0x3498DB   # blue
+    LOW_CONVICTION_COLOR  = 0xE74C3C   # red
+    sector_conviction = result.get("sector_conviction")   # None | "HIGH" | "LOW"
+    if sector_conviction == "HIGH":
+        color = HIGH_CONVICTION_COLOR
+    elif sector_conviction == "LOW":
+        color = LOW_CONVICTION_COLOR
+
     atm     = result.get("atm_data", {})
     ts      = atm.get("tradingsymbol", "unavailable")
     strike  = atm.get("strike")
@@ -49,6 +57,10 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
 
     def fi(v):
         return f"{v:,.1f}" if v is not None else "—"
+
+    delta_used     = result.get("delta_used", 0.50)
+    delta_fallback = result.get("delta_fallback", False)
+    delta_note     = " ⚠️ delta fallback (flat 0.50 used)" if delta_fallback else ""
 
     buy_sub    = f"live LTP @ {ftime}"
     tgt_sub    = f"if {instrument} spot → {fi(spot_tgt)}"
@@ -70,10 +82,6 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     vwap_dir  = "↑ above" if spot_ref > (vwap_val or 0) else "↓ below"
 
     expiry_note = " (rolled forward)" if atm.get("rolled_forward") else ""
-
-    delta_used     = result.get("delta_used", 0.50)
-    delta_fallback = result.get("delta_fallback", False)
-    delta_note     = " ⚠️ delta fallback (flat 0.50 used)" if delta_fallback else ""
 
     fields = [
         {
@@ -144,6 +152,19 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
             "inline": False,
         },
     ]
+
+    if sector_conviction == "HIGH":
+        fields.append({
+            "name":   "Sector Signal",
+            "value":  "High Conviction with Sector Performance",
+            "inline": False,
+        })
+    elif sector_conviction == "LOW":
+        fields.append({
+            "name":   "Sector Signal",
+            "value":  "Low Conviction with Sector Performance",
+            "inline": False,
+        })
 
     embed = {
         "title":     f"{emoji} {direction.upper()} Signal — {instrument}",

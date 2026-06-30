@@ -40,6 +40,14 @@ WEEKLY_EXPIRY_WEEKDAY = {
     # BANKNIFTY omitted — monthly only, falls through to month-end fallback
 }
 
+# Instruments using monthly (not weekly) expiry — BANKNIFTY + all stocks.
+MONTHLY_EXPIRY_INSTRUMENTS = {"BANKNIFTY"}  # stocks handled via stock_config.STOCKS
+
+# Cutoff time on an instrument's own expiry day — no alerts fired after this,
+# even though the normal EVAL_WINDOW_END (14:45) is later. Does not affect
+# instruments that are NOT expiring today.
+EXPIRY_DAY_CUTOFF = "13:30"
+
 # Strike range (pts from spot) to pre-cache at morning-login.
 OPTION_CACHE_RANGE = {
     "NIFTY":     500,
