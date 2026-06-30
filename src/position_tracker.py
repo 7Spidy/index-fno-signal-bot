@@ -345,6 +345,7 @@ def _try_enter() -> bool:
         intent = _load_intent(instrument)
         T: float | None = None
         original_sl: float | None = None
+        kite_sl_initial: float | None = None  # fetched only in no-intent path
 
         if intent:
             risk_pts  = intent.get("spot_risk_pts")
@@ -359,14 +360,19 @@ def _try_enter() -> bool:
                 f"[position_tracker] _try_enter: no intent payload for {instrument} — "
                 "T unavailable. Tracking limited to raw P&L."
             )
+            kite_sl_initial = _get_kite_sl_for(kite, tradingsymbol)
             trade_notifier.send_fyi(
                 instrument, direction,
                 ltp=entry,
                 progress_pct=0.0,
-                current_sl=entry,
+                current_sl=kite_sl_initial if kite_sl_initial is not None else entry,
             )
 
-        prior_sl = original_sl if original_sl is not None else entry
+        prior_sl = (
+            original_sl if original_sl is not None
+            else kite_sl_initial if kite_sl_initial is not None
+            else entry
+        )
 
         track_data = {
             "entry":          entry,
