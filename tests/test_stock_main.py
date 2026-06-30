@@ -164,3 +164,118 @@ def test_rolled_forward_false_in_normal_case():
 
     assert "rolled_forward" in result
     assert result["rolled_forward"] is False
+
+
+# ── Delta lookup tests ────────────────────────────────────────────────────────
+
+from src.stock_main import _compute_moneyness_pct, _lookup_delta
+
+
+class TestComputeMoneynessPct:
+    def test_ce_itm(self):
+        # spot > strike → positive (ITM for CE)
+        assert _compute_moneyness_pct(1050.0, 1000.0, "CE") == pytest.approx(5.0)
+
+    def test_ce_otm(self):
+        # spot < strike → negative (OTM for CE)
+        assert _compute_moneyness_pct(950.0, 1000.0, "CE") == pytest.approx(-5.0)
+
+    def test_pe_itm(self):
+        # strike > spot → positive (ITM for PE)
+        assert _compute_moneyness_pct(950.0, 1000.0, "PE") == pytest.approx(5.0)
+
+    def test_pe_otm(self):
+        # strike < spot → negative (OTM for PE)
+        assert _compute_moneyness_pct(1050.0, 1000.0, "PE") == pytest.approx(-5.0)
+
+    def test_atm(self):
+        assert _compute_moneyness_pct(1000.0, 1000.0, "CE") == pytest.approx(0.0)
+
+    def test_raises_on_none_spot(self):
+        with pytest.raises(ValueError):
+            _compute_moneyness_pct(None, 1000.0, "CE")
+
+    def test_raises_on_none_strike(self):
+        with pytest.raises(ValueError):
+            _compute_moneyness_pct(1000.0, None, "CE")
+
+    def test_raises_on_zero_strike(self):
+        with pytest.raises((ValueError, ZeroDivisionError)):
+            _compute_moneyness_pct(1000.0, 0.0, "CE")
+
+
+class TestLookupDelta:
+    def test_deep_otm_ce(self):
+        # spot much lower than strike → very negative moneyness → deep OTM bucket
+        delta, fallback = _lookup_delta(970.0, 1000.0, "CE")
+        assert delta == 0.35
+        assert fallback is False
+
+    def test_otm_ce(self):
+        # ~-1.5% moneyness → OTM bucket (-2.0 < -1.5 <= -1.0)
+        delta, fallback = _lookup_delta(985.0, 1000.0, "CE")
+        assert delta == 0.40
+        assert fallback is False
+
+    def test_near_otm_ce(self):
+        # ~-0.5% moneyness → near OTM bucket
+        delta, fallback = _lookup_delta(995.0, 1000.0, "CE")
+        assert delta == 0.45
+        assert fallback is False
+
+    def test_atm_bucket_ce(self):
+        # exactly ATM → ATM bucket (moneyness=0, which is <= 0.3)
+        delta, fallback = _lookup_delta(1000.0, 1000.0, "CE")
+        assert delta == 0.50
+        assert fallback is False
+
+    def test_near_itm_ce(self):
+        # ~+0.5% moneyness → near ITM bucket
+        delta, fallback = _lookup_delta(1005.0, 1000.0, "CE")
+        assert delta == 0.55
+        assert fallback is False
+
+    def test_itm_ce(self):
+        # ~+1.5% moneyness → ITM bucket
+        delta, fallback = _lookup_delta(1015.0, 1000.0, "CE")
+        assert delta == 0.60
+        assert fallback is False
+
+    def test_deep_itm_ce(self):
+        # +3% → deep ITM bucket
+        delta, fallback = _lookup_delta(1030.0, 1000.0, "CE")
+        assert delta == 0.65
+        assert fallback is False
+
+    def test_pe_direction_itm(self):
+        # strike > spot → moneyness = (1000-985)/1000*100 = 1.5% → ITM bucket (1.0,2.0] → 0.60
+        delta, fallback = _lookup_delta(985.0, 1000.0, "PE")
+        assert delta == 0.60
+        assert fallback is False
+
+    def test_pe_direction_otm(self):
+        # spot > strike → moneyness = (1000-1015)/1000*100 = -1.5% → OTM bucket (-2.0,-1.0] → 0.40
+        delta, fallback = _lookup_delta(1015.0, 1000.0, "PE")
+        assert delta == 0.40
+        assert fallback is False
+
+    def test_fallback_on_none_strike(self):
+        delta, fallback = _lookup_delta(1000.0, None, "CE")
+        assert delta == 0.50
+        assert fallback is True
+
+    def test_fallback_on_zero_strike(self):
+        delta, fallback = _lookup_delta(1000.0, 0.0, "CE")
+        assert delta == 0.50
+        assert fallback is True
+
+    def test_fallback_on_none_spot(self):
+        delta, fallback = _lookup_delta(None, 1000.0, "CE")
+        assert delta == 0.50
+        assert fallback is True
+
+    def test_fallback_returns_tuple_not_raises(self):
+        # Ensure no exception propagates out on bad input
+        result = _lookup_delta(None, None, "CE")
+        assert isinstance(result, tuple)
+        assert len(result) == 2

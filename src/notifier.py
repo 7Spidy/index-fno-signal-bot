@@ -52,7 +52,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
 
     buy_sub    = f"live LTP @ {ftime}"
     tgt_sub    = f"if {instrument} spot → {fi(spot_tgt)}"
-    sl_sub     = f"if {instrument} spot → {fi(spot_sl)}"
+    sl_sub     = f"if {instrument} spot → {fi(spot_sl)}  ·  Δ{delta_used:.2f}{delta_note}"
 
     asset_class = result.get("asset_class", "INDEX")
     if asset_class == "STOCK":
@@ -70,6 +70,10 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
     vwap_dir  = "↑ above" if spot_ref > (vwap_val or 0) else "↓ below"
 
     expiry_note = " (rolled forward)" if atm.get("rolled_forward") else ""
+
+    delta_used     = result.get("delta_used", 0.50)
+    delta_fallback = result.get("delta_fallback", False)
+    delta_note     = " ⚠️ delta fallback (flat 0.50 used)" if delta_fallback else ""
 
     fields = [
         {
