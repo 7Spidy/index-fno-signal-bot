@@ -142,6 +142,36 @@ def _live_atm_fallback(name: str, spot: float, step: int, direction: str) -> dic
         return {}
 
 
+def _compute_moneyness_pct(spot: float, strike: float, direction: str) -> float:
+    """
+    Signed % distance between spot and strike, oriented so positive = ITM
+    for the given direction. Raises on bad input — caller handles fallback.
+    """
+    if not spot or not strike:
+        raise ValueError("missing spot or strike for moneyness calc")
+    if direction == "CE":
+        return (spot - strike) / strike * 100
+    else:  # PE
+        return (strike - spot) / strike * 100
+
+
+def _lookup_delta(spot: float, strike: float, direction: str) -> tuple[float, bool]:
+    """
+    Returns (delta, used_fallback). Walks cfg.DELTA_MONEYNESS_BUCKETS
+    ascending and returns the first bucket whose upper bound covers the
+    computed moneyness. Falls back to cfg.DELTA_FALLBACK on any error.
+    """
+    try:
+        moneyness_pct = _compute_moneyness_pct(spot, strike, direction)
+        for upper_bound, delta in cfg.DELTA_MONEYNESS_BUCKETS:
+            if moneyness_pct <= upper_bound:
+                return delta, False
+        return cfg.DELTA_FALLBACK, True  # should not happen (inf bucket covers all)
+    except Exception as e:
+        print(f"[stock_main] delta lookup failed, using fallback {cfg.DELTA_FALLBACK}: {e}")
+        return cfg.DELTA_FALLBACK, True
+
+
 def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
     """
     Retrieve ATM option details from the stock option token cache.
@@ -420,6 +450,10 @@ def main() -> None:
             risk_pts = abs(spot - sl_spot)
             dkey     = direction.lower()
 
+            delta_used, delta_fallback = _lookup_delta(
+                spot, opt.get("strike"), direction
+            )
+
             signal_payload = {
                 **result,
                 "instrument":  name,
@@ -432,9 +466,11 @@ def main() -> None:
                     "fetch_time":     opt.get("fetch_time"),
                     "rolled_forward": opt.get("rolled_forward", False),
                 },
-                "atm_ltp":    opt.get("ltp"),
-                "opt_sl":     (opt["ltp"] - round(risk_pts * 0.50, 2))             if opt.get("ltp") else None,
-                "opt_target": (opt["ltp"] + round(risk_pts * 0.50 * target_rr, 2)) if opt.get("ltp") else None,
+                "atm_ltp":        opt.get("ltp"),
+                "opt_sl":         (opt["ltp"] - round(risk_pts * delta_used, 2))             if opt.get("ltp") else None,
+                "opt_target":     (opt["ltp"] + round(risk_pts * delta_used * target_rr, 2)) if opt.get("ltp") else None,
+                "delta_used":     delta_used,
+                "delta_fallback": delta_fallback,
                 "spot_ltp":   spot,
                 "spot_sl":    round(sl_spot, 2),
                 "spot_tgt":   round(spot + risk_pts * target_rr, 2) if direction == "CE"
@@ -467,6 +503,8 @@ def main() -> None:
                 "spot_sl":         signal_payload["spot_sl"],
                 "raw_risk":        signal_payload["raw_risk"],
                 "conviction":      signal_payload["conviction"],
+                "delta_used":      signal_payload["delta_used"],
+                "delta_fallback":  signal_payload["delta_fallback"],
                 "rr":              target_rr,
                 "rsi":             result["rsi"],
                 "pdi":             result["pdi"],
