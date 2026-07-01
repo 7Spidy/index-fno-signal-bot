@@ -3,18 +3,30 @@ Trailing SL position tracker — advisory only, never places/modifies orders.
 
 Triggered every minute by cron-job.org → workflow_dispatch on trade-tracker.yml.
 
-Flow:
-  1. Poll Discord for /enter or /exit messages since last seen.
-  2. Dispatch to enter/exit handlers for any commands found.
-  3. Always run heartbeat: iterate tracked positions, compute trailing SL,
-     and post FYI or ACTION embeds to Discord.
+Flow (pull-based, no manual Discord commands):
+  1. Call get_positions() via Kite every cycle.
+  2. Discover any open NIFTY F&O position not already tracked in Redis.
+  3. Require a position to be seen on 2 consecutive heartbeats (same
+     tradingsymbol, nonzero qty) before posting a "position detected" alert
+     and starting SL ladder tracking — guards against a stale/transient
+     Kite response.
+  4. On confirmation, reconstruct entry context (SL, target T) from the most
+     recent same-instrument signal intent written to Redis by executor_bridge
+     (`executor:pending_intent` / `executor:position`), not from Discord
+     history — that Redis key already carries the structural SL and R:R
+     used to build the alert, and is cheaper/more reliable than a message
+     scan.
+  5. Track the SL ladder per open position, keyed by tradingsymbol so
+     concurrent NIFTY CE + PE positions never collide.
+  6. Detect exits purely via a qty -> 0 (or position-disappears) transition
+     and post a P&L summary, labelled ladder-driven or manual/untracked.
+  7. `position:{tradingsymbol}` Redis keys expire at the next 16:00 IST.
 """
 from __future__ import annotations
 
 import json
 import math
-import os
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 try:
@@ -24,10 +36,11 @@ except ImportError:
     pass
 
 from src import state
-from src import discord_listener
 from src import trade_notifier
 
 IST = ZoneInfo("Asia/Kolkata")
+
+INDEX_KEY = "position:index"
 
 # ──────────────────────────────────────────────────────────────
 # Ladder / SL computation
@@ -164,15 +177,25 @@ def compute_final_sl(ladder_sl: float, ai_sl: float, direction: str) -> float:
 
 
 # ──────────────────────────────────────────────────────────────
-# Redis key helpers
+# Redis state model — position:{tradingsymbol}, keyed independently
+# so concurrent NIFTY CE + PE positions never collide.
 # ──────────────────────────────────────────────────────────────
 
-def _track_key(instrument: str) -> str:
-    return f"track:{instrument}:{date.today().isoformat()}"
+def _seconds_until_next_1600_ist() -> int:
+    """TTL target: next occurrence of 16:00 IST (today if not yet past, else tomorrow)."""
+    now = datetime.now(IST)
+    target = now.replace(hour=16, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += timedelta(days=1)
+    return max(int((target - now).total_seconds()), 60)
 
 
-def _load_track(instrument: str) -> dict | None:
-    raw = state.redis_get(_track_key(instrument))
+def _position_key(tradingsymbol: str) -> str:
+    return f"position:{tradingsymbol}"
+
+
+def _load_position(tradingsymbol: str) -> dict | None:
+    raw = state.redis_get(_position_key(tradingsymbol))
     if raw is None:
         return None
     try:
@@ -181,70 +204,46 @@ def _load_track(instrument: str) -> dict | None:
         return None
 
 
-def _save_track(instrument: str, data: dict) -> None:
-    state.redis_set(_track_key(instrument), json.dumps(data), ex=86400)
-
-
-def _all_tracked_instruments() -> list[str]:
-    """Return instrument names that have a track:*:today key in Redis.
-
-    Upstash REST does not natively support KEYS or SCAN in the free-tier
-    REST endpoint we use, so we probe all known instruments instead of
-    trying a pattern scan.
-    """
-    from src import config
-    tracked = []
-    today = date.today().isoformat()
-    known_names = [i["name"] for i in config.INSTRUMENTS]
-    # Also include any stock instruments from stock_config if available
-    try:
-        from src import stock_config
-        known_names += [i["symbol"] for i in stock_config.STOCKS]
-    except Exception:
-        pass
-    for name in known_names:
-        key = f"track:{name}:{today}"
-        if state.redis_exists(key):
-            tracked.append(name)
-    return tracked
-
-
-# ──────────────────────────────────────────────────────────────
-# Pending-command state (deferred-ack retry for /enter and /exit)
-# ──────────────────────────────────────────────────────────────
-
-def _pending_key(kind: str) -> str:
-    return f"pending:{kind}:{date.today().isoformat()}"
-
-
-def _load_pending(kind: str) -> dict | None:
-    raw = state.redis_get(_pending_key(kind))
-    if raw is None:
-        return None
+def _load_index() -> list[str]:
+    raw = state.redis_get(INDEX_KEY)
+    if not raw:
+        return []
     try:
         return json.loads(raw)
     except Exception:
-        return None
+        return []
 
 
-def _save_pending(kind: str, msg_id: str, attempts: int) -> None:
-    state.redis_set(
-        _pending_key(kind),
-        json.dumps({
-            "msg_id": msg_id,
-            "attempts": attempts,
-            "first_seen_at": datetime.now(IST).isoformat(),
-        }),
-        ex=300,
-    )
+def _save_index(symbols: list[str]) -> None:
+    state.redis_set(INDEX_KEY, json.dumps(symbols), ex=_seconds_until_next_1600_ist())
 
 
-def _clear_pending(kind: str) -> None:
-    state.redis_delete(_pending_key(kind))
+def _add_to_index(tradingsymbol: str) -> None:
+    idx = _load_index()
+    if tradingsymbol not in idx:
+        idx.append(tradingsymbol)
+        _save_index(idx)
+
+
+def _remove_from_index(tradingsymbol: str) -> None:
+    idx = _load_index()
+    if tradingsymbol in idx:
+        idx.remove(tradingsymbol)
+        _save_index(idx)
+
+
+def _save_position(tradingsymbol: str, data: dict) -> None:
+    state.redis_set(_position_key(tradingsymbol), json.dumps(data), ex=_seconds_until_next_1600_ist())
+    _add_to_index(tradingsymbol)
+
+
+def _delete_position(tradingsymbol: str) -> None:
+    state.redis_delete(_position_key(tradingsymbol))
+    _remove_from_index(tradingsymbol)
 
 
 # ──────────────────────────────────────────────────────────────
-# Instrument name extraction from tradingsymbol
+# Instrument / direction extraction from tradingsymbol
 # ──────────────────────────────────────────────────────────────
 
 _KNOWN_UNDERLYINGS = [
@@ -264,15 +263,29 @@ def _underlying_from_tradingsymbol(tradingsymbol: str) -> str | None:
     return None
 
 
+def _direction_from_tradingsymbol(tradingsymbol: str) -> str | None:
+    sym = tradingsymbol.upper()
+    if sym.endswith("CE"):
+        return "CE"
+    if sym.endswith("PE"):
+        return "PE"
+    return None
+
+
 # ──────────────────────────────────────────────────────────────
-# Intent payload lookup
+# Intent payload lookup — this IS the "alert" reconstruction source.
+#
+# executor_bridge.py (this repo) writes executor:pending_intent whenever a
+# signal fires; the (separate) auto-executor writes executor:position once
+# it opens a position. Both are cheaper and more reliable than scanning
+# Discord history, so they are used in preference to any message scan.
 # ──────────────────────────────────────────────────────────────
 
 def _load_intent(instrument: str) -> dict | None:
     """Look up the most recent Redis intent payload for this instrument.
 
-    Checks executor:pending_intent and executor:position (written by Repo 2).
-    Returns the parsed dict if it matches, or None.
+    Checks executor:pending_intent and executor:position. Returns the parsed
+    dict if it matches, or None.
     """
     for key in ("executor:pending_intent", "executor:position"):
         raw = state.redis_get(key)
@@ -288,140 +301,7 @@ def _load_intent(instrument: str) -> dict | None:
 
 
 # ──────────────────────────────────────────────────────────────
-# /enter handler
-# ──────────────────────────────────────────────────────────────
-
-def _try_enter() -> bool:
-    """Snapshot open Kite positions and initialise Redis tracking.
-
-    Returns True if at least one open position was found, False otherwise.
-    """
-    print("[position_tracker] _try_enter: scanning open positions")
-    try:
-        from src import kite_client
-        kite = kite_client.get_kite()
-        positions_data = kite.positions()
-    except Exception as e:
-        print(f"[position_tracker] _try_enter: kite.positions() failed: {e}")
-        trade_notifier.send_fyi(
-            "Unknown", "?", 0.0, 0.0, 0.0
-        )
-        return False
-
-    all_positions = (
-        positions_data.get("net", []) or []
-    )
-    open_positions = [p for p in all_positions if p.get("quantity", 0) != 0]
-
-    if not open_positions:
-        print("[position_tracker] _try_enter: no open positions found in Kite")
-        return False
-
-    for pos in open_positions:
-        tradingsymbol = pos.get("tradingsymbol", "")
-        instrument = _underlying_from_tradingsymbol(tradingsymbol)
-        if not instrument:
-            print(f"[position_tracker] _try_enter: unrecognised symbol {tradingsymbol!r} — skip")
-            continue
-
-        # Idempotent: skip if already tracked
-        existing = _load_track(instrument)
-        if existing:
-            print(f"[position_tracker] _try_enter: {instrument} already tracked — leave untouched")
-            continue
-
-        # Determine direction from tradingsymbol (CE/PE suffix)
-        if tradingsymbol.upper().endswith("CE"):
-            direction = "CE"
-        elif tradingsymbol.upper().endswith("PE"):
-            direction = "PE"
-        else:
-            print(f"[position_tracker] _try_enter: cannot determine direction for {tradingsymbol!r} — skip")
-            continue
-
-        entry = pos.get("average_price") or pos.get("buy_price") or 0.0
-
-        # Look up original intent for T and original SL
-        intent = _load_intent(instrument)
-        T: float | None = None
-        original_sl: float | None = None
-        kite_sl_initial: float | None = None  # fetched only in no-intent path
-
-        if intent:
-            risk_pts  = intent.get("spot_risk_pts")
-            target_rr = intent.get("target_rr")
-            if risk_pts and target_rr:
-                T = risk_pts * target_rr
-            original_sl = intent.get("spot_sl")
-            print(f"[position_tracker] _try_enter: {instrument} intent found — "
-                  f"T={T}, original_sl={original_sl}")
-        else:
-            print(
-                f"[position_tracker] _try_enter: no intent payload for {instrument} — "
-                "T unavailable. Tracking limited to raw P&L."
-            )
-            kite_sl_initial = _get_kite_sl_for(kite, tradingsymbol)
-            trade_notifier.send_fyi(
-                instrument, direction,
-                ltp=entry,
-                progress_pct=0.0,
-                current_sl=kite_sl_initial if kite_sl_initial is not None else entry,
-            )
-
-        prior_sl = (
-            original_sl if original_sl is not None
-            else kite_sl_initial if kite_sl_initial is not None
-            else entry
-        )
-
-        track_data = {
-            "entry":          entry,
-            "T":              T,
-            "direction":      direction,
-            "tradingsymbol":  tradingsymbol,
-            "prior_sl":       prior_sl,
-            "last_alert_sl":  prior_sl,
-            "opened_at":      datetime.now(IST).isoformat(),
-            "action_alerts_sent":   0,
-            "action_alerts_acked":  0,
-            "instrument":     instrument,
-        }
-        _save_track(instrument, track_data)
-        print(f"[position_tracker] _try_enter: tracking {instrument} {direction} "
-              f"entry={entry} T={T} prior_sl={prior_sl}")
-
-    return True
-
-
-def handle_enter(msg_id: str) -> bool:
-    """Retry-safe /enter handler.
-
-    Returns True when the command is resolved (position found or all attempts
-    exhausted). Returns False to signal the caller to not advance
-    last_seen_msg_id — the same message should be re-delivered next cycle.
-    """
-    pending = _load_pending("enter")
-
-    found = _try_enter()
-    if found:
-        _clear_pending("enter")
-        return True
-
-    attempts = (pending["attempts"] + 1) if pending else 1
-
-    if attempts >= 3:
-        print(f"[position_tracker] handle_enter: giving up after {attempts} attempts — no open position found")
-        trade_notifier.send_enter_failed(attempts)
-        _clear_pending("enter")
-        return True  # resolved (given up) — allow message to be marked seen
-
-    print(f"[position_tracker] handle_enter: attempt {attempts}/3 — no open position yet, will retry")
-    _save_pending("enter", msg_id, attempts)
-    return False  # not resolved — do not advance last_seen past this message
-
-
-# ──────────────────────────────────────────────────────────────
-# Heartbeat (runs every minute regardless of /enter or /exit)
+# Kite SL order / exit price lookups
 # ──────────────────────────────────────────────────────────────
 
 def _get_kite_sl_for(kite, tradingsymbol: str) -> float | None:
@@ -443,6 +323,46 @@ def _get_kite_sl_for(kite, tradingsymbol: str) -> float | None:
     except Exception as e:
         print(f"[position_tracker] _get_kite_sl_for({tradingsymbol}): {e}")
         return None
+
+
+def _get_kite_exit_price(kite, tradingsymbol: str) -> float | None:
+    """Average fill price across completed SELL orders for this tradingsymbol today.
+
+    Uses get_orders() (today's order book) rather than get_trades() — positions
+    never span multiple days given the daily TTL reset, so today's orders are
+    sufficient. Returns None if no completed SELL fills are found.
+    """
+    try:
+        orders = kite.orders()
+    except Exception as e:
+        print(f"[position_tracker] _get_kite_exit_price({tradingsymbol}): {e}")
+        return None
+
+    sell_fills = [
+        o for o in orders
+        if o.get("tradingsymbol") == tradingsymbol
+        and o.get("transaction_type") == "SELL"
+        and o.get("status") == "COMPLETE"
+    ]
+    if not sell_fills:
+        return None
+
+    total_qty = sum(o.get("filled_quantity") or o.get("quantity") or 0 for o in sell_fills)
+    if total_qty == 0:
+        return None
+    total_value = sum(
+        (o.get("average_price") or 0) * (o.get("filled_quantity") or o.get("quantity") or 0)
+        for o in sell_fills
+    )
+    return total_value / total_qty
+
+
+def _is_ladder_driven(exit_price: float, sl_ladder_stage: float | None) -> bool:
+    """Whether the exit price matches the last known ladder SL within tolerance."""
+    if sl_ladder_stage is None:
+        return False
+    tolerance = max(abs(sl_ladder_stage) * 0.02, 0.5)
+    return abs(exit_price - sl_ladder_stage) <= tolerance
 
 
 def _get_rsi_snapshot(instrument: str, today_open: datetime) -> list[float] | None:
@@ -470,234 +390,311 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime) -> list[float] | No
         return None
 
 
-def run_heartbeat() -> None:
-    """Check all tracked positions and post FYI/ACTION Discord embeds."""
-    tracked = _all_tracked_instruments()
-    if not tracked:
-        print("[position_tracker] heartbeat: no active positions — skipping")
+# ──────────────────────────────────────────────────────────────
+# Discovery / confirmation / ongoing tracking / exit — per tradingsymbol
+# ──────────────────────────────────────────────────────────────
+
+def _handle_new_sighting(tradingsymbol: str, pos: dict) -> None:
+    """First sighting of an open NIFTY F&O position — pending, no alert yet."""
+    direction = _direction_from_tradingsymbol(tradingsymbol)
+    if direction is None:
+        print(f"[position_tracker] {tradingsymbol}: cannot determine CE/PE — skip")
         return
 
-    print(f"[position_tracker] heartbeat: found {len(tracked)} tracked position(s): {tracked}")
+    instrument = _underlying_from_tradingsymbol(tradingsymbol) or "NIFTY"
+    data = {
+        "tradingsymbol":       tradingsymbol,
+        "instrument":          instrument,
+        "direction":           direction,
+        "entry_price":         pos.get("average_price") or 0.0,
+        "sl":                  None,
+        "target_t":            None,
+        "entry_alert_ts":      None,
+        "discovered_at":       datetime.now(IST).isoformat(),
+        "sl_ladder_stage":     None,
+        "qty":                 pos.get("quantity", 0),
+        "confirm_count":       1,
+        "action_alerts_sent":  0,
+        "action_alerts_acked": 0,
+    }
+    _save_position(tradingsymbol, data)
+    print(f"[position_tracker] {tradingsymbol}: new sighting, qty={data['qty']} — "
+          f"confirm_count=1, no alert yet")
+
+
+def _handle_confirm(kite, tradingsymbol: str, pos: dict, existing: dict) -> None:
+    """Second consecutive sighting — confirm, match alert intent, start ladder."""
+    instrument = existing["instrument"]
+    direction  = existing["direction"]
+    entry_price = pos.get("average_price") or existing.get("entry_price") or 0.0
+    qty = pos.get("quantity", 0)
+
+    intent = _load_intent(instrument)
+    T: float | None = None
+    sl: float | None = None
+    entry_alert_ts: str | None = None
+
+    if intent:
+        risk_pts  = intent.get("spot_risk_pts")
+        target_rr = intent.get("target_rr")
+        if risk_pts and target_rr:
+            T = risk_pts * target_rr
+        sl = intent.get("spot_sl")
+        entry_alert_ts = intent.get("ts")
+        print(f"[position_tracker] {tradingsymbol}: matched alert intent — T={T}, sl={sl}")
+    else:
+        print(f"[position_tracker] {tradingsymbol}: no matching alert intent — "
+              f"SL/T unavailable, raw P&L tracking only")
+        sl = _get_kite_sl_for(kite, tradingsymbol)
+
+    sl_for_display = sl
+    if sl is None:
+        sl = entry_price  # fall back to entry so the ladder has a floor
+
+    existing.update({
+        "entry_price":      entry_price,
+        "sl":                sl,
+        "target_t":          T,
+        "entry_alert_ts":    entry_alert_ts,
+        "sl_ladder_stage":   sl,
+        "qty":               qty,
+        "confirm_count":     2,
+    })
+    _save_position(tradingsymbol, existing)
+
+    trade_notifier.send_position_detected(
+        instrument=instrument,
+        direction=direction,
+        tradingsymbol=tradingsymbol,
+        entry_price=entry_price,
+        sl=sl_for_display,
+        target_t=T,
+        qty=qty,
+    )
+    print(f"[position_tracker] {tradingsymbol}: confirmed at confirm_count=2 — "
+          f"tracking + SL ladder started")
+
+
+def _handle_ongoing(kite, tradingsymbol: str, pos: dict, existing: dict, today_open: datetime) -> None:
+    """Normal per-heartbeat tracking cycle for an already-confirmed position."""
+    instrument = existing["instrument"]
+    direction  = existing["direction"]
+    entry      = existing["entry_price"]
+    T          = existing.get("target_t")
+    sl_ladder_stage = existing.get("sl_ladder_stage")
+    if sl_ladder_stage is None:
+        sl_ladder_stage = entry
+
+    qty      = pos.get("quantity", 0)
+    prev_qty = existing.get("qty", qty)
+
+    if qty > prev_qty:
+        # Averaging in — Kite's blended average_price is authoritative.
+        # SL / target_t / sl_ladder_stage stay fixed at original entry.
+        entry = pos.get("average_price") or entry
+        print(f"[position_tracker] {tradingsymbol}: qty increased {prev_qty} -> {qty} (averaging in)")
+    elif qty < prev_qty:
+        trade_notifier.send_partial_exit(instrument, direction, tradingsymbol, prev_qty, qty)
+        print(f"[position_tracker] {tradingsymbol}: partial exit detected {prev_qty} -> {qty}")
 
     try:
-        from src import kite_client
-        kite = kite_client.get_kite()
+        ltp_data = kite.ltp([f"NFO:{tradingsymbol}"])
+        ltp = float(ltp_data.get(f"NFO:{tradingsymbol}", {}).get("last_price", 0) or 0)
+        if ltp == 0:
+            print(f"[position_tracker] heartbeat: LTP=0 for {tradingsymbol} — skip")
+            existing["entry_price"] = entry
+            existing["qty"] = qty
+            _save_position(tradingsymbol, existing)
+            return
     except Exception as e:
-        print(f"[position_tracker] heartbeat: cannot get Kite client: {e}")
+        print(f"[position_tracker] heartbeat: LTP fetch failed for {tradingsymbol}: {e}")
         return
 
-    today_open = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0)
-
-    for instrument in tracked:
-        track = _load_track(instrument)
-        if not track:
-            continue
-
-        entry         = track["entry"]
-        T             = track.get("T")
-        direction     = track["direction"]
-        tradingsymbol = track["tradingsymbol"]
-        prior_sl      = track["prior_sl"]
-        last_alert_sl = track.get("last_alert_sl", prior_sl)
-
-        # Fetch live LTP for the option contract
-        try:
-            ltp_data = kite.ltp([f"NFO:{tradingsymbol}"])
-            ltp = float(ltp_data.get(f"NFO:{tradingsymbol}", {}).get("last_price", 0) or 0)
-            if ltp == 0:
-                print(f"[position_tracker] heartbeat: LTP=0 for {tradingsymbol} — skip")
-                continue
-        except Exception as e:
-            print(f"[position_tracker] heartbeat: LTP fetch failed for {tradingsymbol}: {e}")
-            continue
-
-        # Progress and RSI snapshot (best-effort; non-fatal on failure)
-        if T and T > 0:
-            if direction == "CE":
-                raw_progress = (ltp - entry) / T
-            else:
-                raw_progress = (entry - ltp) / T
-            progress_pct = raw_progress * 100.0
+    if T and T > 0:
+        if direction == "CE":
+            raw_progress = (ltp - entry) / T
         else:
-            raw_progress = 0.0
-            progress_pct = 0.0
+            raw_progress = (entry - ltp) / T
+        progress_pct = raw_progress * 100.0
+    else:
+        raw_progress = 0.0
+        progress_pct = 0.0
 
-        rsi3 = _get_rsi_snapshot(instrument, today_open)
-        market_snapshot = {
-            "rsi_last3":     rsi3,
-            "progress":      raw_progress,
-            "current_price": ltp,
-            "T":             T,
-            "instrument":    instrument,
-        }
+    rsi3 = _get_rsi_snapshot(instrument, today_open)
+    market_snapshot = {
+        "rsi_last3":     rsi3,
+        "progress":      raw_progress,
+        "current_price": ltp,
+        "T":             T,
+        "instrument":    instrument,
+    }
 
-        if T and T > 0:
-            ladder_sl = compute_ladder_sl(entry, T, ltp, direction, last_alert_sl)
-            ai_sl     = compute_ai_adjusted_sl(ladder_sl, direction, market_snapshot)
-            final_sl  = compute_final_sl(ladder_sl, ai_sl, direction)
-        else:
-            # T unknown — can't ladder; hold at last_alert_sl
-            final_sl = last_alert_sl
+    if T and T > 0:
+        ladder_sl = compute_ladder_sl(entry, T, ltp, direction, sl_ladder_stage)
+        ai_sl     = compute_ai_adjusted_sl(ladder_sl, direction, market_snapshot)
+        final_sl  = compute_final_sl(ladder_sl, ai_sl, direction)
+    else:
+        # T unknown — can't ladder; hold at last known stage
+        final_sl = sl_ladder_stage
 
-        track["last_alert_sl"] = final_sl
+    kite_sl = _get_kite_sl_for(kite, tradingsymbol)
 
-        # Check current Kite SL order
-        kite_sl = _get_kite_sl_for(kite, tradingsymbol)
+    action_needed = False
+    if kite_sl is not None:
+        if direction == "CE" and kite_sl < final_sl:
+            action_needed = True
+        elif direction == "PE" and kite_sl > final_sl:
+            action_needed = True
 
-        action_needed = False
-        if kite_sl is not None:
-            if direction == "CE" and kite_sl < final_sl:
-                action_needed = True
-            elif direction == "PE" and kite_sl > final_sl:
-                action_needed = True
+    action_alerts_sent  = existing.get("action_alerts_sent", 0)
+    action_alerts_acked = existing.get("action_alerts_acked", 0)
 
-        if action_needed:
-            sent = trade_notifier.send_action(
-                instrument=instrument,
-                direction=direction,
-                ltp=ltp,
-                progress_pct=progress_pct,
-                current_sl_kite=kite_sl,
-                required_sl=final_sl,
-            )
-            if sent:
-                track["action_alerts_sent"] = track.get("action_alerts_sent", 0) + 1
-        else:
-            trade_notifier.send_fyi(
-                instrument=instrument,
-                direction=direction,
-                ltp=ltp,
-                progress_pct=progress_pct,
-                current_sl=kite_sl if kite_sl is not None else final_sl,
-            )
-            # If there was a prior action alert, check if SL was moved up to match
-            if track.get("action_alerts_sent", 0) > track.get("action_alerts_acked", 0):
-                if kite_sl is not None:
-                    if direction == "CE" and kite_sl >= final_sl:
-                        track["action_alerts_acked"] = track.get("action_alerts_sent", 0)
-                    elif direction == "PE" and kite_sl <= final_sl:
-                        track["action_alerts_acked"] = track.get("action_alerts_sent", 0)
+    if action_needed:
+        sent = trade_notifier.send_action(
+            instrument=instrument,
+            direction=direction,
+            ltp=ltp,
+            progress_pct=progress_pct,
+            current_sl_kite=kite_sl,
+            required_sl=final_sl,
+        )
+        if sent:
+            action_alerts_sent += 1
+    else:
+        trade_notifier.send_fyi(
+            instrument=instrument,
+            direction=direction,
+            ltp=ltp,
+            progress_pct=progress_pct,
+            current_sl=kite_sl if kite_sl is not None else final_sl,
+        )
+        if action_alerts_sent > action_alerts_acked and kite_sl is not None:
+            if direction == "CE" and kite_sl >= final_sl:
+                action_alerts_acked = action_alerts_sent
+            elif direction == "PE" and kite_sl <= final_sl:
+                action_alerts_acked = action_alerts_sent
 
-        # Update monotonicity floor
-        track["prior_sl"] = final_sl
-        _save_track(instrument, track)
+    existing.update({
+        "entry_price":         entry,
+        "qty":                 qty,
+        "sl_ladder_stage":     final_sl,
+        "action_alerts_sent":  action_alerts_sent,
+        "action_alerts_acked": action_alerts_acked,
+    })
+    _save_position(tradingsymbol, existing)
+
+
+def _finalize_exit(kite, tradingsymbol: str, existing: dict, last_pos_snapshot: dict | None) -> None:
+    """Position fully closed (qty -> 0) — post P&L summary and drop tracking."""
+    instrument = existing["instrument"]
+    direction  = existing["direction"]
+    entry      = existing["entry_price"]
+    qty        = existing.get("qty", 0)
+    sl_ladder_stage = existing.get("sl_ladder_stage")
+    action_sent  = existing.get("action_alerts_sent", 0)
+    action_acked = existing.get("action_alerts_acked", 0)
+
+    exit_price = _get_kite_exit_price(kite, tradingsymbol)
+    if exit_price is None and last_pos_snapshot is not None:
+        fallback = last_pos_snapshot.get("sell_price") or last_pos_snapshot.get("average_price")
+        exit_price = float(fallback) if fallback else None
+    if exit_price is None:
+        exit_price = entry
+        print(f"[position_tracker] {tradingsymbol}: could not determine exit price — falling back to entry")
+
+    pnl_per_unit = exit_price - entry
+    pnl = pnl_per_unit * qty
+    if last_pos_snapshot is not None:
+        realised = float(last_pos_snapshot.get("realised") or 0.0)
+        if realised != 0.0:
+            pnl = realised
+
+    T = existing.get("target_t")
+    r_multiple = (pnl_per_unit / T) if T else None
+    compliance_ratio = (action_acked / action_sent) if action_sent > 0 else 1.0
+
+    ladder_driven = _is_ladder_driven(exit_price, sl_ladder_stage)
+    exit_type = "Ladder SL" if ladder_driven else "Manual / untracked flatten"
+
+    market_note = (
+        f"Closed at {datetime.now(IST).strftime('%H:%M IST')} · "
+        f"entry={entry:.2f} exit={exit_price:.2f}"
+    )
+
+    trade_notifier.send_exit_summary(
+        instrument=instrument,
+        direction=direction,
+        entry=entry,
+        exit_price=exit_price,
+        pnl=pnl,
+        r_multiple=r_multiple,
+        compliance_ratio=compliance_ratio,
+        market_note=market_note,
+        exit_type=exit_type,
+    )
+
+    _delete_position(tradingsymbol)
+    print(f"[position_tracker] {tradingsymbol}: exit detected ({exit_type}) — tracking removed")
+
+
+def _handle_disappeared(kite, tradingsymbol: str, last_pos_snapshot: dict | None) -> None:
+    """A previously tracked tradingsymbol is no longer in the open position set."""
+    existing = _load_position(tradingsymbol)
+    if not existing:
+        _remove_from_index(tradingsymbol)
+        return
+
+    if existing.get("confirm_count", 1) < 2:
+        # Never confirmed — transient Kite artifact, not a real fill. Discard silently.
+        print(f"[position_tracker] {tradingsymbol}: pending sighting vanished before "
+              f"confirm_count reached 2 — discarding silently, no alert")
+        _delete_position(tradingsymbol)
+        return
+
+    _finalize_exit(kite, tradingsymbol, existing, last_pos_snapshot)
 
 
 # ──────────────────────────────────────────────────────────────
-# /exit handler
+# Heartbeat (runs every minute)
 # ──────────────────────────────────────────────────────────────
 
-def _try_exit() -> bool:
-    """Check whether any tracked positions are now closed in Kite and clean them up.
-
-    Returns True if at least one tracked position was found closed, False if all
-    tracked positions are still open or Kite could not be reached.
-    """
-    tracked = _all_tracked_instruments()
-    if not tracked:
-        return True  # nothing to close — consider resolved
-
+def run_heartbeat() -> None:
+    """Pull open positions from Kite, discover/confirm/track/exit per tradingsymbol."""
     try:
         from src import kite_client
         kite = kite_client.get_kite()
         positions_data = kite.positions()
     except Exception as e:
-        print(f"[position_tracker] _try_exit: kite.positions() failed: {e}")
-        return False
+        print(f"[position_tracker] heartbeat: cannot get Kite client/positions: {e}")
+        return
 
     all_positions = positions_data.get("net", []) or []
-    open_syms = {
-        p["tradingsymbol"]
-        for p in all_positions
-        if p.get("quantity", 0) != 0
-    }
     pos_by_symbol = {p["tradingsymbol"]: p for p in all_positions}
+    open_nifty = {
+        ts: p for ts, p in pos_by_symbol.items()
+        if p.get("quantity", 0) != 0 and _underlying_from_tradingsymbol(ts) == "NIFTY"
+    }
 
-    found_closed = False
-    for instrument in tracked:
-        track = _load_track(instrument)
-        if not track:
-            continue
+    tracked_symbols = _load_index()
+    if tracked_symbols or open_nifty:
+        print(f"[position_tracker] heartbeat: tracked={tracked_symbols} open_nifty={list(open_nifty)}")
 
-        tradingsymbol = track["tradingsymbol"]
-        if tradingsymbol in open_syms:
-            print(f"[position_tracker] _try_exit: {instrument} still open — skip")
-            continue
+    # Exit / disappearance handling first, so a freshly-vacated key doesn't
+    # get re-discovered as "new" in the same cycle.
+    for ts in tracked_symbols:
+        if ts not in open_nifty:
+            _handle_disappeared(kite, ts, pos_by_symbol.get(ts))
 
-        # Position closed — build exit summary
-        found_closed = True
-        entry     = track["entry"]
-        direction = track["direction"]
-        T         = track.get("T") or 0.0
-        action_sent  = track.get("action_alerts_sent", 0)
-        action_acked = track.get("action_alerts_acked", 0)
+    today_open = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0)
 
-        # Find fill details from already-fetched positions (no extra API call)
-        pos_data   = pos_by_symbol.get(tradingsymbol, {})
-        exit_price = float(pos_data.get("sell_price") or pos_data.get("average_price") or 0)
-        pnl_total  = float(pos_data.get("realised") or 0.0)
-
-        # Both CE and PE are long options — buy low, sell high
-        pnl_per_unit = exit_price - entry
-        # Prefer Kite's realised total (includes lot size); fall back to per-unit
-        pnl = pnl_total if pnl_total != 0.0 else pnl_per_unit
-        r_multiple = (pnl_per_unit / T) if T > 0 else None
-        compliance_ratio = (action_acked / action_sent) if action_sent > 0 else 1.0
-
-        market_note = (
-            f"Closed at {datetime.now(IST).strftime('%H:%M IST')} · "
-            f"entry={entry:.2f} exit={exit_price:.2f}"
-        )
-
-        trade_notifier.send_exit_summary(
-            instrument=instrument,
-            direction=direction,
-            entry=entry,
-            exit_price=exit_price,
-            pnl=pnl,
-            r_multiple=r_multiple,
-            compliance_ratio=compliance_ratio,
-            market_note=market_note,
-        )
-
-        state.redis_delete(_track_key(instrument))
-        print(f"[position_tracker] _try_exit: {instrument} closed and tracking removed")
-
-    return found_closed
-
-
-def handle_exit(msg_id: str) -> bool:
-    """Retry-safe /exit handler.
-
-    Returns True when the command is resolved (position closed, nothing to close,
-    or all attempts exhausted). Returns False to signal the caller to not advance
-    last_seen_msg_id — the same message should be re-delivered next cycle.
-    """
-    print("[position_tracker] /exit detected — checking for closed positions")
-
-    # Fast path: no tracked positions — not a race condition, just a no-op
-    if not _all_tracked_instruments():
-        print("[position_tracker] handle_exit: no tracked positions to close")
-        return True
-
-    pending = _load_pending("exit")
-
-    found = _try_exit()
-    if found:
-        _clear_pending("exit")
-        return True
-
-    attempts = (pending["attempts"] + 1) if pending else 1
-
-    if attempts >= 3:
-        print(f"[position_tracker] handle_exit: giving up after {attempts} attempts — position still shows open")
-        trade_notifier.send_exit_failed(attempts)
-        _clear_pending("exit")
-        return True  # resolved (given up) — allow message to be marked seen
-
-    print(f"[position_tracker] handle_exit: attempt {attempts}/3 — position still open in Kite, will retry")
-    _save_pending("exit", msg_id, attempts)
-    return False  # not resolved — do not advance last_seen past this message
+    for ts, pos in open_nifty.items():
+        existing = _load_position(ts)
+        if existing is None:
+            _handle_new_sighting(ts, pos)
+        elif existing.get("confirm_count", 1) < 2:
+            _handle_confirm(kite, ts, pos, existing)
+        else:
+            _handle_ongoing(kite, ts, pos, existing, today_open)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -706,54 +703,6 @@ def handle_exit(msg_id: str) -> bool:
 
 def main() -> None:
     print(f"[position_tracker] Run at {datetime.now(IST).isoformat()}")
-
-    channel_id = os.environ.get("TRADE_TRACKER_CHANNEL_ID", "")
-    bot_token  = os.environ.get("DISCORD_BOT_TOKEN", "")
-
-    if not channel_id or not bot_token:
-        print("[position_tracker] TRADE_TRACKER_CHANNEL_ID or DISCORD_BOT_TOKEN not set — skipping listener")
-        messages  = []
-        commands  = []
-    else:
-        last_seen = state.redis_get("trade:last_seen_msg_id")
-        messages  = discord_listener.fetch_new_messages(channel_id, bot_token, last_seen)
-        commands  = discord_listener.extract_commands(messages)
-
-    # Dispatch commands in order; stop at first unresolved command
-    latest_resolved_msg_id: str | None = None
-    unresolved = False
-
-    for msg_id, cmd in commands:
-        if cmd == "/enter":
-            resolved = handle_enter(msg_id)
-        elif cmd == "/exit":
-            resolved = handle_exit(msg_id)
-        else:
-            resolved = True
-
-        if resolved:
-            latest_resolved_msg_id = msg_id
-        else:
-            unresolved = True
-            break  # retry this command next cycle
-
-    # Advance last_seen_msg_id only as far as resolved commands allow
-    if not unresolved:
-        # All commands resolved — advance to last fetched message (normal behaviour)
-        latest_msg_id: str | None = None
-        if messages:
-            latest_msg_id = messages[-1]["id"]
-        elif latest_resolved_msg_id:
-            latest_msg_id = latest_resolved_msg_id
-        if latest_msg_id:
-            state.redis_set("trade:last_seen_msg_id", latest_msg_id)
-    else:
-        # Unresolved command — only advance up to the last message that did resolve
-        if latest_resolved_msg_id:
-            state.redis_set("trade:last_seen_msg_id", latest_resolved_msg_id)
-        # else: nothing resolved — leave cursor unchanged so the command is re-delivered
-
-    # Always run heartbeat — it exits immediately if no tracked positions
     run_heartbeat()
 
 

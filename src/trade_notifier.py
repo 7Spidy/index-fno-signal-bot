@@ -91,30 +91,50 @@ def send_action(
     return _post(embed)
 
 
-def send_enter_failed(attempts: int) -> bool:
-    """Post an amber alert — /enter could not find a matching open position after retries."""
+def send_position_detected(
+    instrument: str,
+    direction: str,
+    tradingsymbol: str,
+    entry_price: float,
+    sl: float | None,
+    target_t: float | None,
+    qty: int,
+) -> bool:
+    """Post a blue alert once a position is confirmed across 2 heartbeats."""
+    arrow = "↑" if direction.upper() == "CE" else "↓"
+    sl_str = f"₹{sl:,.2f}" if sl is not None else "unavailable"
+    t_str  = f"{target_t:,.2f} pts" if target_t is not None else "unavailable"
     embed = {
-        "title": "⚠️ /enter failed",
-        "color": ACTION_COLOR,
-        "description": (
-            f"No open F&O position found in Kite after {attempts} attempts "
-            f"(~{attempts * 1} min). Please confirm the order filled and resend /enter."
-        ),
+        "title":  f"🎯 {instrument} {direction.upper()} — Position Detected",
+        "color":  FYI_COLOR,
+        "fields": [
+            {"name": "Tradingsymbol", "value": tradingsymbol,             "inline": True},
+            {"name": "Entry (avg)",   "value": f"₹{entry_price:,.2f}",    "inline": True},
+            {"name": "Qty",           "value": str(qty),                  "inline": True},
+            {"name": "Direction",     "value": f"{direction.upper()} {arrow}", "inline": True},
+            {"name": "Initial SL",    "value": sl_str,                    "inline": True},
+            {"name": "Target (T)",    "value": t_str,                     "inline": True},
+        ],
+        "footer":    {"text": "Auto-detected via Kite positions · confirmed across 2 heartbeats"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return _post(embed)
 
 
-def send_exit_failed(attempts: int) -> bool:
-    """Post an amber alert — /exit could not find a tracked position to close after retries."""
+def send_partial_exit(
+    instrument: str,
+    direction: str,
+    tradingsymbol: str,
+    old_qty: int,
+    new_qty: int,
+) -> bool:
+    """Post an amber note when a tracked position's quantity decreases but stays open."""
     embed = {
-        "title": "⚠️ /exit failed",
-        "color": ACTION_COLOR,
-        "description": (
-            f"Tracked position still shows open in Kite after {attempts} attempts "
-            f"(~{attempts * 1} min). Please confirm the order filled and resend /exit."
-        ),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "title":       f"✂️ Partial Exit — {instrument} {direction.upper()}",
+        "color":       ACTION_COLOR,
+        "description": f"Partial exit detected on {tradingsymbol}: {old_qty} → {new_qty}.",
+        "footer":      {"text": "SL / target unchanged · ladder is price-driven, not qty-driven"},
+        "timestamp":   datetime.now(timezone.utc).isoformat(),
     }
     return _post(embed)
 
@@ -128,8 +148,13 @@ def send_exit_summary(
     r_multiple: float | None,
     compliance_ratio: float,
     market_note: str,
+    exit_type: str | None = None,
 ) -> bool:
-    """Post a blue Exit summary with trade stats."""
+    """Post a blue Exit summary with trade stats.
+
+    exit_type labels how the exit was detected, e.g. "Ladder SL" vs
+    "Manual / untracked flatten" — always posted regardless of which.
+    """
     pnl_sign = "+" if pnl >= 0 else ""
     if r_multiple is not None:
         r_sign  = "+" if r_multiple >= 0 else ""
@@ -149,6 +174,7 @@ def send_exit_summary(
                 "value":  f"{compliance_ratio:.0%} of action alerts acknowledged",
                 "inline": True,
             },
+            {"name": "Exit Type",   "value": exit_type or "—", "inline": True},
             {"name": "Market note", "value": market_note or "—", "inline": False},
         ],
         "footer":    {"text": "Alert only · trade complete"},
