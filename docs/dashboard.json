@@ -1,8 +1,8 @@
 {
-  "date": "2026-06-30",
+  "date": "2026-07-01",
   "last_run": "2026-06-30T14:40:59.034251+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-06-30T09:05:44.445937+05:30",
+  "token_refreshed_at": "2026-07-01T09:05:53.939128+05:30",
   "instruments": [
     {
       "ce": {
@@ -111,95 +111,6 @@
     }
   ],
   "active_signals": [],
-  "history": [
-    {
-      "time": "14:25",
-      "instrument": "NIFTY",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 57.023027003378616,
-      "pdi": 23.930906517522082,
-      "ndi": 25.288056573811005,
-      "price": 23961.0
-    },
-    {
-      "time": "14:25",
-      "instrument": "SENSEX",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 53.02593136030687,
-      "pdi": 25.791831748214626,
-      "ndi": 30.680901968969092,
-      "price": 77155.0
-    },
-    {
-      "time": "14:05",
-      "instrument": "SENSEX",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 35.11361829028884,
-      "pdi": 21.73972964912087,
-      "ndi": 38.47976061637869,
-      "price": 76980.0
-    },
-    {
-      "time": "11:16",
-      "instrument": "SENSEX",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 56.88583005059265,
-      "pdi": 37.891034616933,
-      "ndi": 20.674970210155877,
-      "price": 77170.0
-    }
-  ],
+  "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
