@@ -1,15 +1,12 @@
-"""Unit tests for position_tracker.py — ladder function, SL invariants, and retry logic."""
-import json
+"""Unit tests for position_tracker.py — ladder function, SL invariants, and
+the pull-based discovery / confirm / exit flow."""
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.position_tracker import (
-    compute_final_sl,
-    compute_ladder_sl,
-    handle_enter,
-    handle_exit,
-)
+from src import position_tracker
+from src.position_tracker import compute_final_sl, compute_ladder_sl
 
 
 # ──────────────────────────────────────────────────────────────
@@ -237,166 +234,323 @@ class TestSlExceedsOriginalT:
 
 
 # ──────────────────────────────────────────────────────────────
-# handle_enter retry / deferred-ack logic
+# Redis keying — guards against the single-position-per-underlying bug
 # ──────────────────────────────────────────────────────────────
 
-_ENTER_PATCHES = [
-    "src.position_tracker.state.redis_get",
-    "src.position_tracker.state.redis_set",
-    "src.position_tracker.state.redis_delete",
-    "src.position_tracker._try_enter",
-    "src.position_tracker.trade_notifier.send_enter_failed",
-]
+class TestPerTradingsymbolKeying:
+    """State must be keyed by tradingsymbol, not by underlying name, so
+    concurrent NIFTY CE and NIFTY PE positions are tracked independently."""
 
-_EXIT_PATCHES = [
-    "src.position_tracker.state.redis_get",
-    "src.position_tracker.state.redis_set",
-    "src.position_tracker.state.redis_delete",
-    "src.position_tracker._try_exit",
-    "src.position_tracker._all_tracked_instruments",
-    "src.position_tracker.trade_notifier.send_exit_failed",
-]
-
-
-class TestHandleEnterRetry:
-    """handle_enter() retry / deferred-ack wrapper."""
-
-    def _make_pending(self, attempts: int) -> str:
-        return json.dumps({"msg_id": "100", "attempts": attempts, "first_seen_at": "2026-06-30T09:00:00"})
-
-    def test_attempt1_no_position_saves_pending_returns_false(self):
-        with patch("src.position_tracker._try_enter", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=None) as mock_load, \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
-            result = handle_enter("101")
-        assert result is False
-        mock_save.assert_called_once_with("enter", "101", 1)
-        mock_clear.assert_not_called()
-        mock_alert.assert_not_called()
-
-    def test_attempt2_no_position_saves_attempts2_returns_false(self):
-        pending = {"msg_id": "101", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._try_enter", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
-            result = handle_enter("101")
-        assert result is False
-        mock_save.assert_called_once_with("enter", "101", 2)
-        mock_clear.assert_not_called()
-        mock_alert.assert_not_called()
-
-    def test_attempt3_no_position_sends_alert_clears_returns_true(self):
-        pending = {"msg_id": "101", "attempts": 2, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._try_enter", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
-            result = handle_enter("101")
-        assert result is True
-        mock_alert.assert_called_once_with(3)
-        mock_clear.assert_called_once_with("enter")
-        mock_save.assert_not_called()
-
-    def test_position_found_on_attempt2_clears_pending_returns_true(self):
-        pending = {"msg_id": "101", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._try_enter", return_value=True), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
-            result = handle_enter("101")
-        assert result is True
-        mock_clear.assert_called_once_with("enter")
-        mock_save.assert_not_called()
-        mock_alert.assert_not_called()
-
-    def test_position_found_on_first_attempt_no_pending_returns_true(self):
-        with patch("src.position_tracker._try_enter", return_value=True), \
-             patch("src.position_tracker._load_pending", return_value=None), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_enter_failed") as mock_alert:
-            result = handle_enter("102")
-        assert result is True
-        mock_clear.assert_called_once_with("enter")
-        mock_save.assert_not_called()
-        mock_alert.assert_not_called()
+    def test_position_key_is_per_tradingsymbol(self):
+        ce_key = position_tracker._position_key("NIFTY26JUN24600CE")
+        pe_key = position_tracker._position_key("NIFTY26JUN24500PE")
+        assert ce_key != pe_key
+        assert ce_key == "position:NIFTY26JUN24600CE"
 
 
 # ──────────────────────────────────────────────────────────────
-# handle_exit retry / deferred-ack logic
+# New sighting (first heartbeat) — pending, no alert
 # ──────────────────────────────────────────────────────────────
 
-class TestHandleExitRetry:
-    """handle_exit() retry / deferred-ack wrapper."""
+class TestNewSighting:
+    def test_creates_pending_state_confirm_count_1_no_alert(self):
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 120.5}
+        with patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert:
+            position_tracker._handle_new_sighting("NIFTY26JUN24600CE", pos)
 
-    def test_no_tracked_positions_resolves_immediately_no_retry(self):
-        with patch("src.position_tracker._all_tracked_instruments", return_value=[]), \
-             patch("src.position_tracker._try_exit") as mock_try, \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
-            result = handle_exit("200")
-        assert result is True
-        mock_try.assert_not_called()
-        mock_save.assert_not_called()
         mock_alert.assert_not_called()
+        mock_save.assert_called_once()
+        saved_symbol, saved_data = mock_save.call_args[0]
+        assert saved_symbol == "NIFTY26JUN24600CE"
+        assert saved_data["confirm_count"] == 1
+        assert saved_data["direction"] == "CE"
+        assert saved_data["qty"] == 75
+        assert saved_data["sl"] is None
+        assert saved_data["target_t"] is None
 
-    def test_attempt1_position_still_open_saves_pending_returns_false(self):
-        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
-             patch("src.position_tracker._try_exit", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=None), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
-            result = handle_exit("201")
-        assert result is False
-        mock_save.assert_called_once_with("exit", "201", 1)
-        mock_clear.assert_not_called()
-        mock_alert.assert_not_called()
-
-    def test_attempt2_position_still_open_saves_attempts2_returns_false(self):
-        pending = {"msg_id": "201", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
-             patch("src.position_tracker._try_exit", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
-            result = handle_exit("201")
-        assert result is False
-        mock_save.assert_called_once_with("exit", "201", 2)
-        mock_clear.assert_not_called()
-        mock_alert.assert_not_called()
-
-    def test_attempt3_position_still_open_sends_alert_clears_returns_true(self):
-        pending = {"msg_id": "201", "attempts": 2, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
-             patch("src.position_tracker._try_exit", return_value=False), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
-            result = handle_exit("201")
-        assert result is True
-        mock_alert.assert_called_once_with(3)
-        mock_clear.assert_called_once_with("exit")
+    def test_unrecognised_direction_is_skipped(self):
+        pos = {"tradingsymbol": "NIFTY26JUNFUT", "quantity": 75, "average_price": 100.0}
+        with patch("src.position_tracker._save_position") as mock_save:
+            position_tracker._handle_new_sighting("NIFTY26JUNFUT", pos)
         mock_save.assert_not_called()
 
-    def test_position_found_closed_clears_pending_returns_true(self):
-        pending = {"msg_id": "201", "attempts": 1, "first_seen_at": "2026-06-30T09:00:00"}
-        with patch("src.position_tracker._all_tracked_instruments", return_value=["NIFTY"]), \
-             patch("src.position_tracker._try_exit", return_value=True), \
-             patch("src.position_tracker._load_pending", return_value=pending), \
-             patch("src.position_tracker._save_pending") as mock_save, \
-             patch("src.position_tracker._clear_pending") as mock_clear, \
-             patch("src.position_tracker.trade_notifier.send_exit_failed") as mock_alert:
-            result = handle_exit("201")
-        assert result is True
-        mock_clear.assert_called_once_with("exit")
-        mock_save.assert_not_called()
-        mock_alert.assert_not_called()
+
+# ──────────────────────────────────────────────────────────────
+# Confirm (second heartbeat) — matches alert intent, posts alert
+# ──────────────────────────────────────────────────────────────
+
+class TestConfirmFlow:
+    def _pending(self):
+        return {
+            "tradingsymbol": "NIFTY26JUN24600CE", "instrument": "NIFTY", "direction": "CE",
+            "entry_price": 120.5, "sl": None, "target_t": None, "entry_alert_ts": None,
+            "discovered_at": "2026-06-30T09:16:00+05:30", "sl_ladder_stage": None,
+            "qty": 75, "confirm_count": 1, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+
+    def test_confirm_with_matching_intent_posts_alert_and_advances_confirm_count(self):
+        existing = self._pending()
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 121.0}
+        intent = {
+            "instrument": "NIFTY", "spot_risk_pts": 20.0, "target_rr": 1.5,
+            "spot_sl": 24480.0, "ts": "2026-06-30T09:15:30+00:00",
+        }
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_intent", return_value=intent), \
+             patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert:
+            position_tracker._handle_confirm(mock_kite, "NIFTY26JUN24600CE", pos, existing)
+
+        mock_alert.assert_called_once()
+        kwargs = mock_alert.call_args.kwargs
+        assert kwargs["sl"] == 24480.0
+        assert kwargs["target_t"] == 30.0   # 20 * 1.5
+        assert kwargs["entry_price"] == 121.0
+        assert kwargs["qty"] == 75
+
+        saved_symbol, saved_data = mock_save.call_args[0]
+        assert saved_data["confirm_count"] == 2
+        assert saved_data["sl"] == 24480.0
+        assert saved_data["sl_ladder_stage"] == 24480.0
+        assert saved_data["target_t"] == 30.0
+        assert saved_data["entry_alert_ts"] == "2026-06-30T09:15:30+00:00"
+
+    def test_confirm_without_intent_falls_back_to_kite_sl_or_entry(self):
+        existing = self._pending()
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 120.5}
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_intent", return_value=None), \
+             patch("src.position_tracker._get_kite_sl_for", return_value=None), \
+             patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert:
+            position_tracker._handle_confirm(mock_kite, "NIFTY26JUN24600CE", pos, existing)
+
+        mock_alert.assert_called_once()
+        kwargs = mock_alert.call_args.kwargs
+        assert kwargs["sl"] is None          # unavailable — no intent, no Kite SL order
+        assert kwargs["target_t"] is None
+
+        saved_symbol, saved_data = mock_save.call_args[0]
+        assert saved_data["confirm_count"] == 2
+        assert saved_data["sl"] == 120.5     # falls back to entry so ladder has a floor
+        assert saved_data["target_t"] is None
+
+    def test_confirm_posts_exactly_one_alert(self):
+        existing = self._pending()
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 120.5}
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_intent", return_value=None), \
+             patch("src.position_tracker._get_kite_sl_for", return_value=None), \
+             patch("src.position_tracker._save_position"), \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert, \
+             patch("src.position_tracker.trade_notifier.send_fyi") as mock_fyi, \
+             patch("src.position_tracker.trade_notifier.send_action") as mock_action:
+            position_tracker._handle_confirm(mock_kite, "NIFTY26JUN24600CE", pos, existing)
+        assert mock_alert.call_count == 1
+        mock_fyi.assert_not_called()
+        mock_action.assert_not_called()
+
+
+# ──────────────────────────────────────────────────────────────
+# Ongoing tracking — qty increase (averaging) / decrease (partial exit)
+# ──────────────────────────────────────────────────────────────
+
+class TestQtyChangeHandling:
+    def _confirmed(self, qty=75, T=30.0, sl_ladder_stage=150.0):
+        return {
+            "tradingsymbol": "NIFTY26JUN24600CE", "instrument": "NIFTY", "direction": "CE",
+            "entry_price": 120.5, "sl": 24480.0, "target_t": T, "entry_alert_ts": "x",
+            "discovered_at": "x", "sl_ladder_stage": sl_ladder_stage,
+            "qty": qty, "confirm_count": 2, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+
+    def _mock_kite(self, ltp=135.0):
+        mock_kite = MagicMock()
+        mock_kite.ltp.return_value = {"NFO:NIFTY26JUN24600CE": {"last_price": ltp}}
+        mock_kite.orders.return_value = []
+        return mock_kite
+
+    def test_qty_increase_updates_entry_price_keeps_sl_and_t(self):
+        existing = self._confirmed(qty=75)
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 150, "average_price": 130.0}
+        mock_kite = self._mock_kite()
+        with patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_fyi"), \
+             patch("src.position_tracker.trade_notifier.send_partial_exit") as mock_partial, \
+             patch("src.position_tracker._get_rsi_snapshot", return_value=None):
+            position_tracker._handle_ongoing(
+                mock_kite, "NIFTY26JUN24600CE", pos, existing, datetime(2026, 6, 30, 9, 15)
+            )
+
+        mock_partial.assert_not_called()
+        saved_symbol, saved_data = mock_save.call_args[0]
+        assert saved_data["entry_price"] == 130.0
+        assert saved_data["qty"] == 150
+        assert saved_data["target_t"] == 30.0   # T unchanged — permanently fixed at entry
+
+    def test_qty_decrease_posts_partial_exit_note_keeps_ladder(self):
+        existing = self._confirmed(qty=150)
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 130.0}
+        mock_kite = self._mock_kite()
+        with patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_fyi"), \
+             patch("src.position_tracker.trade_notifier.send_partial_exit") as mock_partial, \
+             patch("src.position_tracker._get_rsi_snapshot", return_value=None):
+            position_tracker._handle_ongoing(
+                mock_kite, "NIFTY26JUN24600CE", pos, existing, datetime(2026, 6, 30, 9, 15)
+            )
+
+        mock_partial.assert_called_once_with("NIFTY", "CE", "NIFTY26JUN24600CE", 150, 75)
+        saved_symbol, saved_data = mock_save.call_args[0]
+        assert saved_data["qty"] == 75
+
+    def test_qty_unchanged_no_partial_exit_note(self):
+        existing = self._confirmed(qty=75)
+        pos = {"tradingsymbol": "NIFTY26JUN24600CE", "quantity": 75, "average_price": 120.5}
+        mock_kite = self._mock_kite()
+        with patch("src.position_tracker._save_position"), \
+             patch("src.position_tracker.trade_notifier.send_fyi"), \
+             patch("src.position_tracker.trade_notifier.send_partial_exit") as mock_partial, \
+             patch("src.position_tracker._get_rsi_snapshot", return_value=None):
+            position_tracker._handle_ongoing(
+                mock_kite, "NIFTY26JUN24600CE", pos, existing, datetime(2026, 6, 30, 9, 15)
+            )
+        mock_partial.assert_not_called()
+
+
+# ──────────────────────────────────────────────────────────────
+# Exit detection — qty -> 0 transition
+# ──────────────────────────────────────────────────────────────
+
+class TestGetKiteExitPrice:
+    def test_averages_multiple_sell_fills(self):
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = [
+            {"tradingsymbol": "X", "transaction_type": "SELL", "status": "COMPLETE",
+             "filled_quantity": 50, "average_price": 100.0},
+            {"tradingsymbol": "X", "transaction_type": "SELL", "status": "COMPLETE",
+             "filled_quantity": 25, "average_price": 106.0},
+            {"tradingsymbol": "X", "transaction_type": "BUY", "status": "COMPLETE",
+             "filled_quantity": 75, "average_price": 80.0},
+        ]
+        price = position_tracker._get_kite_exit_price(mock_kite, "X")
+        assert abs(price - ((100 * 50 + 106 * 25) / 75)) < 1e-9
+
+    def test_no_sell_fills_returns_none(self):
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = []
+        assert position_tracker._get_kite_exit_price(mock_kite, "X") is None
+
+    def test_orders_call_failure_returns_none(self):
+        mock_kite = MagicMock()
+        mock_kite.orders.side_effect = Exception("network error")
+        assert position_tracker._get_kite_exit_price(mock_kite, "X") is None
+
+
+class TestExitDetection:
+    def _confirmed_existing(self):
+        return {
+            "tradingsymbol": "NIFTY26JUN24600CE", "instrument": "NIFTY", "direction": "CE",
+            "entry_price": 120.5, "sl": 24480.0, "target_t": 30.0, "entry_alert_ts": "x",
+            "discovered_at": "x", "sl_ladder_stage": 150.0,
+            "qty": 75, "confirm_count": 2, "action_alerts_sent": 4, "action_alerts_acked": 3,
+        }
+
+    def test_exit_uses_get_orders_average_price_and_labels_ladder_driven(self):
+        existing = self._confirmed_existing()
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = [
+            {"tradingsymbol": "NIFTY26JUN24600CE", "transaction_type": "SELL",
+             "status": "COMPLETE", "filled_quantity": 75, "average_price": 150.0},
+        ]
+        with patch("src.position_tracker._delete_position") as mock_delete, \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._finalize_exit(mock_kite, "NIFTY26JUN24600CE", existing, None)
+
+        mock_summary.assert_called_once()
+        kwargs = mock_summary.call_args.kwargs
+        assert kwargs["exit_price"] == 150.0
+        assert kwargs["exit_type"] == "Ladder SL"
+        assert abs(kwargs["pnl"] - (150.0 - 120.5) * 75) < 1e-6
+        mock_delete.assert_called_once_with("NIFTY26JUN24600CE")
+
+    def test_exit_price_far_from_ladder_labelled_manual(self):
+        existing = self._confirmed_existing()
+        existing["sl_ladder_stage"] = 200.0
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = [
+            {"tradingsymbol": "NIFTY26JUN24600CE", "transaction_type": "SELL",
+             "status": "COMPLETE", "filled_quantity": 75, "average_price": 100.0},
+        ]
+        with patch("src.position_tracker._delete_position"), \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._finalize_exit(mock_kite, "NIFTY26JUN24600CE", existing, None)
+        kwargs = mock_summary.call_args.kwargs
+        assert kwargs["exit_type"] == "Manual / untracked flatten"
+
+    def test_untracked_exit_still_always_posts(self):
+        """Guards against silently swallowing the untracked-exit case — must
+        always post to Discord even with no ladder stage and no order fills."""
+        existing = self._confirmed_existing()
+        existing["sl_ladder_stage"] = None
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = []
+        with patch("src.position_tracker._delete_position"), \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._finalize_exit(mock_kite, "NIFTY26JUN24600CE", existing, None)
+        mock_summary.assert_called_once()
+        assert mock_summary.call_args.kwargs["exit_type"] == "Manual / untracked flatten"
+
+    def test_exit_deletes_position_key(self):
+        existing = self._confirmed_existing()
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = []
+        with patch("src.position_tracker._delete_position") as mock_delete, \
+             patch("src.position_tracker.trade_notifier.send_exit_summary"):
+            position_tracker._finalize_exit(mock_kite, "NIFTY26JUN24600CE", existing, None)
+        mock_delete.assert_called_once_with("NIFTY26JUN24600CE")
+
+
+class TestDisappearedBeforeConfirm:
+    def test_pending_position_vanishing_is_discarded_silently(self):
+        pending = {
+            "tradingsymbol": "NIFTY26JUN24600CE", "instrument": "NIFTY", "direction": "CE",
+            "entry_price": 120.5, "sl": None, "target_t": None, "entry_alert_ts": None,
+            "discovered_at": "x", "sl_ladder_stage": None,
+            "qty": 75, "confirm_count": 1, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_position", return_value=pending), \
+             patch("src.position_tracker._delete_position") as mock_delete, \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._handle_disappeared(mock_kite, "NIFTY26JUN24600CE", None)
+
+        mock_delete.assert_called_once_with("NIFTY26JUN24600CE")
+        mock_summary.assert_not_called()
+
+    def test_confirmed_position_vanishing_triggers_full_exit_flow(self):
+        confirmed = {
+            "tradingsymbol": "NIFTY26JUN24600CE", "instrument": "NIFTY", "direction": "CE",
+            "entry_price": 120.5, "sl": 24480.0, "target_t": 30.0, "entry_alert_ts": "x",
+            "discovered_at": "x", "sl_ladder_stage": 150.0,
+            "qty": 75, "confirm_count": 2, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+        mock_kite = MagicMock()
+        mock_kite.orders.return_value = []
+        with patch("src.position_tracker._load_position", return_value=confirmed), \
+             patch("src.position_tracker._delete_position") as mock_delete, \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._handle_disappeared(mock_kite, "NIFTY26JUN24600CE", None)
+
+        mock_summary.assert_called_once()
+        mock_delete.assert_called_once_with("NIFTY26JUN24600CE")
+
+    def test_index_only_entry_with_no_position_data_is_pruned(self):
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._remove_from_index") as mock_remove, \
+             patch("src.position_tracker.trade_notifier.send_exit_summary") as mock_summary:
+            position_tracker._handle_disappeared(mock_kite, "STALE_SYMBOL", None)
+        mock_remove.assert_called_once_with("STALE_SYMBOL")
+        mock_summary.assert_not_called()
