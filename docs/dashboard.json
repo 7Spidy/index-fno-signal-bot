@@ -1,8 +1,8 @@
 {
-  "date": "2026-07-01",
+  "date": "2026-07-02",
   "last_run": "2026-07-01T14:41:12.334148+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-07-01T09:05:43.909347+05:30",
+  "token_refreshed_at": "2026-07-02T09:05:52.534460+05:30",
   "instruments": [
     {
       "ce": {
@@ -133,59 +133,7 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [
-    {
-      "instrument": "BANKNIFTY",
-      "direction": "PE",
-      "candle_time": "14:35 IST",
-      "futures_price": 58175.4,
-      "spot_ltp": 57860.1,
-      "fut_spot_spread": 315.3,
-      "tradingsymbol": "BANKNIFTY26JUL57900PE",
-      "strike": 57900,
-      "expiry": "2026-07-28",
-      "fetch_time": "14:41:08 IST",
-      "atm_ltp": 814.2,
-      "opt_target": 1099.58,
-      "opt_sl": 623.95,
-      "spot_tgt": 57217.3,
-      "spot_sl": 58288.6,
-      "raw_risk": 428.5,
-      "conviction": "Moderate",
-      "rr": 1.5,
-      "rsi": 36.34341911545236,
-      "pdi": 12.293085535264213,
-      "ndi": 29.48542255545185,
-      "vwap": 58174.11817257593,
-      "c1": true,
-      "c2": true,
-      "c3": true,
-      "c4": true
-    }
-  ],
-  "history": [
-    {
-      "time": "14:41",
-      "instrument": "BANKNIFTY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 36.34341911545236,
-      "pdi": 12.293085535264213,
-      "ndi": 29.48542255545185,
-      "price": 58175.4
-    }
-  ],
+  "active_signals": [],
+  "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
