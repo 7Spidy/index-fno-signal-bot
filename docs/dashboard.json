@@ -133,7 +133,36 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "CE",
+      "candle_time": "09:35 IST",
+      "futures_price": 58625.2,
+      "spot_ltp": 58335.75,
+      "fut_spot_spread": 289.4,
+      "tradingsymbol": "BANKNIFTY26JUL58300CE",
+      "strike": 58300,
+      "expiry": "2026-07-28",
+      "fetch_time": "09:40:55 IST",
+      "atm_ltp": 1079.95,
+      "opt_target": 1105.87,
+      "opt_sl": 1062.67,
+      "spot_tgt": 58380.8,
+      "spot_sl": 58455.0,
+      "raw_risk": 30,
+      "conviction": "Strong",
+      "rr": 1.5,
+      "rsi": 72.78214116895649,
+      "pdi": 37.94593602771311,
+      "ndi": 15.699279170830716,
+      "vwap": 58508.100079338095,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true
+    }
+  ],
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
