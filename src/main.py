@@ -17,6 +17,7 @@ from src import (
     signals,
     state,
 )
+from src import tracker_bridge
 from src.executor_bridge import write_executor_intent
 
 try:
@@ -315,6 +316,21 @@ def main() -> None:
                         write_executor_intent(result, inst)
                     except Exception as e:
                         print(f"[main] executor_bridge error (non-fatal): {e}")
+                    try:
+                        tracker_bridge.write_tracker_intent(
+                            instrument=name,
+                            asset_class="INDEX",
+                            direction=dir_up,
+                            tradingsymbol=result.get("atm_data", {}).get("tradingsymbol"),
+                            spot_sl=result.get("spot_sl"),
+                            target_pts=result["raw_risk"] * result["rr"],
+                            spot_risk_pts=result.get("raw_risk"),
+                            target_rr=result.get("rr"),
+                            target_source="rr",
+                            atm_strike=result.get("atm_strike"),
+                        )
+                    except Exception as e:
+                        print(f"[main] tracker_bridge error (non-fatal): {e}")
                     dashboard_writer.update_active_signal(name, dir_up, result)
                     journal.log_signal(name, dir_up, result)
                     state.redis_set(dedup_key, "1", ex=86400)

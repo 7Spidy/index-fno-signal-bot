@@ -5,19 +5,21 @@ Triggered every minute by cron-job.org → workflow_dispatch on trade-tracker.ym
 
 Flow (pull-based, no manual Discord commands):
   1. Call get_positions() via Kite every cycle.
-  2. Discover any open NIFTY F&O position not already tracked in Redis.
+  2. Discover any open F&O position (index in config.INSTRUMENTS or stock in
+     stock_config.STOCKS) not already tracked in Redis.
   3. Require a position to be seen on 2 consecutive heartbeats (same
      tradingsymbol, nonzero qty) before posting a "position detected" alert
      and starting SL ladder tracking — guards against a stale/transient
      Kite response.
   4. On confirmation, reconstruct entry context (SL, target T) from the most
-     recent same-instrument signal intent written to Redis by executor_bridge
-     (`executor:pending_intent` / `executor:position`), not from Discord
-     history — that Redis key already carries the structural SL and R:R
-     used to build the alert, and is cheaper/more reliable than a message
-     scan.
+     recent same-instrument signal intent written to Redis — either the
+     legacy NIFTY-only executor_bridge keys (`executor:pending_intent` /
+     `executor:position`) or the per-instrument tracker_bridge key
+     (`tracker:pending_intent:{INSTRUMENT}`), not from Discord history —
+     these Redis keys already carry the structural SL and target used to
+     build the alert, and are cheaper/more reliable than a message scan.
   5. Track the SL ladder per open position, keyed by tradingsymbol so
-     concurrent NIFTY CE + PE positions never collide.
+     concurrent positions (any instrument/direction) never collide.
   6. Detect exits purely via a qty -> 0 (or position-disappears) transition
      and post a P&L summary, labelled ladder-driven or manual/untracked.
   7. `position:{tradingsymbol}` Redis keys expire at the next 16:00 IST.
@@ -35,7 +37,9 @@ try:
 except ImportError:
     pass
 
+from src import config
 from src import state
+from src import stock_config
 from src import trade_notifier
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -246,21 +250,36 @@ def _delete_position(tradingsymbol: str) -> None:
 # Instrument / direction extraction from tradingsymbol
 # ──────────────────────────────────────────────────────────────
 
-_KNOWN_UNDERLYINGS = [
-    "BANKNIFTY", "MIDCPNIFTY", "FINNIFTY", "NIFTY", "SENSEX",
-]
+_INDEX_NAMES = [inst["name"] for inst in config.INSTRUMENTS]          # NIFTY, BANKNIFTY, SENSEX
+_STOCK_NAMES = list(stock_config.STOCK_BY_NAME.keys())                # 14 stocks
+
+# Longest-name-first so no name can shadow a longer one that happens to
+# share a prefix.
+_KNOWN_UNDERLYINGS = sorted(set(_INDEX_NAMES) | set(_STOCK_NAMES), key=len, reverse=True)
 
 
 def _underlying_from_tradingsymbol(tradingsymbol: str) -> str | None:
-    """Extract underlying name from a Kite tradingsymbol.
+    """Extract underlying name from a Kite tradingsymbol — matches any
+    INDEX (config.INSTRUMENTS) or STOCK (stock_config.STOCKS) name.
 
-    Examples: NIFTY26JUN24600CE → NIFTY, BANKNIFTY26JUN52500PE → BANKNIFTY
+    Examples: NIFTY26JUN24600CE → NIFTY, MARUTI26JUL14300CE → MARUTI
     """
     sym = tradingsymbol.upper()
     for name in _KNOWN_UNDERLYINGS:
         if sym.startswith(name):
             return name
     return None
+
+
+def _asset_class_for(instrument: str) -> str:
+    """INDEX for config.INSTRUMENTS names, STOCK for stock_config.STOCKS
+    names, UNKNOWN otherwise (should not happen for anything that passed
+    _underlying_from_tradingsymbol, but never raises)."""
+    if instrument in _INDEX_NAMES:
+        return "INDEX"
+    if instrument in stock_config.STOCK_BY_NAME:
+        return "STOCK"
+    return "UNKNOWN"
 
 
 def _direction_from_tradingsymbol(tradingsymbol: str) -> str | None:
@@ -281,11 +300,34 @@ def _direction_from_tradingsymbol(tradingsymbol: str) -> str | None:
 # Discord history, so they are used in preference to any message scan.
 # ──────────────────────────────────────────────────────────────
 
+def _load_tracker_intent(instrument: str) -> dict | None:
+    """Look up the per-instrument tracker-intent key
+    (tracker:pending_intent:{INSTRUMENT}), written by tracker_bridge.py."""
+    raw = state.redis_get(f"tracker:pending_intent:{instrument.upper()}")
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return None
+    if data.get("instrument", "").upper() != instrument.upper():
+        return None
+    return data
+
+
 def _load_intent(instrument: str) -> dict | None:
     """Look up the most recent Redis intent payload for this instrument.
 
-    Checks executor:pending_intent and executor:position. Returns the parsed
-    dict if it matches, or None.
+    Priority order:
+      1. Legacy global executor keys (executor:pending_intent /
+         executor:position) — these reflect the real, external
+         auto-executor's actual state and are NIFTY-only in practice, but
+         are checked for ALL instruments for backward compatibility.
+      2. Per-instrument tracker key (tracker:pending_intent:{instrument}) —
+         covers every instrument this bot tracks, including NIFTY when the
+         legacy keys are absent/stale/expired.
+
+    Returns the parsed dict if found, else None.
     """
     for key in ("executor:pending_intent", "executor:position"):
         raw = state.redis_get(key)
@@ -297,7 +339,8 @@ def _load_intent(instrument: str) -> dict | None:
             continue
         if data.get("instrument", "").upper() == instrument.upper():
             return data
-    return None
+
+    return _load_tracker_intent(instrument)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -365,21 +408,37 @@ def _is_ladder_driven(exit_price: float, sl_ladder_stage: float | None) -> bool:
     return abs(exit_price - sl_ladder_stage) <= tolerance
 
 
-def _get_rsi_snapshot(instrument: str, today_open: datetime) -> list[float] | None:
-    """Fetch last 3 RSI values for the instrument's futures.
+def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = "INDEX") -> list[float] | None:
+    """Fetch last 3 RSI values for the instrument.
+
+    INDEX: futures token from kite:instrument_tokens ({instrument: {"token": ...}}).
+    STOCK: equity token from stock_config.REDIS_EQUITY_TOKENS_KEY ({instrument: token_id}),
+           mirroring how stock_main._fetch_and_evaluate sources its own RSI.
 
     Returns [r_oldest, r_middle, r_newest] or None on failure.
     """
     try:
         from src import kite_client, indicators, state as st
-        raw = st.redis_get("kite:instrument_tokens")
-        if not raw:
-            return None
-        tokens = json.loads(raw)
-        token_info = tokens.get(instrument)
-        if not token_info:
-            return None
-        df = kite_client.fetch_ohlcv(token_info["token"], today_open)
+
+        if asset_class == "STOCK":
+            raw = st.redis_get(stock_config.REDIS_EQUITY_TOKENS_KEY)
+            if not raw:
+                return None
+            tokens = json.loads(raw)
+            token_id = tokens.get(instrument)
+            if not token_id:
+                return None
+        else:
+            raw = st.redis_get("kite:instrument_tokens")
+            if not raw:
+                return None
+            tokens = json.loads(raw)
+            token_info = tokens.get(instrument)
+            if not token_info:
+                return None
+            token_id = token_info["token"]
+
+        df = kite_client.fetch_ohlcv(token_id, today_open)
         rsi_series = indicators.rsi_wilder(df)
         last3 = rsi_series.dropna().iloc[-3:]
         if len(last3) < 3:
@@ -395,16 +454,22 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime) -> list[float] | No
 # ──────────────────────────────────────────────────────────────
 
 def _handle_new_sighting(tradingsymbol: str, pos: dict) -> None:
-    """First sighting of an open NIFTY F&O position — pending, no alert yet."""
+    """First sighting of an open tracked F&O position — pending, no alert yet."""
+    instrument = _underlying_from_tradingsymbol(tradingsymbol)
+    if instrument is None:
+        print(f"[position_tracker] {tradingsymbol}: cannot determine underlying — skip")
+        return
+
     direction = _direction_from_tradingsymbol(tradingsymbol)
     if direction is None:
         print(f"[position_tracker] {tradingsymbol}: cannot determine CE/PE — skip")
         return
 
-    instrument = _underlying_from_tradingsymbol(tradingsymbol) or "NIFTY"
+    asset_class = _asset_class_for(instrument)
     data = {
         "tradingsymbol":       tradingsymbol,
         "instrument":          instrument,
+        "asset_class":         asset_class,
         "direction":           direction,
         "entry_price":         pos.get("average_price") or 0.0,
         "sl":                  None,
@@ -418,8 +483,8 @@ def _handle_new_sighting(tradingsymbol: str, pos: dict) -> None:
         "action_alerts_acked": 0,
     }
     _save_position(tradingsymbol, data)
-    print(f"[position_tracker] {tradingsymbol}: new sighting, qty={data['qty']} — "
-          f"confirm_count=1, no alert yet")
+    print(f"[position_tracker] {tradingsymbol}: new sighting ({instrument}/{asset_class}), "
+          f"qty={data['qty']} — confirm_count=1, no alert yet")
 
 
 def _handle_confirm(kite, tradingsymbol: str, pos: dict, existing: dict) -> None:
@@ -435,10 +500,12 @@ def _handle_confirm(kite, tradingsymbol: str, pos: dict, existing: dict) -> None
     entry_alert_ts: str | None = None
 
     if intent:
-        risk_pts  = intent.get("spot_risk_pts")
-        target_rr = intent.get("target_rr")
-        if risk_pts and target_rr:
-            T = risk_pts * target_rr
+        T = intent.get("target_pts")
+        if T is None:
+            risk_pts  = intent.get("spot_risk_pts")
+            target_rr = intent.get("target_rr")
+            if risk_pts and target_rr:
+                T = risk_pts * target_rr
         sl = intent.get("spot_sl")
         entry_alert_ts = intent.get("ts")
         print(f"[position_tracker] {tradingsymbol}: matched alert intent — T={T}, sl={sl}")
@@ -520,7 +587,7 @@ def _handle_ongoing(kite, tradingsymbol: str, pos: dict, existing: dict, today_o
         raw_progress = 0.0
         progress_pct = 0.0
 
-    rsi3 = _get_rsi_snapshot(instrument, today_open)
+    rsi3 = _get_rsi_snapshot(instrument, today_open, asset_class=existing.get("asset_class", "INDEX"))
     market_snapshot = {
         "rsi_last3":     rsi3,
         "progress":      raw_progress,
@@ -670,24 +737,24 @@ def run_heartbeat() -> None:
 
     all_positions = positions_data.get("net", []) or []
     pos_by_symbol = {p["tradingsymbol"]: p for p in all_positions}
-    open_nifty = {
+    open_tracked = {
         ts: p for ts, p in pos_by_symbol.items()
-        if p.get("quantity", 0) != 0 and _underlying_from_tradingsymbol(ts) == "NIFTY"
+        if p.get("quantity", 0) != 0 and _underlying_from_tradingsymbol(ts) is not None
     }
 
     tracked_symbols = _load_index()
-    if tracked_symbols or open_nifty:
-        print(f"[position_tracker] heartbeat: tracked={tracked_symbols} open_nifty={list(open_nifty)}")
+    if tracked_symbols or open_tracked:
+        print(f"[position_tracker] heartbeat: tracked={tracked_symbols} open_tracked={list(open_tracked)}")
 
     # Exit / disappearance handling first, so a freshly-vacated key doesn't
     # get re-discovered as "new" in the same cycle.
     for ts in tracked_symbols:
-        if ts not in open_nifty:
+        if ts not in open_tracked:
             _handle_disappeared(kite, ts, pos_by_symbol.get(ts))
 
     today_open = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0)
 
-    for ts, pos in open_nifty.items():
+    for ts, pos in open_tracked.items():
         existing = _load_position(ts)
         if existing is None:
             _handle_new_sighting(ts, pos)

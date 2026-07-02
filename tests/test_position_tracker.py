@@ -1,5 +1,6 @@
 """Unit tests for position_tracker.py — ladder function, SL invariants, and
 the pull-based discovery / confirm / exit flow."""
+import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -249,6 +250,99 @@ class TestPerTradingsymbolKeying:
 
 
 # ──────────────────────────────────────────────────────────────
+# Underlying / asset-class extraction across index AND stock instruments
+# — this is the direct regression coverage for the MARUTI incident, where
+# stock positions and non-NIFTY index positions were silently invisible to
+# the tracker.
+# ──────────────────────────────────────────────────────────────
+
+class TestUnderlyingExtractionMultiInstrument:
+    def test_index_names_resolve(self):
+        assert position_tracker._underlying_from_tradingsymbol("NIFTY26JUN24600CE") == "NIFTY"
+        assert position_tracker._underlying_from_tradingsymbol("BANKNIFTY26JUN52500PE") == "BANKNIFTY"
+        assert position_tracker._underlying_from_tradingsymbol("SENSEX26JUN82000CE") == "SENSEX"
+
+    def test_stock_names_resolve(self):
+        assert position_tracker._underlying_from_tradingsymbol("MARUTI26JUL14300CE") == "MARUTI"
+        assert position_tracker._underlying_from_tradingsymbol("SBIN26JUL800PE") == "SBIN"
+        assert position_tracker._underlying_from_tradingsymbol("LT26JUL3600CE") == "LT"
+
+    def test_unknown_symbol_returns_none(self):
+        assert position_tracker._underlying_from_tradingsymbol("RANDOMJUNK26JUL100CE") is None
+
+    def test_midcpnifty_finnifty_no_longer_recognised(self):
+        # Deliberately dropped — never in config.INSTRUMENTS, were dead entries.
+        assert position_tracker._underlying_from_tradingsymbol("MIDCPNIFTY26JUL12000CE") is None
+        assert position_tracker._underlying_from_tradingsymbol("FINNIFTY26JUL22000PE") is None
+
+
+class TestAssetClassFor:
+    def test_index_names_are_index(self):
+        for name in ("NIFTY", "BANKNIFTY", "SENSEX"):
+            assert position_tracker._asset_class_for(name) == "INDEX"
+
+    def test_stock_names_are_stock(self):
+        for name in ("MARUTI", "SBIN", "RELIANCE"):
+            assert position_tracker._asset_class_for(name) == "STOCK"
+
+    def test_unknown_is_unknown(self):
+        assert position_tracker._asset_class_for("GARBAGE") == "UNKNOWN"
+
+
+# ──────────────────────────────────────────────────────────────
+# Intent lookup — legacy executor keys vs the new per-instrument tracker key
+# ──────────────────────────────────────────────────────────────
+
+class TestLoadTrackerIntent:
+    def test_returns_matching_payload(self):
+        payload = json.dumps({"instrument": "MARUTI", "target_pts": 45.0, "spot_sl": 12000.0})
+        with patch("src.position_tracker.state.redis_get", return_value=payload):
+            result = position_tracker._load_tracker_intent("MARUTI")
+        assert result["target_pts"] == 45.0
+
+    def test_mismatched_instrument_returns_none(self):
+        payload = json.dumps({"instrument": "SBIN", "target_pts": 10.0})
+        with patch("src.position_tracker.state.redis_get", return_value=payload):
+            assert position_tracker._load_tracker_intent("MARUTI") is None
+
+    def test_missing_key_returns_none(self):
+        with patch("src.position_tracker.state.redis_get", return_value=None):
+            assert position_tracker._load_tracker_intent("MARUTI") is None
+
+    def test_malformed_json_returns_none(self):
+        with patch("src.position_tracker.state.redis_get", return_value="not json"):
+            assert position_tracker._load_tracker_intent("MARUTI") is None
+
+
+class TestLoadIntentPriorityFallback:
+    def test_legacy_executor_key_wins_over_tracker_key(self):
+        def fake_get(key):
+            if key == "executor:pending_intent":
+                return json.dumps({"instrument": "NIFTY", "spot_risk_pts": 20.0, "target_rr": 1.5})
+            if key.startswith("tracker:pending_intent:"):
+                return json.dumps({"instrument": "NIFTY", "target_pts": 999.0})
+            return None
+        with patch("src.position_tracker.state.redis_get", side_effect=fake_get):
+            result = position_tracker._load_intent("NIFTY")
+        assert result["spot_risk_pts"] == 20.0  # legacy payload, not the tracker one
+
+    def test_falls_back_to_tracker_key_when_legacy_absent(self):
+        def fake_get(key):
+            if key in ("executor:pending_intent", "executor:position"):
+                return None
+            if key == "tracker:pending_intent:BANKNIFTY":
+                return json.dumps({"instrument": "BANKNIFTY", "target_pts": 75.0, "spot_sl": 51000.0})
+            return None
+        with patch("src.position_tracker.state.redis_get", side_effect=fake_get):
+            result = position_tracker._load_intent("BANKNIFTY")
+        assert result["target_pts"] == 75.0
+
+    def test_none_when_neither_source_matches(self):
+        with patch("src.position_tracker.state.redis_get", return_value=None):
+            assert position_tracker._load_intent("SENSEX") is None
+
+
+# ──────────────────────────────────────────────────────────────
 # New sighting (first heartbeat) — pending, no alert
 # ──────────────────────────────────────────────────────────────
 
@@ -273,6 +367,30 @@ class TestNewSighting:
         pos = {"tradingsymbol": "NIFTY26JUNFUT", "quantity": 75, "average_price": 100.0}
         with patch("src.position_tracker._save_position") as mock_save:
             position_tracker._handle_new_sighting("NIFTY26JUNFUT", pos)
+        mock_save.assert_not_called()
+
+
+class TestNewSightingMultiInstrument:
+    def test_banknifty_sighting_sets_index_asset_class(self):
+        pos = {"tradingsymbol": "BANKNIFTY26JUL52500PE", "quantity": 30, "average_price": 300.0}
+        with patch("src.position_tracker._save_position") as mock_save:
+            position_tracker._handle_new_sighting("BANKNIFTY26JUL52500PE", pos)
+        _, saved_data = mock_save.call_args[0]
+        assert saved_data["instrument"] == "BANKNIFTY"
+        assert saved_data["asset_class"] == "INDEX"
+
+    def test_maruti_sighting_sets_stock_asset_class(self):
+        pos = {"tradingsymbol": "MARUTI26JUL14300CE", "quantity": 50, "average_price": 250.0}
+        with patch("src.position_tracker._save_position") as mock_save:
+            position_tracker._handle_new_sighting("MARUTI26JUL14300CE", pos)
+        _, saved_data = mock_save.call_args[0]
+        assert saved_data["instrument"] == "MARUTI"
+        assert saved_data["asset_class"] == "STOCK"
+
+    def test_unrecognised_underlying_is_skipped(self):
+        pos = {"tradingsymbol": "RANDOMJUNK26JUL100CE", "quantity": 50, "average_price": 100.0}
+        with patch("src.position_tracker._save_position") as mock_save:
+            position_tracker._handle_new_sighting("RANDOMJUNK26JUL100CE", pos)
         mock_save.assert_not_called()
 
 
@@ -350,6 +468,50 @@ class TestConfirmFlow:
         assert mock_alert.call_count == 1
         mock_fyi.assert_not_called()
         mock_action.assert_not_called()
+
+
+class TestConfirmFlowMultiInstrument:
+    def test_sensex_confirm_with_new_tracker_style_intent_uses_target_pts_directly(self):
+        existing = {
+            "tradingsymbol": "SENSEX26JUL82000CE", "instrument": "SENSEX", "asset_class": "INDEX",
+            "direction": "CE", "entry_price": 300.0, "sl": None, "target_t": None,
+            "entry_alert_ts": None, "discovered_at": "x", "sl_ladder_stage": None,
+            "qty": 20, "confirm_count": 1, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+        pos = {"tradingsymbol": "SENSEX26JUL82000CE", "quantity": 20, "average_price": 305.0}
+        intent = {"instrument": "SENSEX", "target_pts": 120.0, "spot_sl": 81500.0, "ts": "2026-07-02T04:00:00+00:00"}
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_intent", return_value=intent), \
+             patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert:
+            position_tracker._handle_confirm(mock_kite, "SENSEX26JUL82000CE", pos, existing)
+        kwargs = mock_alert.call_args.kwargs
+        assert kwargs["target_t"] == 120.0   # taken directly, no risk*rr multiplication
+        _, saved_data = mock_save.call_args[0]
+        assert saved_data["target_t"] == 120.0
+
+    def test_maruti_confirm_with_atr_based_tracker_intent(self):
+        existing = {
+            "tradingsymbol": "MARUTI26JUL14300CE", "instrument": "MARUTI", "asset_class": "STOCK",
+            "direction": "CE", "entry_price": 250.0, "sl": None, "target_t": None,
+            "entry_alert_ts": None, "discovered_at": "x", "sl_ladder_stage": None,
+            "qty": 50, "confirm_count": 1, "action_alerts_sent": 0, "action_alerts_acked": 0,
+        }
+        pos = {"tradingsymbol": "MARUTI26JUL14300CE", "quantity": 50, "average_price": 252.0}
+        intent = {
+            "instrument": "MARUTI", "target_pts": 42.5, "spot_sl": 14150.0,
+            "target_source": "atr", "ts": "2026-07-02T04:15:00+00:00",
+        }
+        mock_kite = MagicMock()
+        with patch("src.position_tracker._load_intent", return_value=intent), \
+             patch("src.position_tracker._save_position") as mock_save, \
+             patch("src.position_tracker.trade_notifier.send_position_detected") as mock_alert:
+            position_tracker._handle_confirm(mock_kite, "MARUTI26JUL14300CE", pos, existing)
+        kwargs = mock_alert.call_args.kwargs
+        assert kwargs["target_t"] == 42.5
+        assert kwargs["sl"] == 14150.0
+        _, saved_data = mock_save.call_args[0]
+        assert saved_data["asset_class"] == "STOCK"   # preserved through confirm
 
 
 # ──────────────────────────────────────────────────────────────
@@ -554,3 +716,91 @@ class TestDisappearedBeforeConfirm:
             position_tracker._handle_disappeared(mock_kite, "STALE_SYMBOL", None)
         mock_remove.assert_called_once_with("STALE_SYMBOL")
         mock_summary.assert_not_called()
+
+
+# ──────────────────────────────────────────────────────────────
+# _get_rsi_snapshot — asset_class branch (INDEX futures vs STOCK equity)
+# ──────────────────────────────────────────────────────────────
+
+class TestGetRsiSnapshotAssetClassBranch:
+    def test_index_path_reads_futures_token(self):
+        import pandas as pd
+        tokens_json = json.dumps({"NIFTY": {"token": 12345}})
+        rsi_series = pd.Series([10.0, 20.0, 30.0])
+        with patch("src.position_tracker.state.redis_get", return_value=tokens_json), \
+             patch("src.kite_client.fetch_ohlcv") as mock_fetch, \
+             patch("src.indicators.rsi_wilder", return_value=rsi_series):
+            result = position_tracker._get_rsi_snapshot(
+                "NIFTY", datetime(2026, 7, 2, 9, 15), asset_class="INDEX"
+            )
+        mock_fetch.assert_called_once()
+        assert mock_fetch.call_args[0][0] == 12345
+        assert result == [10.0, 20.0, 30.0]
+
+    def test_stock_path_reads_equity_token_directly(self):
+        import pandas as pd
+        tokens_json = json.dumps({"MARUTI": 67890})   # flat int, not nested dict
+        rsi_series = pd.Series([10.0, 20.0, 30.0])
+        with patch("src.position_tracker.state.redis_get", return_value=tokens_json), \
+             patch("src.kite_client.fetch_ohlcv") as mock_fetch, \
+             patch("src.indicators.rsi_wilder", return_value=rsi_series):
+            result = position_tracker._get_rsi_snapshot(
+                "MARUTI", datetime(2026, 7, 2, 9, 15), asset_class="STOCK"
+            )
+        mock_fetch.assert_called_once()
+        assert mock_fetch.call_args[0][0] == 67890
+        assert result == [10.0, 20.0, 30.0]
+
+    def test_stock_missing_token_returns_none(self):
+        with patch("src.position_tracker.state.redis_get", return_value=json.dumps({})):
+            result = position_tracker._get_rsi_snapshot(
+                "MARUTI", datetime(2026, 7, 2, 9, 15), asset_class="STOCK"
+            )
+        assert result is None
+
+    def test_index_missing_token_map_returns_none(self):
+        with patch("src.position_tracker.state.redis_get", return_value=None):
+            result = position_tracker._get_rsi_snapshot(
+                "NIFTY", datetime(2026, 7, 2, 9, 15), asset_class="INDEX"
+            )
+        assert result is None
+
+
+# ──────────────────────────────────────────────────────────────
+# run_heartbeat — direct regression test for the reported bug: only NIFTY
+# positions were ever tracked, silently excluding BANKNIFTY/SENSEX and every
+# stock (e.g. the MARUTI incident).
+# ──────────────────────────────────────────────────────────────
+
+class TestRunHeartbeatMultiInstrument:
+    def test_heartbeat_tracks_index_and_stock_positions_not_just_nifty(self):
+        positions = {
+            "net": [
+                {"tradingsymbol": "NIFTY26JUL24600CE",     "quantity": 75, "average_price": 100},
+                {"tradingsymbol": "BANKNIFTY26JUL52500PE", "quantity": 30, "average_price": 200},
+                {"tradingsymbol": "MARUTI26JUL14300CE",    "quantity": 50, "average_price": 250},
+                {"tradingsymbol": "RANDOMJUNKFUT",         "quantity": 10, "average_price": 50},
+            ]
+        }
+        mock_kite = MagicMock()
+        mock_kite.positions.return_value = positions
+        with patch("src.kite_client.get_kite", return_value=mock_kite), \
+             patch("src.position_tracker._load_index", return_value=[]), \
+             patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._handle_new_sighting") as mock_new:
+            position_tracker.run_heartbeat()
+
+        tracked_calls = {c.args[0] for c in mock_new.call_args_list}
+        assert tracked_calls == {"NIFTY26JUL24600CE", "BANKNIFTY26JUL52500PE", "MARUTI26JUL14300CE"}
+        assert "RANDOMJUNKFUT" not in tracked_calls
+
+    def test_zero_qty_position_is_not_tracked(self):
+        positions = {"net": [{"tradingsymbol": "MARUTI26JUL14300CE", "quantity": 0, "average_price": 250}]}
+        mock_kite = MagicMock()
+        mock_kite.positions.return_value = positions
+        with patch("src.kite_client.get_kite", return_value=mock_kite), \
+             patch("src.position_tracker._load_index", return_value=[]), \
+             patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._handle_new_sighting") as mock_new:
+            position_tracker.run_heartbeat()
+        mock_new.assert_not_called()

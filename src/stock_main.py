@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, indicators, notifier, sector_config, state
+from src import calendar_nse, indicators, notifier, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
@@ -540,6 +540,21 @@ def main() -> None:
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED "
                   f"(target={target_source}, RR={rr_effective})")
+            try:
+                tracker_bridge.write_tracker_intent(
+                    instrument=name,
+                    asset_class="STOCK",
+                    direction=direction,
+                    tradingsymbol=signal_payload["atm_data"].get("tradingsymbol"),
+                    spot_sl=signal_payload["spot_sl"],
+                    target_pts=signal_payload["target_pts"],
+                    spot_risk_pts=signal_payload["raw_risk"],
+                    target_rr=None,
+                    target_source=signal_payload["target_source"],
+                    atm_strike=signal_payload["atm_data"].get("strike"),
+                )
+            except Exception as e:
+                print(f"[stock_main] tracker_bridge error (non-fatal): {e}")
 
             fired_signals.append({
                 "instrument":      name,
