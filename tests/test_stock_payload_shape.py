@@ -8,7 +8,7 @@ Asserts:
 - spot_tgt not None
 - asset_class == "STOCK"
 - notifier renders tradingsymbol inside a triple-backtick code block
-- notifier emits a "Spot" field (not "Futures / Spot")
+- notifier omits the Spot/diagnostic block entirely (removed for brevity)
 """
 import os
 import sys
@@ -121,31 +121,32 @@ def test_tradingsymbol_in_code_block():
     print(f"✅ tradingsymbol '{symbol}' is in a code block")
 
 
-def test_notifier_emits_spot_field_not_futures_spot():
-    """stock notifier: must emit 'Spot' field, not 'Futures / Spot'."""
+def test_notifier_omits_spot_and_futures_spot_fields():
+    """stock notifier: diagnostic block (Spot/Futures-Spot through Conditions)
+    was intentionally removed from the embed to keep alerts brief."""
     with mock.patch.object(notifier, "requests", _requests_stub):
         _requests_stub.post.reset_mock()
         notifier.send_signal("RELIANCE", "CE", _make_stock_payload())
         call_kwargs = _requests_stub.post.call_args[1]
     embed = call_kwargs["json"]["embeds"][0]
     field_names = [f["name"] for f in embed["fields"]]
-    assert "Spot" in field_names, f"'Spot' field missing. Fields: {field_names}"
+    assert "Spot" not in field_names, f"'Spot' field should be removed. Fields: {field_names}"
     assert "Futures / Spot" not in field_names, (
-        f"'Futures / Spot' field present for STOCK — should be 'Spot'. Fields: {field_names}"
+        f"'Futures / Spot' field should be removed. Fields: {field_names}"
     )
-    print("✅ notifier emits 'Spot' field (not 'Futures / Spot') for STOCK")
+    print("✅ notifier omits Spot/Futures-Spot field for STOCK (diagnostic block removed)")
 
 
-def test_spot_field_shows_futures_price():
-    """The 'Spot' field value should reflect the equity close (futures_price)."""
-    payload = _make_stock_payload()
+def test_diagnostic_fields_removed_from_embed():
+    """Candle/RSI(14)/+DI-−DI/VWAP/Conditions were removed from the embed
+    along with Spot — the whole diagnostic block is gone, alert stays brief."""
     with mock.patch.object(notifier, "requests", _requests_stub):
         _requests_stub.post.reset_mock()
-        notifier.send_signal("RELIANCE", "CE", payload)
+        notifier.send_signal("RELIANCE", "CE", _make_stock_payload())
         call_kwargs = _requests_stub.post.call_args[1]
-    spot_field = _get_field(call_kwargs["json"], "Spot")
-    # fi() formats as "1,314.4"
-    assert "1,314" in spot_field["value"] or "1314" in spot_field["value"], (
-        f"Spot field value doesn't reflect futures_price: {spot_field['value']!r}"
-    )
-    print(f"✅ 'Spot' field value: {spot_field['value']!r}")
+    embed = call_kwargs["json"]["embeds"][0]
+    field_names = [f["name"] for f in embed["fields"]]
+    removed = {"Spot", "Futures / Spot", "Candle", "RSI(14)", "+DI / −DI", "VWAP", "Conditions"}
+    leaked = removed.intersection(field_names)
+    assert not leaked, f"Diagnostic fields should be removed but found: {leaked}. Fields: {field_names}"
+    print(f"✅ diagnostic block fully removed. Remaining fields: {field_names}")
