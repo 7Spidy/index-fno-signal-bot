@@ -19,25 +19,11 @@ WARN_COLOR       = 0xF59E0B
 SUPPRESSED_COLOR = 0x6B7280   # gray — visually distinct from CE/PE/warning colors
 
 
-def send_signal(instrument: str, direction: str, result: dict) -> bool:
-    """Post a rich Discord embed for a CE or PE signal. Returns True on success."""
-    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
-    if not webhook:
-        print("[notifier] DISCORD_WEBHOOK_URL not set")
-        return False
-
+def _build_trade_fields(instrument: str, direction: str, result: dict) -> list[dict]:
+    """Build the shared trade-detail field list used by both send_signal()
+    and send_suppressed_signal() (instrument, buy/target/SL, conditions, etc)."""
     is_ce  = direction.upper() == "CE"
-    color  = CE_COLOR if is_ce else PE_COLOR
-    emoji  = "🟢" if is_ce else "🔴"
     arrow  = "↑" if is_ce else "↓"
-
-    HIGH_CONVICTION_COLOR = 0x3498DB   # blue
-    LOW_CONVICTION_COLOR  = 0xE74C3C   # red
-    sector_conviction = result.get("sector_conviction")   # None | "HIGH" | "LOW"
-    if sector_conviction == "HIGH":
-        color = HIGH_CONVICTION_COLOR
-    elif sector_conviction == "LOW":
-        color = LOW_CONVICTION_COLOR
 
     atm     = result.get("atm_data", {})
     ts      = atm.get("tradingsymbol", "unavailable")
@@ -154,6 +140,7 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
         },
     ]
 
+    sector_conviction = result.get("sector_conviction")   # None | "HIGH" | "LOW"
     if sector_conviction == "HIGH":
         fields.append({
             "name":   "Sector Signal",
@@ -166,6 +153,30 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
             "value":  "Low Conviction with Sector Performance",
             "inline": False,
         })
+
+    return fields
+
+
+def send_signal(instrument: str, direction: str, result: dict) -> bool:
+    """Post a rich Discord embed for a CE or PE signal. Returns True on success."""
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook:
+        print("[notifier] DISCORD_WEBHOOK_URL not set")
+        return False
+
+    is_ce  = direction.upper() == "CE"
+    color  = CE_COLOR if is_ce else PE_COLOR
+    emoji  = "🟢" if is_ce else "🔴"
+
+    HIGH_CONVICTION_COLOR = 0x3498DB   # blue
+    LOW_CONVICTION_COLOR  = 0xE74C3C   # red
+    sector_conviction = result.get("sector_conviction")   # None | "HIGH" | "LOW"
+    if sector_conviction == "HIGH":
+        color = HIGH_CONVICTION_COLOR
+    elif sector_conviction == "LOW":
+        color = LOW_CONVICTION_COLOR
+
+    fields = _build_trade_fields(instrument, direction, result)
 
     embed = {
         "title":     f"{emoji} {direction.upper()} Signal — {instrument}",
@@ -204,44 +215,40 @@ def send_suppressed_signal(instrument: str, direction: str, result: dict) -> boo
         print("[notifier] DISCORD_WEBHOOK_URL not set")
         return False
 
-    is_ce      = direction.upper() == "CE"
-    arrow      = "↑" if is_ce else "↓"
     raw_risk   = result.get("raw_risk")
     target_pts = result.get("target_pts")
     rr         = result.get("rr")
     atr        = result.get("daily_atr")
 
+    fields = _build_trade_fields(instrument, direction, result)
+    fields.extend([
+        {
+            "name":   "Reason",
+            "value":  (f"R:R {rr} below minimum {result.get('rr_floor', 0.8)} — "
+                       "target capped by ATR/option-range, not worth the risk"),
+            "inline": False,
+        },
+        {
+            "name":   "Risk (pts)",
+            "value":  f"{raw_risk}" if raw_risk is not None else "—",
+            "inline": True,
+        },
+        {
+            "name":   "Capped target (pts)",
+            "value":  f"{target_pts}" if target_pts is not None else "—",
+            "inline": True,
+        },
+        {
+            "name":   "Daily ATR(14)",
+            "value":  f"{atr:.1f}" if atr is not None else "unavailable",
+            "inline": True,
+        },
+    ])
+
     embed = {
-        "title":  f"⚪ {direction.upper()} Signal SUPPRESSED — {instrument} (low R:R)",
-        "color":  SUPPRESSED_COLOR,
-        "fields": [
-            {
-                "name":   "Reason",
-                "value":  (f"R:R {rr} below minimum {result.get('rr_floor', 0.8)} — "
-                           "target capped by ATR/option-range, not worth the risk"),
-                "inline": False,
-            },
-            {
-                "name":   "Risk (pts)",
-                "value":  f"{raw_risk}" if raw_risk is not None else "—",
-                "inline": True,
-            },
-            {
-                "name":   "Capped target (pts)",
-                "value":  f"{target_pts}" if target_pts is not None else "—",
-                "inline": True,
-            },
-            {
-                "name":   "Daily ATR(14)",
-                "value":  f"{atr:.1f}" if atr is not None else "unavailable",
-                "inline": True,
-            },
-            {
-                "name":   "Candle",
-                "value":  result.get("candle_time", "—"),
-                "inline": True,
-            },
-        ],
+        "title":     f"⚪ {direction.upper()} Signal SUPPRESSED — {instrument} (low R:R)",
+        "color":     SUPPRESSED_COLOR,
+        "fields":    fields,
         "footer":    {"text": "Visibility only — no trade implied · not logged to journal"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
