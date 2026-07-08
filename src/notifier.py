@@ -99,6 +99,18 @@ def _build_trade_fields(instrument: str, direction: str, result: dict) -> list[d
             "inline": False,
         })
 
+    # Stock-only deviation from "identical layout": the displayed Target is
+    # a synthetic 2R reference, not what actually closes the trade. Index
+    # alerts are unaffected (they carry no "asset_class" key).
+    if result.get("asset_class") == "STOCK":
+        fields.append({
+            "name":   "Exit Note",
+            "value":  ("Exit is via trailing stop, not a fixed target. "
+                       "Target above is a display reference — watch the "
+                       "Supertrend line manually."),
+            "inline": False,
+        })
+
     return fields
 
 

@@ -150,3 +150,32 @@ def test_diagnostic_fields_removed_from_embed():
     leaked = removed.intersection(field_names)
     assert not leaked, f"Diagnostic fields should be removed but found: {leaked}. Fields: {field_names}"
     print(f"✅ diagnostic block fully removed. Remaining fields: {field_names}")
+
+
+def test_stock_embed_has_trailing_stop_footnote():
+    """Supertrend+VWAP change: stock alerts (asset_class=='STOCK') carry a
+    one-line footnote clarifying the exit is a manually-monitored trailing
+    stop, not the displayed Target."""
+    with mock.patch.object(notifier, "requests", _requests_stub):
+        _requests_stub.post.reset_mock()
+        notifier.send_signal("RELIANCE", "CE", _make_stock_payload())
+        call_kwargs = _requests_stub.post.call_args[1]
+    embed = call_kwargs["json"]["embeds"][0]
+    note = _find_field(call_kwargs["json"], "Exit Note")
+    assert note is not None, f"Expected 'Exit Note' field. Fields: {[f['name'] for f in embed['fields']]}"
+    assert "trailing stop" in note["value"].lower()
+    print("✅ stock embed carries the trailing-stop footnote")
+
+
+def test_index_embed_omits_trailing_stop_footnote():
+    """The footnote must be stock-only — index payloads carry no
+    'asset_class' key and must not gain the new field."""
+    index_payload = _make_stock_payload()
+    del index_payload["asset_class"]
+    with mock.patch.object(notifier, "requests", _requests_stub):
+        _requests_stub.post.reset_mock()
+        notifier.send_signal("NIFTY", "CE", index_payload)
+        call_kwargs = _requests_stub.post.call_args[1]
+    note = _find_field(call_kwargs["json"], "Exit Note")
+    assert note is None, "Index alerts must not carry the stock-only Exit Note field"
+    print("✅ index embed correctly omits the stock-only footnote")
