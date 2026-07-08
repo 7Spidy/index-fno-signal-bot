@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -282,13 +283,17 @@ def _asset_class_for(instrument: str) -> str:
     return "UNKNOWN"
 
 
+_CE_PE_SUFFIX_RE = re.compile(r"\d(CE|PE)$")
+
+
 def _direction_from_tradingsymbol(tradingsymbol: str) -> str | None:
+    """Extract CE/PE from a tradingsymbol, requiring the suffix to be
+    immediately preceded by a digit (the strike price) — always true for a
+    real option tradingsymbol, never true for a bare stock/index name (e.g.
+    RELIANCE, BAJFINANCE, both of which end in the letters "CE")."""
     sym = tradingsymbol.upper()
-    if sym.endswith("CE"):
-        return "CE"
-    if sym.endswith("PE"):
-        return "PE"
-    return None
+    m = _CE_PE_SUFFIX_RE.search(sym)
+    return m.group(1) if m else None
 
 
 # ──────────────────────────────────────────────────────────────
@@ -737,10 +742,16 @@ def run_heartbeat() -> None:
 
     all_positions = positions_data.get("net", []) or []
     pos_by_symbol = {p["tradingsymbol"]: p for p in all_positions}
-    open_tracked = {
-        ts: p for ts, p in pos_by_symbol.items()
-        if p.get("quantity", 0) != 0 and _underlying_from_tradingsymbol(ts) is not None
-    }
+    open_tracked = {}
+    for ts, p in pos_by_symbol.items():
+        if p.get("quantity", 0) == 0:
+            continue
+        underlying = _underlying_from_tradingsymbol(ts)
+        if underlying is None:
+            continue
+        if p.get("exchange") != config.fno_exchange_for(underlying):
+            continue
+        open_tracked[ts] = p
 
     tracked_symbols = _load_index()
     if tracked_symbols or open_tracked:

@@ -776,10 +776,10 @@ class TestRunHeartbeatMultiInstrument:
     def test_heartbeat_tracks_index_and_stock_positions_not_just_nifty(self):
         positions = {
             "net": [
-                {"tradingsymbol": "NIFTY26JUL24600CE",     "quantity": 75, "average_price": 100},
-                {"tradingsymbol": "BANKNIFTY26JUL52500PE", "quantity": 30, "average_price": 200},
-                {"tradingsymbol": "MARUTI26JUL14300CE",    "quantity": 50, "average_price": 250},
-                {"tradingsymbol": "RANDOMJUNKFUT",         "quantity": 10, "average_price": 50},
+                {"tradingsymbol": "NIFTY26JUL24600CE",     "quantity": 75, "average_price": 100, "exchange": "NFO"},
+                {"tradingsymbol": "BANKNIFTY26JUL52500PE", "quantity": 30, "average_price": 200, "exchange": "NFO"},
+                {"tradingsymbol": "MARUTI26JUL14300CE",    "quantity": 50, "average_price": 250, "exchange": "NFO"},
+                {"tradingsymbol": "RANDOMJUNKFUT",         "quantity": 10, "average_price": 50,  "exchange": "NFO"},
             ]
         }
         mock_kite = MagicMock()
@@ -795,7 +795,7 @@ class TestRunHeartbeatMultiInstrument:
         assert "RANDOMJUNKFUT" not in tracked_calls
 
     def test_zero_qty_position_is_not_tracked(self):
-        positions = {"net": [{"tradingsymbol": "MARUTI26JUL14300CE", "quantity": 0, "average_price": 250}]}
+        positions = {"net": [{"tradingsymbol": "MARUTI26JUL14300CE", "quantity": 0, "average_price": 250, "exchange": "NFO"}]}
         mock_kite = MagicMock()
         mock_kite.positions.return_value = positions
         with patch("src.kite_client.get_kite", return_value=mock_kite), \
@@ -804,3 +804,66 @@ class TestRunHeartbeatMultiInstrument:
              patch("src.position_tracker._handle_new_sighting") as mock_new:
             position_tracker.run_heartbeat()
         mock_new.assert_not_called()
+
+    def test_cash_equity_reliance_position_is_never_tracked(self):
+        """RELIANCE cash equity buy (exchange=NSE, bare tradingsymbol) must
+        never reach _handle_new_sighting — regression test for the false
+        'Position Detected' alert incident."""
+        positions = {
+            "net": [
+                {"tradingsymbol": "RELIANCE", "quantity": 10, "average_price": 2900.0, "exchange": "NSE"},
+            ]
+        }
+        mock_kite = MagicMock()
+        mock_kite.positions.return_value = positions
+        with patch("src.kite_client.get_kite", return_value=mock_kite), \
+             patch("src.position_tracker._load_index", return_value=[]), \
+             patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._handle_new_sighting") as mock_new:
+            position_tracker.run_heartbeat()
+        mock_new.assert_not_called()
+
+    def test_cash_equity_bajfinance_position_is_never_tracked(self):
+        positions = {
+            "net": [
+                {"tradingsymbol": "BAJFINANCE", "quantity": 5, "average_price": 7000.0, "exchange": "NSE"},
+            ]
+        }
+        mock_kite = MagicMock()
+        mock_kite.positions.return_value = positions
+        with patch("src.kite_client.get_kite", return_value=mock_kite), \
+             patch("src.position_tracker._load_index", return_value=[]), \
+             patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._handle_new_sighting") as mock_new:
+            position_tracker.run_heartbeat()
+        mock_new.assert_not_called()
+
+    def test_genuine_reliance_option_is_tracked(self):
+        positions = {
+            "net": [
+                {"tradingsymbol": "RELIANCE26JUL1300CE", "quantity": 500, "average_price": 25.0, "exchange": "NFO"},
+            ]
+        }
+        mock_kite = MagicMock()
+        mock_kite.positions.return_value = positions
+        with patch("src.kite_client.get_kite", return_value=mock_kite), \
+             patch("src.position_tracker._load_index", return_value=[]), \
+             patch("src.position_tracker._load_position", return_value=None), \
+             patch("src.position_tracker._handle_new_sighting") as mock_new:
+            position_tracker.run_heartbeat()
+        tracked_calls = {c.args[0] for c in mock_new.call_args_list}
+        assert tracked_calls == {"RELIANCE26JUL1300CE"}
+
+
+class TestDirectionFromTradingsymbolStockNameCollision:
+    """RELIANCE and BAJFINANCE end in the letters CE as plain English words
+    ('relianCE', 'bajfinanCE') — must not be misread as a call option."""
+
+    def test_reliance_bare_stock_name_returns_none(self):
+        assert position_tracker._direction_from_tradingsymbol("RELIANCE") is None
+
+    def test_bajfinance_bare_stock_name_returns_none(self):
+        assert position_tracker._direction_from_tradingsymbol("BAJFINANCE") is None
+
+    def test_genuine_reliance_option_returns_ce(self):
+        assert position_tracker._direction_from_tradingsymbol("RELIANCE26JUL1300CE") == "CE"
