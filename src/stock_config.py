@@ -216,6 +216,11 @@ REDIS_DAILY_ATR_KEY = "stock:daily_atr"   # {NAME: atr_value}, refreshed daily
 # individually noisier and a 25 floor was filtering out otherwise-clean signals.
 DI_THRESHOLD = 24
 
+# Supertrend params for C5 - mirrors index config; independently tunable per
+# stock in future. Soft/informational condition only — does not gate signals.
+SUPERTREND_PERIOD     = 10
+SUPERTREND_MULTIPLIER = 5
+
 # Event exclusion — stocks with earnings/dividend/corp-action events in the
 # next N calendar days (inclusive of today) are skipped entirely by stock_main.
 EVENT_LOOKAHEAD_DAYS = 1

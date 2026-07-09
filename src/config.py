@@ -93,6 +93,11 @@ RSI_SLOPE_CANDLES = 3
 # Cooldown: minimum candles between same-direction signals
 COOLDOWN_CANDLES = 3
 
+# Supertrend params for C5 — soft/informational condition only, does not
+# participate in the ce_signal/pe_signal gating chain (see signals.evaluate).
+SUPERTREND_PERIOD     = 10
+SUPERTREND_MULTIPLIER = 5
+
 
 def fno_exchange_for(name: str) -> str:
     """Returns the F&O exchange segment for an underlying (NFO or BFO)."""
@@ -119,4 +124,6 @@ def as_dict() -> dict:
         "TARGET_RR":                 TARGET_RR,
         "ATM_DELTA":                 ATM_DELTA,
         "VWAP_PROXIMITY_PTS":        VWAP_PROXIMITY_PTS,
+        "SUPERTREND_PERIOD":         SUPERTREND_PERIOD,
+        "SUPERTREND_MULTIPLIER":     SUPERTREND_MULTIPLIER,
     }

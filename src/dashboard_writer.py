@@ -71,8 +71,8 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
         {
             "time": now.strftime("%H:%M"),
             "instrument": r["name"],
-            "ce_conditions": [r["ce"][k] for k in ["c1", "c2", "c3", "c4"]],
-            "pe_conditions": [r["pe"][k] for k in ["c1", "c2", "c3", "c4"]],
+            "ce_conditions": [r["ce"][k] for k in ["c1", "c2", "c3", "c4", "c5"]],
+            "pe_conditions": [r["pe"][k] for k in ["c1", "c2", "c3", "c4", "c5"]],
             "ce_signal": r["ce"]["signal"],
             "pe_signal": r["pe"]["signal"],
             "rsi": r.get("rsi"),
@@ -119,6 +119,7 @@ def _build_signal_entry(instrument: str, direction: str, result: dict) -> dict:
         "c2":              result.get("c2"),
         "c3":              result.get("c3"),
         "c4":              result.get("c4"),
+        "c5":              result.get("c5"),
     }
 
 

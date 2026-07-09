@@ -112,6 +112,11 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
         live_df = indicators.with_live_bar(df, live_quote["ltp"])
         live_rsi_s = indicators.rsi_wilder(live_df)
         live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
+        live_st_line_s, live_st_dir_s = indicators.supertrend_wilder(
+            live_df, cfg["SUPERTREND_PERIOD"], cfg["SUPERTREND_MULTIPLIER"]
+        )
+        _live_dir_val = live_st_dir_s.iloc[-1]
+        live_supertrend_dir = bool(_live_dir_val) if _live_dir_val is not None else None
 
         inst_cfg = dict(cfg)
         inst_cfg["strike_step"] = inst["strike_step"]
@@ -124,6 +129,7 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
             live_rsi=float(live_rsi_s.iloc[-1]),
             live_pdi=float(live_pdi_s.iloc[-1]),
             live_ndi=float(live_ndi_s.iloc[-1]),
+            live_supertrend_dir=live_supertrend_dir,
         )
         result["name"] = name
         result["symbol"] = token_info["tradingsymbol"]
@@ -295,6 +301,7 @@ def main() -> None:
                     result["c2"] = result[direction]["c2"]
                     result["c3"] = result[direction]["c3"]
                     result["c4"] = result[direction]["c4"]
+                    result["c5"] = result[direction]["c5"]
                     result.update({
                         "spot_ltp":        spot_ltp,
                         "spot_sl":         spot_sl,

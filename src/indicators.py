@@ -139,6 +139,91 @@ def _dx(pdi: float, ndi: float) -> float:
     return 100.0 * abs(pdi - ndi) / denom
 
 
+def supertrend_wilder(df: pd.DataFrame, period: int = 10,
+                       multiplier: float = 5.0) -> tuple[pd.Series, pd.Series]:
+    """
+    Classic Supertrend using Wilder-smoothed ATR (same smoothing convention as
+    dmi_wilder — first ATR value is a simple mean of the first `period` true
+    ranges, then Wilder-recursive thereafter).
+
+    Returns (supertrend_line, in_uptrend) where in_uptrend is a bool Series
+    (True = green/uptrend, False = red/downtrend). Standard flip rule:
+    - uptrend persists while close > lower band (band ratchets up, never down)
+    - downtrend persists while close < upper band (band ratchets down, never up)
+    - flip occurs when close crosses the opposite band
+    """
+    high = df["high"].values.astype(float)
+    low = df["low"].values.astype(float)
+    close = df["close"].values.astype(float)
+    n = len(close)
+
+    st_line = np.full(n, np.nan)
+    in_uptrend = np.array([None] * n, dtype=object)
+
+    if n < period + 1:
+        return (
+            pd.Series(st_line, index=df.index, name="supertrend"),
+            pd.Series(in_uptrend, index=df.index, name="in_uptrend"),
+        )
+
+    tr = np.zeros(n)
+    for i in range(1, n):
+        tr[i] = max(
+            high[i] - low[i],
+            abs(high[i] - close[i - 1]),
+            abs(low[i] - close[i - 1]),
+        )
+
+    # Wilder seed: simple mean of the first `period` true ranges (a genuine
+    # average, unlike dmi_wilder's sum-based seed — Supertrend bands need the
+    # real ATR value, not a period-scaled proxy that only works as a ratio).
+    atr_arr = np.full(n, np.nan)
+    atr_arr[period] = tr[1:period + 1].mean()
+    for i in range(period + 1, n):
+        atr_arr[i] = atr_arr[i - 1] - atr_arr[i - 1] / period + tr[i] / period
+
+    final_upper = np.full(n, np.nan)
+    final_lower = np.full(n, np.nan)
+    trend = np.full(n, np.nan)  # 1.0 = up, -1.0 = down
+
+    for i in range(period, n):
+        mid = (high[i] + low[i]) / 2.0
+        basic_upper = mid + multiplier * atr_arr[i]
+        basic_lower = mid - multiplier * atr_arr[i]
+
+        if i == period:
+            final_upper[i] = basic_upper
+            final_lower[i] = basic_lower
+            trend[i] = 1.0
+        else:
+            final_upper[i] = (
+                basic_upper
+                if (basic_upper < final_upper[i - 1] or close[i - 1] > final_upper[i - 1])
+                else final_upper[i - 1]
+            )
+            final_lower[i] = (
+                basic_lower
+                if (basic_lower > final_lower[i - 1] or close[i - 1] < final_lower[i - 1])
+                else final_lower[i - 1]
+            )
+
+            prev_trend = trend[i - 1]
+            if prev_trend == 1.0 and close[i] < final_lower[i]:
+                trend[i] = -1.0
+            elif prev_trend == -1.0 and close[i] > final_upper[i]:
+                trend[i] = 1.0
+            else:
+                trend[i] = prev_trend
+
+        st_line[i] = final_lower[i] if trend[i] == 1.0 else final_upper[i]
+        in_uptrend[i] = bool(trend[i] == 1.0)
+
+    return (
+        pd.Series(st_line, index=df.index, name="supertrend"),
+        pd.Series(in_uptrend, index=df.index, name="in_uptrend"),
+    )
+
+
 def with_live_bar(df: pd.DataFrame, live_ltp: float) -> pd.DataFrame:
     """
     Returns a copy of df with its last row (the possibly-partial candle this

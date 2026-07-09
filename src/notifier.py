@@ -83,6 +83,11 @@ def _build_trade_fields(instrument: str, direction: str, result: dict) -> list[d
                        f"  ·  1:{result.get('rr', '—')}"),
             "inline": True,
         },
+        {
+            "name":   "Supertrend (10,5)",
+            "value":  "Uptrend" if result.get("c5") else "Downtrend",
+            "inline": True,
+        },
     ]
 
     sector_conviction = result.get("sector_conviction")   # None | "HIGH" | "LOW"

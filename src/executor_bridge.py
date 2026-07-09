@@ -115,6 +115,7 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
             "rsi":  signal_result.get("rsi"),
             "pdi":  signal_result.get("pdi"),
             "ndi":  signal_result.get("ndi"),
+            "supertrend_dir": "up" if signal_result.get("c5") else "down",
         },
     }
 

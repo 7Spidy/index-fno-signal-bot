@@ -189,6 +189,11 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 }
 .sig-cond-pass { color: var(--green); }
 .sig-cond-fail { color: #f8717160; }
+.sig-cond-soft { color: var(--amber); opacity: .85; }
+.sig-cond-soft-badge {
+  font-size: 8px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-muted); margin-left: 4px; opacity: .8;
+}
 
 /* INSTRUMENT CARDS */
 .instrument-card {
@@ -212,6 +217,12 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .cond-row { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-dim); padding: 2px 0; }
 .check-pass { color: var(--green); }
 .check-fail { color: #f8717160; }
+.check-soft { color: var(--amber); }
+.cond-row-soft { opacity: .85; }
+.soft-badge {
+  font-size: 8px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--text-muted); margin-left: 4px; opacity: .8;
+}
 .cond-status { font-size: 10px; margin-top: 7px; font-weight: 600; letter-spacing: .05em; }
 .status-signal-ce { color: var(--green); }
 .status-signal-pe { color: var(--red); }
@@ -411,8 +422,8 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 </div>
 
 <script>
-const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25'];
-const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25'];
+const CE_LABELS = ['Close ↑ prev', 'VWAP cross-up', 'RSI rising', '+DI > 25', 'Supertrend(10,5) green'];
+const PE_LABELS = ['Close ↓ prev', 'VWAP cross-dn', 'RSI falling', '-DI > 25', 'Supertrend(10,5) red'];
 
 let lastFetchTime = null;
 let lastRunISO = null;
@@ -518,6 +529,10 @@ function fmtExpiry(isoDate) {
 
 function condItem(pass, label) {
   return `<span class="${pass ? 'sig-cond-pass' : 'sig-cond-fail'}">${pass ? '✅' : '❌'} ${escHtml(label)}</span>`;
+}
+
+function condItemSoft(pass, label) {
+  return `<span class="sig-cond-soft">${pass ? '✅' : '➖'} ${escHtml(label)}<span class="sig-cond-soft-badge">soft</span></span>`;
 }
 
 function copyTs(text, btn) {
@@ -648,12 +663,14 @@ function buildSignalBanner(s) {
   const c2lbl = isCE ? 'VWAP cross-up ≤30min' : 'VWAP cross-dn ≤30min';
   const c3lbl = isCE ? 'RSI rising (3 candles)' : 'RSI falling (3 candles)';
   const c4lbl = isCE ? '+DI > 25, dominant ↑' : '−DI > 25, dominant ↑';
+  const c5lbl = isCE ? 'Supertrend(10,5) green' : 'Supertrend(10,5) red';
   const conds = `
     <div class="sig-conds">
       ${condItem(s.c1, c1lbl)}
       ${condItem(s.c2, c2lbl)}
       ${condItem(s.c3, c3lbl)}
       ${condItem(s.c4, c4lbl)}
+      ${condItemSoft(s.c5, c5lbl)}
     </div>`;
 
   return `<div class="signal-banner ${cls}">${header}${optBox}${prices}${meta}${conds}</div>`;
@@ -714,15 +731,16 @@ function buildInstrumentCard(inst) {
 
 function buildCondRows(side, labels) {
   if (!side) return labels.map(l => condRow(false, l)).join('');
-  const keys = ['c1', 'c2', 'c3', 'c4'];
-  return keys.map((k, i) => condRow(!!side[k], labels[i])).join('');
+  const keys = ['c1', 'c2', 'c3', 'c4', 'c5'];
+  return keys.map((k, i) => condRow(!!side[k], labels[i], k === 'c5')).join('');
 }
 
-function condRow(pass, label) {
+function condRow(pass, label, soft) {
   const icon = pass
-    ? '<span class="check-pass">✓</span>'
+    ? `<span class="${soft ? 'check-soft' : 'check-pass'}">${soft ? '●' : '✓'}</span>`
     : '<span class="check-fail">✗</span>';
-  return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
+  const badge = soft ? '<span class="soft-badge">soft</span>' : '';
+  return `<div class="cond-row${soft ? ' cond-row-soft' : ''}">${icon}<span>${escHtml(label)}</span>${badge}</div>`;
 }
 
 /* ── Stock rows (compact) ───────────────────────────────────── */
@@ -745,8 +763,8 @@ function buildStockRow(inst, idx) {
   const statusCls = inst.ce?.signal ? 'stock-status-signal-ce'
     : (inst.pe?.signal ? 'stock-status-signal-pe' : 'stock-status-none');
   const statusTxt = inst.ce?.signal ? 'CE SIGNAL' : (inst.pe?.signal ? 'PE SIGNAL' : '—');
-  const ceDots = buildDots([inst.ce?.c1, inst.ce?.c2, inst.ce?.c3, inst.ce?.c4]);
-  const peDots = buildDots([inst.pe?.c1, inst.pe?.c2, inst.pe?.c3, inst.pe?.c4]);
+  const ceDots = buildDots([inst.ce?.c1, inst.ce?.c2, inst.ce?.c3, inst.ce?.c4, inst.ce?.c5]);
+  const peDots = buildDots([inst.pe?.c1, inst.pe?.c2, inst.pe?.c3, inst.pe?.c4, inst.pe?.c5]);
 
   return `
     <div class="stock-row" onclick="openStockDrawer(${idx})" role="button" tabindex="0">

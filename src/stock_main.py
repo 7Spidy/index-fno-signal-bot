@@ -258,6 +258,11 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
     live_pdi = float(live_pdi_s.iloc[-1])
     live_ndi = float(live_ndi_s.iloc[-1])
+    live_st_line_s, live_st_dir_s = indicators.supertrend_wilder(
+        live_df, cfg.SUPERTREND_PERIOD, cfg.SUPERTREND_MULTIPLIER
+    )
+    _live_dir_val = live_st_dir_s.iloc[-1]
+    live_supertrend_dir = bool(_live_dir_val) if _live_dir_val is not None else None
 
     di_threshold = cfg.DI_THRESHOLD   # 24
 
@@ -277,6 +282,11 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     ce_c4 = live_pdi > di_threshold and live_pdi > live_ndi and live_pdi > pdi0 > pdi1
     pe_c4 = live_ndi > di_threshold and live_ndi > live_pdi and live_ndi > ndi0 > ndi1
 
+    # C5 — Supertrend(10,5) direction: soft/informational only, never gates
+    # ce_signal/pe_signal (see the AND-chain immediately below).
+    ce_c5 = bool(live_supertrend_dir is True)
+    pe_c5 = bool(live_supertrend_dir is False)
+
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
 
@@ -284,8 +294,8 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
         "name":             name,
         "sector":           stock["sector"],
         "lot_size":         stock["lot_size"],
-        "ce":               {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
-        "pe":               {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
+        "ce":               {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "c5": ce_c5, "signal": ce_signal},
+        "pe":               {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "c5": pe_c5, "signal": pe_signal},
         "futures_price":    float(p0["close"]),
         "candle_high":      float(p0["high"]),
         "candle_low":       float(p0["low"]),
@@ -440,9 +450,9 @@ def main() -> None:
                 "candle_time":   candle_time,
                 "instrument":    name,
                 "ce_conditions": [result["ce"]["c1"], result["ce"]["c2"],
-                                  result["ce"]["c3"], result["ce"]["c4"]],
+                                  result["ce"]["c3"], result["ce"]["c4"], result["ce"]["c5"]],
                 "pe_conditions": [result["pe"]["c1"], result["pe"]["c2"],
-                                  result["pe"]["c3"], result["pe"]["c4"]],
+                                  result["pe"]["c3"], result["pe"]["c4"], result["pe"]["c5"]],
                 "ce_signal":     ce_signal,
                 "pe_signal":     pe_signal,
                 "rsi":           result["rsi"],
@@ -529,6 +539,7 @@ def main() -> None:
                 "rr":            rr_effective,
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
                 "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
+                "c5": result[dkey]["c5"],
             }
 
             if rr_suppressed:
@@ -586,6 +597,7 @@ def main() -> None:
                 "vwap":            result["vwap"],
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
                 "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
+                "c5": result[dkey]["c5"],
                 "asset_class":     "STOCK",
             })
 

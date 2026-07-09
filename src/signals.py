@@ -8,7 +8,8 @@ IST = ZoneInfo("Asia/Kolkata")
 def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
              pdi: pd.Series, ndi: pd.Series, cfg: dict,
              live_ltp: float, live_vwap: float,
-             live_rsi: float, live_pdi: float, live_ndi: float) -> dict:
+             live_rsi: float, live_pdi: float, live_ndi: float,
+             live_supertrend_dir: bool | None = None) -> dict:
     """
     Evaluates CE and PE conditions against live quote/indicator values
     (fetched/recomputed by the caller this run — see kite_client.get_live_quote
@@ -79,6 +80,11 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
             ce_c4 = ce_c4 and pdi_rising
             pe_c4 = pe_c4 and ndi_rising
 
+    # C5 — Supertrend(10,5) direction: soft/informational only, never gates
+    # ce_signal/pe_signal (see the AND-chain immediately below).
+    ce_c5 = bool(live_supertrend_dir is True)
+    pe_c5 = bool(live_supertrend_dir is False)
+
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
 
@@ -92,8 +98,8 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     atm_strike = round(price / strike_step) * strike_step
 
     return {
-        "ce": {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
-        "pe": {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
+        "ce": {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "c5": ce_c5, "signal": ce_signal},
+        "pe": {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "c5": pe_c5, "signal": pe_signal},
         "futures_price":    round(price, 2),
         "candle_high":      round(float(p0["high"]), 2),
         "candle_low":       round(float(p0["low"]),  2),
@@ -114,7 +120,7 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
 
 
 def _empty_result(df, vwap, rsi, pdi, ndi, strike_step):
-    empty_side = {"c1": False, "c2": False, "c3": False, "c4": False, "signal": False}
+    empty_side = {"c1": False, "c2": False, "c3": False, "c4": False, "c5": False, "signal": False}
     return {
         "ce":            empty_side,
         "pe":            dict(empty_side),
