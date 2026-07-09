@@ -1,10 +1,9 @@
 """
 stock_main.py — Stock F&O signal evaluation loop.
-14 NSE-listed stocks evaluated via Supertrend(10,3) + VWAP pullback entry,
-with a Supertrend trailing-stop exit (monitored manually — see notifier.py).
-Alert-only, entry alert only (no exit alert, no persistent position state).
+14 NSE-listed stocks evaluated through C1–C4. Alert-only.
 Called by stock-signal.yml every 5 minutes during market hours.
 
+Risk gate: VWAP proximity only (C2). No candle-width gate.
 OHLCV: NSE equity tokens (real volume).
 Options: NFO monthly chain.
 """
@@ -17,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, indicators, notifier, sector_config, signals, state, tracker_bridge
+from src import calendar_nse, indicators, notifier, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
@@ -224,15 +223,12 @@ def _get_atm_option(name: str, spot: float, step: int, direction: str) -> dict:
 
 def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     """
-    Run Supertrend(10,3) + VWAP pullback evaluation on a single stock using a
-    pre-fetched live quote (from the single batched kite.quote() call made
-    once per run in main()) plus live-recomputed indicators against the
-    latest closed candle. Raises if this stock's key is missing from
-    live_quotes — the caller's existing per-stock try/except turns that into
-    a skip-this-stock-this-run, same as every other failure mode in this loop.
-
-    RSI/DMI are still computed and returned for the dashboard's informational
-    display — they no longer gate entries (see signals.evaluate_stock_supertrend_vwap).
+    Run C1–C4 on a single stock using a pre-fetched live quote (from the
+    single batched kite.quote() call made once per run in main()) plus
+    live-recomputed indicators against the two most recently closed candles.
+    Raises if this stock's key is missing from live_quotes — the caller's
+    existing per-stock try/except turns that into a skip-this-stock-this-run,
+    same as every other failure mode in this loop.
     """
     name       = stock["name"]
     step       = stock["strike_step"]
@@ -241,12 +237,14 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     pdi_s, ndi_s, _ = indicators.dmi_wilder(df)
     rsi_s            = indicators.rsi_wilder(df)
     vwap_s           = indicators.vwap_session(df, today_open)
-    _, st_dir_s = indicators.compute_supertrend(
-        df, cfg.STOCK_ST_PERIOD, cfg.STOCK_ST_MULTIPLIER)
 
-    r0   = float(rsi_s.iloc[-2])
-    pdi0 = float(pdi_s.iloc[-2])
-    ndi0 = float(ndi_s.iloc[-2])
+    p0 = df.iloc[-2]
+    p1 = df.iloc[-3]
+
+    v0         = float(vwap_s.iloc[-2])
+    r0, r1     = float(rsi_s.iloc[-2]),  float(rsi_s.iloc[-3])
+    pdi0, pdi1 = float(pdi_s.iloc[-2]),  float(pdi_s.iloc[-3])
+    ndi0, ndi1 = float(ndi_s.iloc[-2]),  float(ndi_s.iloc[-3])
 
     live_key   = f"{stock['spot_exchange']}:{stock['equity_symbol']}"
     live_quote = live_quotes.get(live_key)
@@ -260,54 +258,61 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
     live_pdi = float(live_pdi_s.iloc[-1])
     live_ndi = float(live_ndi_s.iloc[-1])
-    live_st_val_s, live_st_dir_s = indicators.compute_supertrend(
-        live_df, cfg.STOCK_ST_PERIOD, cfg.STOCK_ST_MULTIPLIER)
-    live_st_dir = float(live_st_dir_s.iloc[-1])
-    live_st_value = float(live_st_val_s.iloc[-1])
 
-    ev_cfg = {"strike_step": step, "STOCK_VWAP_TOUCH_PCT": cfg.STOCK_VWAP_TOUCH_PCT}
-    ev = signals.evaluate_stock_supertrend_vwap(
-        df, vwap_s, st_dir_s,
-        live_ltp, live_vwap, live_st_dir, live_st_value,
-        ev_cfg,
-    )
+    di_threshold = cfg.DI_THRESHOLD   # 24
+
+    # C1 — momentum: live price vs P0's close
+    ce_c1 = live_ltp > float(p0["close"])
+    pe_c1 = live_ltp < float(p0["close"])
+
+    # C2 — VWAP position (live) + P0 dipped/spiked through VWAP
+    ce_c2 = live_ltp > live_vwap and float(p0["low"])  <= v0
+    pe_c2 = live_ltp < live_vwap and float(p0["high"]) >= v0
+
+    # C3 — RSI direction: live > P0 > P1 (or reverse), no threshold
+    ce_c3 = live_rsi > r0 > r1
+    pe_c3 = live_rsi < r0 < r1
+
+    # C4 — DI threshold, dominance, direction: live > P0 > P1 (or reverse)
+    ce_c4 = live_pdi > di_threshold and live_pdi > live_ndi and live_pdi > pdi0 > pdi1
+    pe_c4 = live_ndi > di_threshold and live_ndi > live_pdi and live_ndi > ndi0 > ndi1
+
+    ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
+    pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
 
     return {
         "name":             name,
         "sector":           stock["sector"],
         "lot_size":         stock["lot_size"],
-        "ce":               ev["ce"],
-        "pe":               ev["pe"],
-        "futures_price":    ev["futures_price"],
-        "candle_high":      ev["candle_high"],
-        "candle_low":       ev["candle_low"],
-        "prev_candle_high": ev["prev_candle_high"],
-        "prev_candle_low":  ev["prev_candle_low"],
-        "candle_time":      ev["candle_time"],
-        "vwap":             ev["vwap"],
+        "ce":               {"c1": ce_c1, "c2": ce_c2, "c3": ce_c3, "c4": ce_c4, "signal": ce_signal},
+        "pe":               {"c1": pe_c1, "c2": pe_c2, "c3": pe_c3, "c4": pe_c4, "signal": pe_signal},
+        "futures_price":    float(p0["close"]),
+        "candle_high":      float(p0["high"]),
+        "candle_low":       float(p0["low"]),
+        "prev_candle_high": float(p1["high"]),
+        "prev_candle_low":  float(p1["low"]),
+        "candle_time":      p0["timestamp"].strftime("%H:%M IST"),
+        "vwap":             v0,
         "rsi":              r0,
         "pdi":              pdi0,
         "ndi":              ndi0,
-        "live_price":       ev["live_price"],
-        "live_vwap":        ev["live_vwap"],
+        "live_price":       live_ltp,
+        "live_vwap":        live_vwap,
         "live_rsi":         live_rsi,
         "live_pdi":         live_pdi,
         "live_ndi":         live_ndi,
-        "atm_strike":       ev["atm_strike"],
+        "atm_strike":       round(float(p0["close"]) / step) * step,
         "strike_step":      step,
-        # Trailing-stop anchor if a signal fires this run (live Supertrend
-        # value) — replaces the old prev-candle structural SL for stocks.
-        "initial_sl":       ev["initial_sl"],
     }
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def _fetch_and_evaluate(stock, equity_tokens, live_quotes, today_open):
-    """Fetch candles and run Supertrend+VWAP evaluation for one stock. Pure
-    read + compute — no Redis writes, no Discord, no git. Safe to run
-    concurrently across stocks. Returns (stock, result, df) on success, or
-    None if this stock should be skipped this run."""
+    """Fetch candles and run C1–C4 for one stock. Pure read + compute — no
+    Redis writes, no Discord, no git. Safe to run concurrently across
+    stocks. Returns (stock, result, df) on success, or None if this stock
+    should be skipped this run."""
     name = stock["name"]
     try:
         token_id = equity_tokens.get(name)
@@ -370,6 +375,12 @@ def main() -> None:
     instrument_results = []
     new_history_rows   = []
     fired_signals      = []
+
+    raw_daily_atr = state.redis_get(cfg.REDIS_DAILY_ATR_KEY)
+    daily_atr_map: dict[str, float] = json.loads(raw_daily_atr) if raw_daily_atr else {}
+    if not daily_atr_map:
+        print("[stock_main] WARNING — no cached daily ATR, falling back to "
+              "flat 1.5R target for all stocks this run")
 
     # Batch-fetch live quotes for all 12 stocks in ONE Kite API call instead
     # of one call per stock — sidesteps the quote endpoint's 1 req/sec limit
@@ -447,16 +458,9 @@ def main() -> None:
             # Option data
             opt = _get_atm_option(name, result["futures_price"], stock["strike_step"], direction)
 
-            # SL — Supertrend trailing-stop anchor at entry (replaces the old
-            # prior-candle structural extreme). Displayed once at signal
-            # time; the trader trails it manually from there (see
-            # notifier.py's stock-only footnote) — no auto-managed exit.
-            spot    = result["futures_price"]
-            sl_spot = result["initial_sl"]
-            if sl_spot is None:
-                print(f"[stock_main] {name}: signal fired but initial_sl "
-                      f"missing — skipping (indicator warm-up issue)")
-                continue
+            # SL (unchanged — anchored to prior candle structural extreme)
+            spot     = result["futures_price"]
+            sl_spot  = result["prev_candle_low"] if direction == "CE" else result["prev_candle_high"]
             risk_pts = abs(spot - sl_spot)
             dkey     = direction.lower()
 
@@ -464,13 +468,24 @@ def main() -> None:
                 spot, opt.get("strike"), direction
             )
 
-            # Target: synthetic 2R reference, computed once — display only,
-            # does not drive an exit. See STOCK_TRAIL_TARGET_R.
-            target_pts    = cfg.STOCK_TRAIL_TARGET_R * risk_pts
-            rr_effective  = cfg.STOCK_TRAIL_TARGET_R
-            target_source = "supertrend_trail"
+            # Target: ATR-anchored, decoupled from 1.5R. Falls back to the
+            # old flat-1.5R formula only if this stock's ATR is missing from
+            # the cache (e.g. morning-login ATR step failed or stock was
+            # newly added without a cache refresh yet).
+            stock_atr = daily_atr_map.get(name)
+            if stock_atr:
+                raw_target_pts = cfg.ATR_TARGET_K * stock_atr
+                floor_pts      = max(0.0015 * spot, 2 * cfg.SLIPPAGE_PTS_EST)
+                ceiling_pts    = 0.8 * cfg.OPTION_CACHE_RANGE[name]
+                target_pts     = max(floor_pts, min(raw_target_pts, ceiling_pts))
+                rr_effective   = round(target_pts / risk_pts, 2) if risk_pts else 0
+                target_source  = "atr"
+            else:
+                target_pts    = risk_pts * 1.5
+                rr_effective  = 1.5
+                target_source = "fallback_1.5R"
 
-            rr_suppressed = risk_pts > 0 and rr_effective < cfg.MIN_RR
+            rr_suppressed = stock_atr is not None and rr_effective < cfg.MIN_RR
 
             sector_key  = sector_config.STOCK_SECTOR.get(name)
             sector_data = sector_perf.get(sector_key) if sector_key else None
@@ -509,6 +524,7 @@ def main() -> None:
                 "raw_risk":      round(risk_pts, 1),
                 "target_pts":    round(target_pts, 1),
                 "target_source": target_source,
+                "daily_atr":     stock_atr,
                 "conviction":    "HIGH" if (result["pdi"] > 30 or result["ndi"] > 30) else "MED",
                 "rr":            rr_effective,
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
@@ -559,6 +575,7 @@ def main() -> None:
                 "raw_risk":        signal_payload["raw_risk"],
                 "target_pts":      signal_payload["target_pts"],
                 "target_source":   signal_payload["target_source"],
+                "daily_atr":       signal_payload["daily_atr"],
                 "conviction":      signal_payload["conviction"],
                 "delta_used":      signal_payload["delta_used"],
                 "delta_fallback":  signal_payload["delta_fallback"],

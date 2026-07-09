@@ -20,18 +20,11 @@ STOCK_SECTOR = {
 }
 
 # Kite NSE tradingsymbol for each sector index. Verified 2026-06-30 against
-# live kite.instruments("NSE") dump (segment=INDICES), except TELECOM (added
-# later — see note below).
+# live kite.instruments("NSE") dump (segment=INDICES).
 # Corrections from spec draft:
 #   PRIVATE_BANK: "NIFTY PRIVATE BANK" → "NIFTY PVT BANK" (live dump name)
-#   CONSUMER_DURABLES: kept as "NIFTY CONSR DURBL" (this file's own verified
-#            live-dump value) despite a later change-spec proposing
-#            "NIFTY CONSUMPTION" instead — see 2026-07-08 change-spec review,
-#            kept per explicit user decision pending a fresh live-Kite check.
-#   TELECOM: no dedicated NSE telecom index exists. "NIFTY MEDIA" is used as
-#            the closest available proxy for BHARTIARTL (added 2026-07-08,
-#            per change-spec — not independently re-verified against a live
-#            Kite dump this session).
+#   TELECOM: omitted — no dedicated NSE telecom index exists; BHARTIARTL
+#            silently degrades to no conviction tag.
 # If Kite ltp()/historical_data() calls fail for one of these, the morning
 # step logs a warning and that sector is omitted from the Redis map (silent
 # degrade — see stock_main.py handling).
@@ -43,7 +36,6 @@ SECTOR_INDEX_SYMBOL = {
     "PHARMA":              "NIFTY PHARMA",
     "INFRA":               "NIFTY INFRA",
     "PSU_BANK":            "NIFTY PSU BANK",
-    "TELECOM":             "NIFTY MEDIA",
     "FMCG":                "NIFTY FMCG",
     "METAL":               "NIFTY METAL",
     "CONSUMER_DURABLES":   "NIFTY CONSR DURBL",

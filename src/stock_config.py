@@ -5,10 +5,9 @@ All stocks use monthly expiry only (no weekly — SEBI post-Nov 2024).
 OHLCV source: NSE equity tokens (real volume, accurate VWAP).
 Options: NFO segment, monthly chain.
 
-Entry logic: Supertrend(10,3) + VWAP pullback (see signals.py
-evaluate_stock_supertrend_vwap()). Exit: Supertrend trailing stop,
-monitored manually — the displayed Target is a synthetic 2R reference,
-not a real exit level. No candle-width (max_risk_pts) gate.
+Risk gate: VWAP proximity only — consistent with the index bot design.
+No candle-width (max_risk_pts) gate. If a signal fires and the candle
+is too wide for the capital rule, the alert surfaces it and you decide.
 
 lot_size is metadata only — surfaced in the Discord alert so you can
 judge capital implication. Not used in any gate or condition logic.
@@ -202,28 +201,20 @@ OPTION_CACHE_RANGE = {
     "HINDALCO":     50,
 }
 
-# ── Supertrend + VWAP entry/exit (stocks only) ───────────────────────────────
-# Backtested May-June 2026 on all 14 stocks, real Kite 5-min data: 1,314
-# trades, 60.6% win rate, 2.82 pooled profit factor, all 14 stocks
-# individually profitable. Replaces the old C1-C4 + ATR-target logic below.
-STOCK_ST_PERIOD       = 10
-STOCK_ST_MULTIPLIER   = 3
-STOCK_VWAP_TOUCH_PCT  = 0.0015   # 0.15% — how close price must be to VWAP to qualify
-STOCK_TRAIL_TARGET_R  = 2.0      # display-only synthetic target multiple (not a real exit)
+# ── ATR-based stock target (replaces flat 1.5R target for stocks only) ──────
+# Stocks move 2-5% daily — a flat 1.5x-risk target overstates what a 5-min
+# signal can realistically capture. Target is instead anchored to each
+# stock's own 14-day daily ATR, refreshed once per morning by morning-login.
+ATR_TARGET_K        = 0.40   # fraction of daily ATR used as intraday target
+ATR_PERIOD_DAYS      = 14
+MIN_RR               = 0.8   # below this, suppress signal (target/risk too thin)
+SLIPPAGE_PTS_EST     = 1.0   # conservative per-leg slippage estimate, in spot pts
 
-MIN_RR = 0.8   # below this, suppress signal (target/risk too thin). Since
-# target is now always exactly STOCK_TRAIL_TARGET_R * risk by construction,
-# this gate is effectively a no-op for stocks going forward — kept because
-# it's shared machinery, not stock-specific.
-
-# ── Daily ATR cache (retained, no longer read by stock_main.py) ─────────────
-# Fed the old ATR-anchored target formula, now replaced by the Supertrend
-# trailing stop above. Nothing else in the codebase reads REDIS_DAILY_ATR_KEY
-# (confirmed via grep) — the cache-population step in morning-login.yml is
-# left running as-is (out of scope for this change; remove only with
-# separate approval).
-ATR_PERIOD_DAYS = 14
 REDIS_DAILY_ATR_KEY = "stock:daily_atr"   # {NAME: atr_value}, refreshed daily
+
+# DI threshold for C4 — lower than the index threshold (25); stocks are
+# individually noisier and a 25 floor was filtering out otherwise-clean signals.
+DI_THRESHOLD = 24
 
 # Event exclusion — stocks with earnings/dividend/corp-action events in the
 # next N calendar days (inclusive of today) are skipped entirely by stock_main.
