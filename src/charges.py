@@ -47,22 +47,31 @@ def net_pnl(entry: float, exit_price: float, lot_size: int, direction: str) -> f
 
     entry, exit_price: option premium per unit (in ₹)
     lot_size: number of units per lot (1 lot traded)
-    direction: "CE" or "PE"
+    direction: "CE" or "PE" — used only for validation, NOT for sign or
+        buy/sell-side logic. Every position is a long option premium, so
+        P&L is always (exit_price - entry) * lot_size regardless of
+        direction; direction only ever affects which underlying move
+        makes the premium itself rise (handled upstream in
+        position_tracker.py, not here).
 
     Returns net P&L in ₹ (positive = profit, negative = loss).
     All charge computations use the premium (option price), not the underlying.
     """
     direction = direction.upper()
+    if direction not in ("CE", "PE"):
+        raise ValueError(f"direction must be 'CE' or 'PE', got {direction!r}")
 
-    buy_price  = entry       if direction == "CE" else exit_price
-    sell_price = exit_price  if direction == "CE" else entry
+    # Every position is a long option premium regardless of CE/PE — you
+    # always buy at entry_price and sell at exit_price. Direction affects
+    # only which underlying move makes the premium rise; it never flips
+    # which side is buy vs sell, or the sign of gross P&L.
+    buy_price  = entry
+    sell_price = exit_price
 
     buy_turnover  = buy_price  * lot_size
     sell_turnover = sell_price * lot_size
 
     gross_pnl = (exit_price - entry) * lot_size
-    if direction == "PE":
-        gross_pnl = (entry - exit_price) * lot_size
 
     # Brokerage: ₹20 per leg × 2 legs
     brokerage = BROKERAGE_PER_LEG * 2
@@ -84,7 +93,4 @@ def net_pnl(entry: float, exit_price: float, lot_size: int, direction: str) -> f
 
     total_charges = brokerage + stt + exchange + sebi + stamp + gst
 
-    if direction == "CE":
-        return (exit_price - entry) * lot_size - total_charges
-    else:
-        return (entry - exit_price) * lot_size - total_charges
+    return gross_pnl - total_charges
