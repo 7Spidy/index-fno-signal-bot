@@ -887,7 +887,7 @@ function buildHistoryDetail(row, dir) {
 }
 
 function buildDots(conds) {
-  return (conds || [false, false, false, false]).map(v =>
+  return (conds || [false, false, false, false, false]).map(v =>
     `<span class="dot ${v ? 'dot-pass' : 'dot-fail'}"></span>`
   ).join('');
 }

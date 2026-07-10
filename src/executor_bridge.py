@@ -115,7 +115,11 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
             "rsi":  signal_result.get("rsi"),
             "pdi":  signal_result.get("pdi"),
             "ndi":  signal_result.get("ndi"),
-            "supertrend_dir": "up" if signal_result.get("c5") else "down",
+            # signal_result["c5"] is direction-specific "aligned" (ce.c5 for
+            # CE, pe.c5 for PE) — flip back to the raw trend for PE so this
+            # always reports actual Supertrend state, not trade alignment.
+            "supertrend_dir": ("up" if signal_result.get("c5") else "down") if direction == "CE"
+                               else ("down" if signal_result.get("c5") else "up"),
         },
     }
 

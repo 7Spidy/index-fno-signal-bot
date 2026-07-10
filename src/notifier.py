@@ -19,6 +19,18 @@ WARN_COLOR       = 0xF59E0B
 SUPPRESSED_COLOR = 0x6B7280   # gray — visually distinct from CE/PE/warning colors
 
 
+def _supertrend_field_value(direction: str, aligned: bool | None) -> str:
+    """result's c5 is already the direction-specific "aligned" boolean
+    (ce.c5 for a CE signal, pe.c5 for a PE signal) — True means Supertrend
+    matches this trade's direction (CE=up, PE=down). Recover the raw trend
+    label from (direction, aligned) rather than reading c5 as if it were the
+    raw uptrend/downtrend flag, since that flips meaning between CE and PE."""
+    is_ce = direction.upper() == "CE"
+    raw_uptrend = aligned if is_ce else not aligned
+    label = "Uptrend" if raw_uptrend else "Downtrend"
+    return label if aligned else f"⚠️ {label} ⚠️"
+
+
 def _build_trade_fields(instrument: str, direction: str, result: dict) -> list[dict]:
     """Build the shared trade-detail field list used by both send_signal()
     and send_suppressed_signal() (instrument, buy/target/SL, conditions, etc)."""
@@ -85,7 +97,7 @@ def _build_trade_fields(instrument: str, direction: str, result: dict) -> list[d
         },
         {
             "name":   "Supertrend (10,5)",
-            "value":  "Uptrend" if result.get("c5") else "Downtrend",
+            "value":  _supertrend_field_value(direction, result.get("c5")),
             "inline": True,
         },
     ]
