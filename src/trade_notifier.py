@@ -21,6 +21,7 @@ OPEN_COLOR   = 0x4FC3F7   # blue — open positions
 CLOSED_COLOR = 0x00C853   # green — profitable day
 LOSS_COLOR   = 0xF44336   # red — loss day
 EOD_COLOR    = 0x9C27B0   # purple — end-of-day summary
+SKIP_COLOR   = 0x9E9E9E   # gray — skipped entry
 
 
 def _webhook() -> str | None:
@@ -99,7 +100,7 @@ def _build_consolidated_embed(
             sign = "+" if unreal >= 0 else ""
 
             fields.append({
-                "name": f"{pos['instrument']} {direction} {arrow} [OPEN]",
+                "name": f"{pos.get('tradingsymbol', pos['instrument'])} {direction} {arrow} [OPEN]",
                 "value": (
                     f"Entry ₹{entry:.2f} · LTP ₹{ltp:.2f} · SL ₹{sl:.2f}\n"
                     f"Unrealized ≈ {sign}₹{unreal:.0f} (gross, est.)"
@@ -113,7 +114,7 @@ def _build_consolidated_embed(
             pnl   = rec.get("pnl_net", 0)
             sign  = "+" if pnl >= 0 else ""
             fields.append({
-                "name": f"{rec['instrument']} {rec['direction']} {arrow} [CLOSED]",
+                "name": f"{rec.get('tradingsymbol', rec['instrument'])} {rec['direction']} {arrow} [CLOSED]",
                 "value": (
                     f"Entry ₹{rec['entry_price']:.2f} · Exit ₹{rec['exit_price']:.2f} · "
                     f"Net {sign}₹{pnl:.2f} · {rec.get('reason', '')}"
@@ -181,7 +182,7 @@ def send_paper_eod_summary(
         psign = "+" if p >= 0 else ""
         arrow = "↑" if rec.get("direction") == "CE" else "↓"
         lines.append(
-            f"{rec['instrument']} {rec['direction']} {arrow} "
+            f"{rec.get('tradingsymbol', rec['instrument'])} {rec['direction']} {arrow} "
             f"entry={rec['entry_price']:.2f} exit={rec['exit_price']:.2f} "
             f"net={psign}₹{p:.2f} ({rec.get('reason', '')})"
         )
@@ -212,4 +213,34 @@ def send_paper_eod_summary(
         return ok
     except Exception as e:
         print(f"[trade_notifier] EOD POST failed: {e}")
+        return False
+
+
+def send_trade_skipped(
+    instrument: str,
+    tradingsymbol: str,
+    direction: str,
+    reason: str,
+) -> bool:
+    """Post a one-off notice when a signal is skipped instead of entered."""
+    arrow = "↑" if direction.upper() == "CE" else "↓"
+    embed = {
+        "title":       f"⏭️ Skipped — {tradingsymbol} {direction.upper()} {arrow}",
+        "color":       SKIP_COLOR,
+        "description": reason,
+        "footer":      {"text": "Paper simulation only · no real orders"},
+        "timestamp":   datetime.now(timezone.utc).isoformat(),
+    }
+
+    webhook = _webhook()
+    if not webhook:
+        return False
+    try:
+        resp = requests.post(webhook, json={"embeds": [embed]}, timeout=10)
+        ok = resp.status_code in (200, 204)
+        if not ok:
+            print(f"[trade_notifier] Skip POST returned {resp.status_code}: {resp.text[:200]}")
+        return ok
+    except Exception as e:
+        print(f"[trade_notifier] Skip POST failed: {e}")
         return False

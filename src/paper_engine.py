@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from src import config, state, stock_config
+from src import config, state, stock_config, trade_notifier
 from src.charges import net_pnl
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -196,6 +196,10 @@ def _block_entries(date_str: str, reason: str) -> None:
     print(f"[paper_engine] Entries BLOCKED for {date_str}: {reason}")
 
 
+def _block_reason(date_str: str) -> str | None:
+    return state.redis_get(_paper_no_more_key(date_str))
+
+
 def get_closed_positions(date_str: str) -> list[dict]:
     raw = state.redis_get(_paper_closed_key(date_str))
     if not raw:
@@ -252,7 +256,9 @@ def simulate_entry(intent: dict, kite) -> None:
     # Gate: entries blocked for today
     get_or_init_daily_capital(date_str)
     if entries_blocked(date_str):
+        reason = _block_reason(date_str) or "entries blocked"
         print(f"[paper_engine] {instrument}: entries blocked for {date_str} — skip")
+        trade_notifier.send_trade_skipped(instrument, tradingsymbol, direction, reason)
         return
 
     # Already have an open paper position in this tradingsymbol? Skip duplicate
@@ -288,6 +294,8 @@ def simulate_entry(intent: dict, kite) -> None:
             f"[paper_engine] {instrument}: capital exhausted "
             f"(need ₹{entry_cost:.0f}, have ₹{remaining:.0f}) — skip entry"
         )
+        reason = f"Budget constraint: need ₹{entry_cost:.0f}, have ₹{remaining:.0f} remaining"
+        trade_notifier.send_trade_skipped(instrument, tradingsymbol, direction, reason)
         return
 
     # Derive initial option SL from spot_sl via delta approximation
