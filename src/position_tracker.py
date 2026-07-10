@@ -363,115 +363,55 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = 
 # ──────────────────────────────────────────────────────────────
 
 def run_heartbeat() -> None:
-    """Paper-trade cycle: process intents, trail SLs, check exits, EOD square-off."""
-    try:
-        from src import kite_client
-        kite = kite_client.get_kite()
-    except Exception as e:
-        print(f"[position_tracker] heartbeat: cannot get Kite client: {e}")
-        return
+    """Paper-trade cycle: process intents, trail SLs, check exits, EOD square-off.
 
-    now      = datetime.now(IST)
-    date_str = now.strftime("%Y-%m-%d")
+    The consolidated Discord message is always sent/edited at the end of every
+    cycle, even when the Kite client is unavailable (positions show stale LTP).
+    """
+    now        = datetime.now(IST)
+    date_str   = now.strftime("%Y-%m-%d")
     today_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
 
     paper_engine.get_or_init_daily_capital(date_str)
 
-    # ── Step 1: process fresh intents for all 17 instruments ────────────────
-    if not paper_engine.entries_blocked(date_str):
-        for instrument in _ALL_INSTRUMENTS:
-            intent = _load_tracker_intent(instrument)
-            if intent is None:
-                continue
+    # Try to get Kite — if it fails, skip the LTP-dependent steps but still
+    # send the Discord update so the consolidated message keeps refreshing.
+    kite = None
+    try:
+        from src import kite_client
+        kite = kite_client.get_kite()
+    except Exception as e:
+        print(f"[position_tracker] heartbeat: cannot get Kite client: {e} — LTP steps skipped")
 
-            ts_key = intent.get("ts", "").replace(":", "-").replace(".", "-")
-            consumed_key = f"paper:intent_consumed:{instrument.upper()}:{ts_key}"
-            if state.redis_exists(consumed_key):
-                continue
+    if kite is not None:
+        # ── Step 1: process fresh intents for all 17 instruments ────────────
+        if not paper_engine.entries_blocked(date_str):
+            for instrument in _ALL_INSTRUMENTS:
+                intent = _load_tracker_intent(instrument)
+                if intent is None:
+                    continue
 
-            # Mark consumed BEFORE entry attempt to prevent double-fire on retry
-            state.redis_set(consumed_key, "1", ex=7200)
+                ts_key = intent.get("ts", "").replace(":", "-").replace(".", "-")
+                consumed_key = f"paper:intent_consumed:{instrument.upper()}:{ts_key}"
+                if state.redis_exists(consumed_key):
+                    continue
 
-            try:
-                paper_engine.simulate_entry(intent, kite)
-            except Exception as e:
-                print(f"[position_tracker] {instrument}: simulate_entry error: {e}")
+                # Mark consumed BEFORE entry attempt to prevent double-fire
+                state.redis_set(consumed_key, "1", ex=7200)
 
-    # ── Step 2: trail SLs and check exits for open paper positions ──────────
-    open_positions = paper_engine.get_open_positions()
+                try:
+                    paper_engine.simulate_entry(intent, kite)
+                except Exception as e:
+                    print(f"[position_tracker] {instrument}: simulate_entry error: {e}")
 
-    for pos in open_positions:
-        tradingsymbol = pos["tradingsymbol"]
-        instrument    = pos["instrument"]
-        direction     = pos["direction"]
-        entry         = pos["entry_price"]
-        T             = pos.get("target_t")
-        sl_stage      = pos.get("sl_ladder_stage", pos["initial_sl"])
-        asset_class   = pos.get("asset_class", "INDEX")
-
-        # Fetch live option LTP
-        exchange = paper_engine._exchange_for(instrument, asset_class)
-        ltp_key  = f"{exchange}:{tradingsymbol}"
-        try:
-            ltp_data = kite.ltp([ltp_key])
-            ltp = float(ltp_data.get(ltp_key, {}).get("last_price", 0) or 0)
-        except Exception as e:
-            print(f"[position_tracker] {tradingsymbol}: LTP fetch failed: {e} — skip this cycle")
-            continue
-
-        if ltp <= 0:
-            print(f"[position_tracker] {tradingsymbol}: LTP=0 — skip (no SL update, not an exit)")
-            continue
-
-        # Update current_ltp in position for display
-        pos["current_ltp"] = ltp
-
-        if T and T > 0:
-            # Compute progress in option-premium space
-            if direction == "CE":
-                raw_progress = (ltp - entry) / T
-            else:
-                raw_progress = (entry - ltp) / T
-
-            rsi3 = _get_rsi_snapshot(instrument, today_open, asset_class=asset_class)
-            market_snapshot = {
-                "rsi_last3":     rsi3,
-                "progress":      raw_progress,
-                "current_price": ltp,
-                "T":             T,
-                "instrument":    instrument,
-            }
-
-            ladder_sl = compute_ladder_sl(entry, T, ltp, direction, sl_stage)
-            ai_sl     = compute_ai_adjusted_sl(ladder_sl, direction, market_snapshot)
-            final_sl  = compute_final_sl(ladder_sl, ai_sl, direction)
-        else:
-            final_sl = sl_stage
-
-        pos["sl_ladder_stage"] = round(final_sl, 2)
-        paper_engine.save_paper_position(tradingsymbol, pos)
-
-        # Check SL hit — compare option LTP against option SL
-        sl_hit = False
-        if direction == "CE" and ltp <= final_sl:
-            sl_hit = True
-        elif direction == "PE" and ltp <= final_sl:
-            # For PE: we bought a put, SL is a price floor on the option premium
-            sl_hit = True
-
-        if sl_hit:
-            print(f"[position_tracker] {tradingsymbol}: SL hit (ltp={ltp:.2f} <= sl={final_sl:.2f})")
-            try:
-                paper_engine.simulate_exit(tradingsymbol, final_sl, "sl_hit")
-            except Exception as e:
-                print(f"[position_tracker] {tradingsymbol}: simulate_exit error: {e}")
-
-    # ── Step 3: EOD square-off at 15:30 IST ────────────────────────────────
-    if paper_engine.is_eod(now):
-        remaining = paper_engine.get_open_positions()
-        for pos in remaining:
+        # ── Step 2: trail SLs and check exits for open paper positions ──────
+        for pos in paper_engine.get_open_positions():
             tradingsymbol = pos["tradingsymbol"]
             instrument    = pos["instrument"]
+            direction     = pos["direction"]
+            entry         = pos["entry_price"]
+            T             = pos.get("target_t")
+            sl_stage      = pos.get("sl_ladder_stage", pos["initial_sl"])
             asset_class   = pos.get("asset_class", "INDEX")
 
             exchange = paper_engine._exchange_for(instrument, asset_class)
@@ -480,26 +420,83 @@ def run_heartbeat() -> None:
                 ltp_data = kite.ltp([ltp_key])
                 ltp = float(ltp_data.get(ltp_key, {}).get("last_price", 0) or 0)
             except Exception as e:
-                print(f"[position_tracker] EOD {tradingsymbol}: LTP fetch failed: {e} — using entry")
-                ltp = pos["entry_price"]
+                print(f"[position_tracker] {tradingsymbol}: LTP fetch failed: {e} — skip cycle")
+                continue
 
             if ltp <= 0:
-                ltp = pos["entry_price"]
+                # Zero LTP must never be interpreted as an SL hit
+                print(f"[position_tracker] {tradingsymbol}: LTP=0 — skip (not an exit)")
+                continue
 
-            print(f"[position_tracker] EOD square-off: {tradingsymbol} at ltp={ltp:.2f}")
-            try:
-                paper_engine.simulate_exit(tradingsymbol, ltp, "eod_squareoff")
-            except Exception as e:
-                print(f"[position_tracker] EOD {tradingsymbol}: simulate_exit error: {e}")
+            pos["current_ltp"] = ltp
 
-        # Post EOD summary exactly once per day
-        if not paper_engine.eod_posted(date_str):
-            closed    = paper_engine.get_closed_positions(date_str)
-            total_pnl = paper_engine.get_daily_pnl(date_str)
-            trade_notifier.send_paper_eod_summary(closed, total_pnl, date_str)
-            paper_engine.mark_eod_posted(date_str)
+            if T and T > 0:
+                # In option-premium space, both CE and PE premiums RISE when the
+                # trade is winning. Use the "CE-like" progress formula for both:
+                # progress = (ltp - entry) / T.  The original compute_ladder_sl
+                # CE branch does exactly this, so pass direction="CE" here.
+                raw_progress = (ltp - entry) / T
 
-    # ── Step 4: post/edit consolidated Discord message ───────────────────────
+                rsi3 = _get_rsi_snapshot(instrument, today_open, asset_class=asset_class)
+                market_snapshot = {
+                    "rsi_last3":     rsi3,
+                    "progress":      raw_progress,
+                    "current_price": ltp,
+                    "T":             T,
+                    "instrument":    instrument,
+                }
+
+                # Use "CE" for both directions: SL ratchets up as premium rises
+                ladder_sl = compute_ladder_sl(entry, T, ltp, "CE", sl_stage)
+                ai_sl     = compute_ai_adjusted_sl(ladder_sl, "CE", market_snapshot)
+                final_sl  = compute_final_sl(ladder_sl, ai_sl, "CE")
+            else:
+                final_sl = sl_stage
+
+            pos["sl_ladder_stage"] = round(final_sl, 2)
+            paper_engine.save_paper_position(tradingsymbol, pos)
+
+            # SL hit: option premium dropped to or below the trailing floor
+            if ltp <= final_sl:
+                print(f"[position_tracker] {tradingsymbol}: SL hit "
+                      f"(ltp={ltp:.2f} <= sl={final_sl:.2f})")
+                try:
+                    paper_engine.simulate_exit(tradingsymbol, final_sl, "sl_hit")
+                except Exception as e:
+                    print(f"[position_tracker] {tradingsymbol}: simulate_exit error: {e}")
+
+        # ── Step 3: EOD square-off at 15:30 IST ─────────────────────────────
+        if paper_engine.is_eod(now):
+            for pos in paper_engine.get_open_positions():
+                tradingsymbol = pos["tradingsymbol"]
+                instrument    = pos["instrument"]
+                asset_class   = pos.get("asset_class", "INDEX")
+
+                exchange = paper_engine._exchange_for(instrument, asset_class)
+                ltp_key  = f"{exchange}:{tradingsymbol}"
+                try:
+                    ltp_data = kite.ltp([ltp_key])
+                    ltp = float(ltp_data.get(ltp_key, {}).get("last_price", 0) or 0)
+                except Exception as e:
+                    print(f"[position_tracker] EOD {tradingsymbol}: LTP fetch failed: {e} — using entry")
+                    ltp = pos["entry_price"]
+
+                if ltp <= 0:
+                    ltp = pos["entry_price"]
+
+                print(f"[position_tracker] EOD square-off: {tradingsymbol} at ltp={ltp:.2f}")
+                try:
+                    paper_engine.simulate_exit(tradingsymbol, ltp, "eod_squareoff")
+                except Exception as e:
+                    print(f"[position_tracker] EOD {tradingsymbol}: simulate_exit error: {e}")
+
+            if not paper_engine.eod_posted(date_str):
+                closed    = paper_engine.get_closed_positions(date_str)
+                total_pnl = paper_engine.get_daily_pnl(date_str)
+                trade_notifier.send_paper_eod_summary(closed, total_pnl, date_str)
+                paper_engine.mark_eod_posted(date_str)
+
+    # ── Step 4: always post/edit consolidated Discord message ────────────────
     open_now   = paper_engine.get_open_positions()
     closed_now = paper_engine.get_closed_positions(date_str)
     try:
