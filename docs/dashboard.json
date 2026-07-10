@@ -116,7 +116,37 @@
       "strike_step": 100
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "PE",
+      "candle_time": "13:15 IST",
+      "futures_price": 77652.75,
+      "spot_ltp": 77454.36,
+      "fut_spot_spread": 198.4,
+      "tradingsymbol": "SENSEX2671677500PE",
+      "strike": 77500,
+      "expiry": "2026-07-16",
+      "fetch_time": "13:21:12 IST",
+      "atm_ltp": 485.35,
+      "opt_target": 698.1,
+      "opt_sl": 343.52,
+      "spot_tgt": 77018.4,
+      "spot_sl": 77745.0,
+      "raw_risk": 290.6,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 44.63551314746007,
+      "pdi": 20.640138483973217,
+      "ndi": 28.189200064266334,
+      "vwap": 77682.59889046272,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": false
+    }
+  ],
   "history": [
     {
       "time": "12:31",
