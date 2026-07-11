@@ -20,7 +20,6 @@ IST = ZoneInfo("Asia/Kolkata")
 OPEN_COLOR   = 0x4FC3F7   # blue — open positions
 CLOSED_COLOR = 0x00C853   # green — profitable day
 LOSS_COLOR   = 0xF44336   # red — loss day
-EOD_COLOR    = 0x9C27B0   # purple — end-of-day summary
 SKIP_COLOR   = 0x9E9E9E   # gray — skipped entry
 
 

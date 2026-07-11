@@ -12,8 +12,9 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
              live_supertrend_dir: bool | None = None) -> dict:
     """
     Evaluates CE and PE conditions against live quote/indicator values
-    (fetched/recomputed by the caller this run — see kite_client.get_live_quote
-    and indicators.with_live_bar) and the two most recently closed candles.
+    (fetched/recomputed by the caller this run — see
+    kite_client.get_live_quotes_batch and indicators.with_live_bar) and the
+    two most recently closed candles.
 
     P0 = df.iloc[-2] (latest closed candle)
     P1 = df.iloc[-3] (candle before that)

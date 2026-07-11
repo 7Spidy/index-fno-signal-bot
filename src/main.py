@@ -100,7 +100,7 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
 
         vwap = indicators.vwap_session(df, today_open)
         rsi = indicators.rsi_wilder(df)
-        pdi, ndi, adx = indicators.dmi_wilder(df)
+        pdi, ndi, _ = indicators.dmi_wilder(df)
 
         exchange = inst.get("fno_exchange", "NFO")
         live_key = f"{exchange}:{token_info['tradingsymbol']}"
@@ -112,7 +112,7 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
         live_df = indicators.with_live_bar(df, live_quote["ltp"])
         live_rsi_s = indicators.rsi_wilder(live_df)
         live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
-        live_st_line_s, live_st_dir_s = indicators.supertrend_wilder(
+        _, live_st_dir_s = indicators.supertrend_wilder(
             live_df, cfg["SUPERTREND_PERIOD"], cfg["SUPERTREND_MULTIPLIER"]
         )
         _live_dir_val = live_st_dir_s.iloc[-1]

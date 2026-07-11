@@ -2,7 +2,7 @@
 Paper trade engine for Phase 1 simulation.
 
 Simulates entries and exits for all 17 instruments (3 indices + 14 stocks)
-using ₹50,000 fixed daily capital. Never places real orders.
+using ₹1,00,000 fixed daily capital. Never places real orders.
 
 All state is stored in Redis under the paper: key namespace.
 """
@@ -18,8 +18,9 @@ from src.charges import net_pnl
 IST = ZoneInfo("Asia/Kolkata")
 
 # ── Paper-trade constants ────────────────────────────────────────────────────
-DAILY_CAPITAL: float = 50_000.0
-DAILY_LOSS_LIMIT: float = -5_000.0   # -10% of 50,000
+DAILY_CAPITAL: float = 100_000.0
+DAILY_LOSS_PCT: float = 0.15
+DAILY_LOSS_LIMIT: float = -(DAILY_CAPITAL * DAILY_LOSS_PCT)   # -15% of capital, computed
 
 # Index lot sizes — verify quarterly against NSE published schedule.
 # NIFTY: 75 (revised 2024), BANKNIFTY: 15 (revised 2024), SENSEX: 20.
@@ -84,10 +85,6 @@ def _paper_no_more_key(date_str: str) -> str:
 
 def _paper_eod_key(date_str: str) -> str:
     return f"paper:discord_eod_posted:{date_str}"
-
-
-def _consumed_key(instrument: str, ts_key: str) -> str:
-    return f"paper:intent_consumed:{instrument.upper()}:{ts_key}"
 
 
 # ── Position index ───────────────────────────────────────────────────────────
@@ -156,7 +153,7 @@ def get_open_positions() -> list[dict]:
 # ── Daily state helpers ──────────────────────────────────────────────────────
 
 def get_or_init_daily_capital(date_str: str) -> float:
-    """Always returns 50,000 — resets every day regardless of prior day P&L.
+    """Always returns DAILY_CAPITAL — resets every day regardless of prior day P&L.
 
     Writes the key only if it doesn't exist yet (first run of the day).
     Never reads or carries forward the previous day's figure.
@@ -187,7 +184,7 @@ def _update_daily_pnl(date_str: str, delta: float) -> float:
 
 
 def entries_blocked(date_str: str) -> bool:
-    """True if either the daily-loss breaker or the 1Trade flag has tripped."""
+    """True if the daily-loss breaker has tripped."""
     return state.redis_exists(_paper_no_more_key(date_str))
 
 
@@ -387,10 +384,6 @@ def simulate_exit(tradingsymbol: str, exit_price: float, reason: str) -> None:
     # Daily-loss circuit breaker
     if new_pnl <= DAILY_LOSS_LIMIT and not entries_blocked(date_str):
         _block_entries(date_str, f"daily_loss_breaker: pnl={new_pnl:.2f}")
-
-    # 1Trade rule: if cumulative P&L is positive after ANY close, block further entries
-    elif new_pnl > 0 and not entries_blocked(date_str):
-        _block_entries(date_str, f"1trade_rule: cumulative_pnl={new_pnl:.2f} > 0")
 
 
 # ── EOD guard ────────────────────────────────────────────────────────────────

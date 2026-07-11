@@ -5,7 +5,7 @@ All stocks use monthly expiry only (no weekly — SEBI post-Nov 2024).
 OHLCV source: NSE equity tokens (real volume, accurate VWAP).
 Options: NFO segment, monthly chain.
 
-Risk gate: VWAP proximity only — consistent with the index bot design.
+C2 gate: VWAP crossover — consistent with the index bot design.
 No candle-width (max_risk_pts) gate. If a signal fires and the candle
 is too wide for the capital rule, the alert surfaces it and you decide.
 

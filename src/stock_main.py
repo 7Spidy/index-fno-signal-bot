@@ -3,7 +3,7 @@ stock_main.py — Stock F&O signal evaluation loop.
 14 NSE-listed stocks evaluated through C1–C4. Alert-only.
 Called by stock-signal.yml every 5 minutes during market hours.
 
-Risk gate: VWAP proximity only (C2). No candle-width gate.
+C2 gate: VWAP crossover — price must cross VWAP in the signal direction.
 OHLCV: NSE equity tokens (real volume).
 Options: NFO monthly chain.
 """
@@ -258,7 +258,7 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     live_pdi_s, live_ndi_s, _ = indicators.dmi_wilder(live_df)
     live_pdi = float(live_pdi_s.iloc[-1])
     live_ndi = float(live_ndi_s.iloc[-1])
-    live_st_line_s, live_st_dir_s = indicators.supertrend_wilder(
+    _, live_st_dir_s = indicators.supertrend_wilder(
         live_df, cfg.SUPERTREND_PERIOD, cfg.SUPERTREND_MULTIPLIER
     )
     _live_dir_val = live_st_dir_s.iloc[-1]

@@ -411,35 +411,6 @@ def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
     return df
 
 
-def get_live_quote(key: str) -> dict | None:
-    """
-    Fetches the live LTP and live session VWAP for one instrument via a single
-    kite.quote() call. `key` is "EXCHANGE:TRADINGSYMBOL", e.g.
-    "NFO:NIFTY26JUNFUT" (index futures) or "NSE:INFY" (stock spot).
-
-    VWAP is read from Kite's own 'average_price' field — see spec §2.1.
-
-    Returns {"ltp": float, "vwap": float}, or None on any failure. Callers must
-    treat None as "skip this instrument this run" — never crash the loop.
-    """
-    try:
-        kite = get_kite()
-        data = kite.quote([key])
-        q = data.get(key)
-        if not q:
-            print(f"[kite_client] get_live_quote({key}): no data in response")
-            return None
-        ltp  = q.get("last_price")
-        vwap = q.get("average_price")
-        if ltp is None or vwap is None:
-            print(f"[kite_client] get_live_quote({key}): missing last_price/average_price")
-            return None
-        return {"ltp": float(ltp), "vwap": float(vwap)}
-    except Exception as e:
-        print(f"[kite_client] get_live_quote({key}) failed: {e}")
-        return None
-
-
 def get_live_quotes_batch(keys: list[str]) -> dict[str, dict]:
     """
     Fetches live LTP and live session VWAP for MULTIPLE instruments in a
@@ -449,10 +420,9 @@ def get_live_quotes_batch(keys: list[str]) -> dict[str, dict]:
 
     Returns {key: {"ltp": float, "vwap": float}} — only for keys that had
     valid last_price AND average_price in the response. A key missing from
-    the result means "skip this instrument this run", same contract as the
-    old per-instrument get_live_quote(). Returns {} (not None) on a total
-    failure so callers can safely use .get(key) without a None-check on the
-    whole dict.
+    the result means "skip this instrument this run". Returns {} (not None)
+    on a total failure so callers can safely use .get(key) without a
+    None-check on the whole dict.
     """
     if not keys:
         return {}
