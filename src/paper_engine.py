@@ -18,7 +18,7 @@ from src.charges import net_pnl
 IST = ZoneInfo("Asia/Kolkata")
 
 # ── Paper-trade constants ────────────────────────────────────────────────────
-DAILY_CAPITAL: float = 100_000.0
+DAILY_CAPITAL: float = 50_000.0
 DAILY_LOSS_PCT: float = 0.15
 DAILY_LOSS_LIMIT: float = -(DAILY_CAPITAL * DAILY_LOSS_PCT)   # -15% of capital, computed
 
