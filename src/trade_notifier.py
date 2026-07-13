@@ -92,10 +92,10 @@ def _build_consolidated_embed(
             direction = pos.get("direction", "?")
 
             # Unrealized gross P&L (before charges — shown as estimate)
-            if direction == "CE":
-                unreal = (ltp - entry) * ls
-            else:
-                unreal = (entry - ltp) * ls
+            # Options are always bought long (CE or PE) — premium rising is
+            # always profit, regardless of option type. Do not branch on
+            # direction here (that was the PE sign-inversion bug).
+            unreal = (ltp - entry) * ls
             sign = "+" if unreal >= 0 else ""
 
             fields.append({
