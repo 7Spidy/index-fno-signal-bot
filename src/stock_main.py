@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from src import calendar_nse, indicators, notifier, sector_config, state, tracker_bridge
 from src import stock_config as cfg
+from src.executor_bridge import write_executor_intent
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -551,6 +552,10 @@ def main() -> None:
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED "
                   f"(target={target_source}, RR={rr_effective})")
+            try:
+                write_executor_intent(signal_payload, stock)
+            except Exception as e:
+                print(f"[stock_main] executor_bridge error (non-fatal): {e}")
             try:
                 tracker_bridge.write_tracker_intent(
                     instrument=name,

@@ -9,9 +9,15 @@ from . import config
 
 REDIS_URL    = os.environ.get("UPSTASH_REDIS_REST_URL", "")
 REDIS_TOKEN  = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
-INTENT_KEY   = "executor:pending_intent"
-POSITION_KEY = "executor:position"
 INTENT_TTL_SECONDS = 360   # 6 minutes — stale after that
+
+
+def _intent_key(instrument: str) -> str:
+    return f"executor:pending_intent:{instrument.upper()}"
+
+
+def _position_key(instrument: str) -> str:
+    return f"executor:position:{instrument.upper()}"
 
 
 def _redis_get(key: str):
@@ -41,22 +47,15 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
     """
     instrument = instrument_cfg.get("name", "NIFTY")
 
-    # Executor v1 is NIFTY-only (spec §1, §21 — BANKNIFTY deferred to v2,
-    # SENSEX is alert-only and never gets executor support). Any other
-    # instrument must never produce an executor intent.
-    if instrument != "NIFTY":
-        print(f"[executor_bridge] {instrument} not supported by executor v1 "
-              f"(NIFTY only) — skipping intent, alert-only")
-        return False
-
     if not REDIS_URL or not REDIS_TOKEN:
         print("[executor_bridge] Redis env vars not set — skipping intent write")
         return False
 
-    # Don't overwrite an active position
-    existing_position = _redis_get(POSITION_KEY)
+    # Don't overwrite an active position for THIS instrument only — other
+    # instruments must be free to signal concurrently.
+    existing_position = _redis_get(_position_key(instrument))
     if existing_position:
-        print("[executor_bridge] Position already open — skipping intent write")
+        print(f"[executor_bridge] {instrument} position already open — skipping intent write")
         return False
 
     # Determine direction
@@ -123,7 +122,7 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         },
     }
 
-    success = _redis_setex(INTENT_KEY, INTENT_TTL_SECONDS, json.dumps(intent))
+    success = _redis_setex(_intent_key(instrument), INTENT_TTL_SECONDS, json.dumps(intent))
     if success:
         print(f"[executor_bridge] Intent written to Redis: {direction} {instrument} {atm_strike}")
     else:
