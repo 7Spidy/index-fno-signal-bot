@@ -1,8 +1,8 @@
 {
-  "date": "2026-07-14",
+  "date": "2026-07-15",
   "last_run": "2026-07-14T14:41:14.710065+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-07-14T09:05:43.929927+05:30",
+  "token_refreshed_at": "2026-07-15T09:05:52.326583+05:30",
   "instruments": [
     {
       "ce": {
@@ -80,31 +80,6 @@
     }
   ],
   "active_signals": [],
-  "history": [
-    {
-      "time": "09:41",
-      "instrument": "NIFTY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 28.575669387983254,
-      "pdi": 12.998742779717723,
-      "ndi": 41.96137618776964,
-      "price": 24101.2
-    }
-  ],
+  "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
