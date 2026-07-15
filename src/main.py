@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 from src import (
     calendar_nse,
     config,
@@ -14,6 +16,7 @@ from src import (
     journal,
     kite_client,
     notifier,
+    pvwap_signals,
     signals,
     state,
 )
@@ -141,6 +144,199 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
         return None
 
 
+def _evaluate_pvwap_nifty(instrument_tokens, live_quotes, today_open, now_ist):
+    """PVWAP entry evaluation for NIFTY, using the daily bias cached in
+    Redis by the pre-market job (src/pvwap_signals.run_premarket, invoked
+    from morning-login.yml). Returns a result dict (always, for the
+    dashboard status card) or None if this run should be skipped entirely."""
+    name = "NIFTY"
+    inst = next(i for i in config.INSTRUMENTS if i["name"] == name)
+
+    if not calendar_nse.in_eval_window_for(name):
+        print(f"[main] {name}: outside eval window "
+              f"(expiry-day cutoff applies: {calendar_nse.is_expiry_day(name)})")
+        return None
+
+    token_info = instrument_tokens.get(name)
+    if not token_info:
+        print(f"[main] No token for {name} — skipping")
+        return None
+
+    date_str = now_ist.date().isoformat()
+    bias_data = pvwap_signals.get_cached_bias(date_str) or {}
+    bias = bias_data.get("bias", "NEUTRAL")
+
+    try:
+        df = kite_client.fetch_ohlcv(token_info["token"], today_open)
+        if len(df) < 4:
+            print(f"[main] {name}: <4 candles — skip")
+            return None
+
+        exchange = inst.get("fno_exchange", "NFO")
+        live_key = f"{exchange}:{token_info['tradingsymbol']}"
+        live_quote = live_quotes.get(live_key)
+        if live_quote is None:
+            print(f"[main] {name}: live quote unavailable — skipping this run")
+            return None
+
+        rsi_series = indicators.rsi_wilder(df)
+        prev_rsi = rsi_series.iloc[-2]
+        live_df = indicators.with_live_bar(df, live_quote["ltp"])
+        live_rsi = indicators.rsi_wilder(live_df).iloc[-1]
+
+        price = float(df.iloc[-2]["close"])
+        vwap_val = float(live_quote["vwap"])
+        strike_step = inst["strike_step"]
+        atm_strike = round(price / strike_step) * strike_step
+
+        empty_side = {"c1": False, "c2": False, "c3": False, "c4": False, "c5": None, "signal": False}
+        result = {
+            "name": name,
+            "symbol": token_info["tradingsymbol"],
+            "strike_step": strike_step,
+            "ce": dict(empty_side),
+            "pe": dict(empty_side),
+            "futures_price": round(price, 2),
+            "vwap": vwap_val,
+            "rsi": float(prev_rsi) if pd.notna(prev_rsi) else None,
+            "pdi": None,
+            "ndi": None,
+            "atm_strike": int(atm_strike),
+            "candle_time": _fmt_candle_time_safe(df.iloc[-2]["timestamp"]),
+            "prev_candle_low": round(float(df.iloc[-2]["low"]), 2),
+            "prev_candle_high": round(float(df.iloc[-2]["high"]), 2),
+            "strategy": "PVWAP",
+            "pvwap_bias": bias,
+            "pvwap_rationale": bias_data.get("rationale"),
+        }
+
+        if bias not in ("CE", "PE") or not pd.notna(prev_rsi):
+            return result
+
+        position_open = pvwap_signals.is_position_open(date_str)
+        entered = pvwap_signals.check_entry(
+            bias=bias,
+            live_ltp=float(live_quote["ltp"]),
+            live_vwap=vwap_val,
+            live_rsi=float(live_rsi),
+            prev_rsi=float(prev_rsi),
+            position_open=position_open,
+        )
+        direction = bias
+        result[direction.lower()]["signal"] = entered
+        if not entered:
+            return result
+
+        candle_ts = df.iloc[-2]["timestamp"]
+        candle_ts_str = candle_ts.isoformat() if hasattr(candle_ts, "isoformat") else str(candle_ts)
+        dedup_key = f"fired:{name}:{direction.lower()}:{candle_ts_str}"
+        if state.redis_exists(dedup_key):
+            print(f"[main] {name} PVWAP {direction} already fired this candle — dedup skip")
+            return result
+
+        cooldown_key = f"cooldown:{name}:{direction.lower()}"
+        last_fired = state.redis_get(cooldown_key)
+        if _within_cooldown(last_fired, candle_ts):
+            print(f"[main] {name} PVWAP {direction} in cooldown — skip")
+            return result
+
+        spot_ltp = kite_client.get_spot_ltp(name)
+        reference = spot_ltp if spot_ltp is not None else price
+        if spot_ltp is None:
+            print(f"[main] {name}: spot LTP unavailable, using futures close as fallback")
+
+        spot_sl = round(pvwap_signals.compute_sl(df, direction, config.PVWAP_SL_CANDLES), 2)
+        rr = config.TARGET_RR
+        if direction == "CE":
+            raw_risk = max(reference - spot_sl, inst["min_risk"])
+            spot_tgt = round(reference + rr * raw_risk, 1)
+        else:
+            raw_risk = max(spot_sl - reference, inst["min_risk"])
+            spot_tgt = round(reference - rr * raw_risk, 1)
+
+        atm_data = kite_client.get_atm_option(
+            instrument_name=name, spot_price=reference, direction=direction, step=strike_step,
+        )
+        atm_ltp = atm_data.get("ltp")
+        opt_sl = None
+        opt_target = None
+        delta = kite_client.estimate_atm_delta(
+            instrument_name=name,
+            atm_strike=atm_data.get("strike") or atm_strike,
+            direction=direction,
+            step=strike_step,
+        )
+        if atm_ltp is not None:
+            opt_sl = round(atm_ltp - raw_risk * delta, 2)
+            opt_target = round(atm_ltp + raw_risk * rr * delta, 2)
+
+        result["c1"] = result[direction.lower()]["c1"]
+        result["c2"] = result[direction.lower()]["c2"]
+        result["c3"] = result[direction.lower()]["c3"]
+        result["c4"] = result[direction.lower()]["c4"]
+        result["c5"] = result[direction.lower()]["c5"]
+        result.update({
+            "spot_ltp": spot_ltp,
+            "spot_sl": spot_sl,
+            "spot_tgt": spot_tgt,
+            "raw_risk": round(raw_risk, 1),
+            "atm_delta": delta,
+            "conviction": bias_data.get("rationale", "pvwap"),
+            "rr": rr,
+            "atm_data": atm_data,
+            "atm_ltp": atm_ltp,
+            "opt_sl": opt_sl,
+            "opt_target": opt_target,
+            "fut_spot_spread": round(price - reference, 1) if spot_ltp else None,
+        })
+
+        notifier.send_signal(name, direction, result)
+        try:
+            write_executor_intent(result, inst)
+        except Exception as e:
+            print(f"[main] executor_bridge error (non-fatal): {e}")
+        pvwap_tradingsymbol = result.get("atm_data", {}).get("tradingsymbol")
+        try:
+            tracker_ok = tracker_bridge.write_tracker_intent(
+                instrument=name,
+                asset_class="INDEX",
+                direction=direction,
+                tradingsymbol=pvwap_tradingsymbol,
+                spot_sl=result.get("spot_sl"),
+                target_pts=result["raw_risk"] * result["rr"],
+                spot_risk_pts=result.get("raw_risk"),
+                target_rr=result.get("rr"),
+                target_source="rr",
+                atm_strike=result.get("atm_strike"),
+            )
+            if tracker_ok and pvwap_tradingsymbol:
+                # Marks PVWAP's own open-position flag so is_position_open()
+                # gates the next check_entry call — independent of whether
+                # the generic C1-C4 path also has a NIFTY position open.
+                pvwap_signals.mark_open_position(date_str, pvwap_tradingsymbol, now_ist)
+        except Exception as e:
+            print(f"[main] tracker_bridge error (non-fatal): {e}")
+        dashboard_writer.update_active_signal(name, direction, result)
+        journal.log_signal(name, direction, result, strategy="PVWAP")
+        state.redis_set(dedup_key, "1", ex=86400)
+        state.redis_set(cooldown_key, candle_ts_str)
+
+        return result
+
+    except Exception as e:
+        print(f"[main] ERROR evaluating NIFTY (PVWAP): {e}")
+        return None
+
+
+def _fmt_candle_time_safe(ts) -> str | None:
+    try:
+        if hasattr(ts, "astimezone"):
+            return ts.astimezone(IST).strftime("%H:%M IST")
+        return str(ts)
+    except Exception:
+        return None
+
+
 def main() -> None:
     now_ist = datetime.now(IST)
     print(f"[main] Run at {now_ist.isoformat()}")
@@ -190,6 +386,9 @@ def main() -> None:
     pending = []
     for inst in config.INSTRUMENTS:
         name = inst["name"]
+        # NIFTY runs BOTH the generic C1-C4 evaluate() path (below) AND the
+        # PVWAP branch (after the firing loop) — the two are independent
+        # signal sources, not mutually exclusive.
         if not calendar_nse.in_eval_window_for(name):
             print(f"[main] {name}: outside eval window "
                   f"(expiry-day cutoff applies: {calendar_nse.is_expiry_day(name)})")
@@ -346,6 +545,21 @@ def main() -> None:
         except Exception as e:
             print(f"[main] ERROR firing signal for {name}: {e}")
             # Always continue to next instrument — never crash the loop
+
+    # 5.5. PVWAP branch — NIFTY. Runs IN ADDITION TO the generic C1-C4 path
+    # above (NIFTY is no longer excluded from it) as an independent signal
+    # source. Reuses the batch live-quote fetch, cooldown/dedup, entry-
+    # order/notifier/journal plumbing, and (via paper_engine, unmodified)
+    # squareoff + daily-loss-breaker gating from the generic path; only the
+    # signal-evaluation call swaps. Both paths write to the same
+    # Redis/tracker/executor keys for "NIFTY" — if both fire in the same
+    # run, whichever writes last wins that instrument's pending intent.
+    try:
+        pvwap_result = _evaluate_pvwap_nifty(instrument_tokens, live_quotes, today_open, now_ist)
+        if pvwap_result is not None:
+            results.append(pvwap_result)
+    except Exception as e:
+        print(f"[main] ERROR processing NIFTY (PVWAP): {e}")
 
     # 6. Update dashboard (every run, signal or not)
     if results:

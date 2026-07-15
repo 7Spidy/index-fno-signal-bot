@@ -228,6 +228,50 @@ def send_suppressed_signal(instrument: str, direction: str, result: dict) -> boo
         return False
 
 
+def send_pvwap_bias(date_str: str, bias_data: dict, fib_levels: dict) -> bool:
+    """Post the standalone daily PVWAP pre-market bias alert for NIFTY.
+    Separate message block — never merged into the per-candle signal embed."""
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook:
+        print("[notifier] DISCORD_WEBHOOK_URL not set")
+        return False
+
+    bias = bias_data.get("bias", "NEUTRAL")
+    color = {"CE": CE_COLOR, "PE": PE_COLOR}.get(bias, SUPPRESSED_COLOR)
+    support = bias_data.get("support")
+    resistance = bias_data.get("resistance")
+    fib_618 = fib_levels.get("0.618")
+
+    def fp(v):
+        return f"{v:,.1f}" if v is not None else "—"
+
+    embed = {
+        "title": "📊 PVWAP Pre-Market Bias — NIFTY",
+        "color": color,
+        "fields": [
+            {"name": "Date", "value": date_str, "inline": True},
+            {"name": "Bias", "value": bias, "inline": True},
+            {"name": "Key zones", "value": f"Support {fp(support)}, Resistance {fp(resistance)}", "inline": False},
+            {"name": "Fib 0.618", "value": fp(fib_618), "inline": True},
+            {"name": "Rationale", "value": bias_data.get("rationale", "—"), "inline": True},
+        ],
+        "footer": {"text": "Alert only · verify before trading"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        resp = requests.post(webhook, json={"embeds": [embed]}, timeout=10)
+        ok = resp.status_code in (200, 204)
+        if not ok:
+            print(f"[notifier] Discord returned {resp.status_code}: {resp.text[:200]}")
+        else:
+            print(f"[notifier] ✓ PVWAP bias alert sent: {bias}")
+        return ok
+    except Exception as e:
+        print(f"[notifier] PVWAP bias POST failed: {e}")
+        return False
+
+
 def send_warning(message: str) -> None:
     """Post a plain warning embed to Discord."""
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")

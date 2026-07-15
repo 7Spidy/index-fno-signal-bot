@@ -25,7 +25,7 @@ def _headers() -> dict:
     }
 
 
-def log_signal(instrument: str, direction: str, result: dict) -> bool:
+def log_signal(instrument: str, direction: str, result: dict, strategy: str = "C1-C4") -> bool:
     """Append a signal row to the Notion signals database. Returns True on success."""
     db_id = os.environ.get("NOTION_DB_ID")
     if not db_id:
@@ -55,6 +55,7 @@ def log_signal(instrument: str, direction: str, result: dict) -> bool:
         "VWAP Delta": {"number": vwap_delta},
         "Conditions": {"rich_text": [{"text": {"content": cond_text}}]},
         "Signal": {"checkbox": True},
+        "Strategy": {"rich_text": [{"text": {"content": strategy}}]},
     }
 
     try:

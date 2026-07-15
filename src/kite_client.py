@@ -411,6 +411,36 @@ def fetch_ohlcv(instrument_token: int, today_open: datetime) -> pd.DataFrame:
     return df
 
 
+def fetch_ohlcv_multi(instrument_token: int, interval: str, lookback_days: int) -> pd.DataFrame:
+    """Historical OHLCV fetch for an arbitrary Kite interval (e.g. "60minute",
+    "15minute") over `lookback_days` calendar days ending now. Shares the same
+    rate limiter as fetch_ohlcv(); used by pvwap_signals.py for multi-timeframe
+    swing/zone/Fibonacci analysis, which needs windows fetch_ohlcv() (fixed at
+    5minute/5-day) cannot provide."""
+    _throttle_historical_call()
+
+    kite = get_kite()
+    from_date = datetime.now(IST) - timedelta(days=lookback_days)
+
+    data = kite.historical_data(
+        instrument_token=instrument_token,
+        from_date=from_date,
+        to_date=datetime.now(IST),
+        interval=interval,
+        continuous=False,
+        oi=False,
+    )
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        raise RuntimeError(f"No {interval} data returned for token {instrument_token}")
+
+    df = df.rename(columns={"date": "timestamp"})
+    df = df[["timestamp", "open", "high", "low", "close", "volume"]]
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    return df
+
+
 def get_live_quotes_batch(keys: list[str]) -> dict[str, dict]:
     """
     Fetches live LTP and live session VWAP for MULTIPLE instruments in a
@@ -454,3 +484,6 @@ if __name__ == "__main__":
         resolve_futures_tokens()
     if "--cache-option-tokens" in sys.argv:
         cache_option_tokens()
+    if "--pvwap-premarket" in sys.argv:
+        from src import pvwap_signals
+        pvwap_signals.run_premarket()
