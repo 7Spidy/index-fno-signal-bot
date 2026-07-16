@@ -103,3 +103,36 @@ def test_c2_pe_fails_when_live_above_live_vwap():
     # live_ltp > live_vwap → PE side fails regardless of P0 high
     df = _make_df(close_val=23250.0, low_val=23240.0, high_val=23310.0)
     assert _eval(df, live_ltp=23310.0, live_vwap=23280.0)["pe"]["c2"] is False
+
+
+# ── C2 tolerance: near-miss touches within C2_VWAP_TOUCH_TOLERANCE_PCT ──────
+# v0=23300 → default 0.03% tolerance ≈ 6.99 points, so v0+tol ≈ 23306.99 (CE)
+# and v0-tol ≈ 23293.01 (PE).
+
+def test_c2_ce_passes_when_p0_low_misses_vwap_by_less_than_tolerance():
+    # P0 low=23305 > v0=23300 (a "clean breakout", no exact touch) but within
+    # the ~6.99pt tolerance band → still passes. Mirrors the real NIFTY
+    # 10:45 case (candle_low missed vwap by 0.6pts / ~0.0025%).
+    df = _make_df(close_val=23350.0, low_val=23305.0, high_val=23360.0)
+    assert _eval(df, live_ltp=23360.0, live_vwap=23320.0)["ce"]["c2"] is True
+
+
+def test_c2_ce_fails_when_p0_low_misses_vwap_by_more_than_tolerance():
+    # P0 low=23310 misses v0=23300 by 10pts — outside the ~6.99pt tolerance
+    # band → still correctly fails.
+    df = _make_df(close_val=23350.0, low_val=23310.0, high_val=23360.0)
+    assert _eval(df, live_ltp=23360.0, live_vwap=23320.0)["ce"]["c2"] is False
+
+
+def test_c2_pe_passes_when_p0_high_misses_vwap_by_less_than_tolerance():
+    # P0 high=23295 < v0=23300 (no exact touch) but within the ~6.99pt
+    # tolerance band → still passes.
+    df = _make_df(close_val=23250.0, low_val=23240.0, high_val=23295.0)
+    assert _eval(df, live_ltp=23240.0, live_vwap=23280.0)["pe"]["c2"] is True
+
+
+def test_c2_pe_fails_when_p0_high_misses_vwap_by_more_than_tolerance():
+    # P0 high=23290 misses v0=23300 by 10pts — outside the ~6.99pt tolerance
+    # band → still correctly fails.
+    df = _make_df(close_val=23250.0, low_val=23240.0, high_val=23290.0)
+    assert _eval(df, live_ltp=23240.0, live_vwap=23280.0)["pe"]["c2"] is False

@@ -51,12 +51,16 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
     ce_c1 = bool(live_ltp > p0["close"])
     pe_c1 = bool(live_ltp < p0["close"])
 
-    # C2 — VWAP position (live) + P0 dipped/spiked through VWAP at some point
+    # C2 — VWAP position (live) + P0 dipped/spiked through VWAP at some point.
+    # A small tolerance is allowed on the touch so a clean breakout candle
+    # that misses VWAP by a few points (rather than a real gap away from it)
+    # still counts — see C2_VWAP_TOUCH_TOLERANCE_PCT.
     ce_c2 = False
     pe_c2 = False
     if pd.notna(v0):
-        ce_c2 = bool(live_ltp > live_vwap and p0["low"]  <= v0)
-        pe_c2 = bool(live_ltp < live_vwap and p0["high"] >= v0)
+        tol = v0 * cfg.get("C2_VWAP_TOUCH_TOLERANCE_PCT", 0.03) / 100.0
+        ce_c2 = bool(live_ltp > live_vwap and p0["low"]  <= v0 + tol)
+        pe_c2 = bool(live_ltp < live_vwap and p0["high"] >= v0 - tol)
 
     # C3 — RSI direction: live > P0 > P1 (or reverse), no threshold
     ce_c3 = False

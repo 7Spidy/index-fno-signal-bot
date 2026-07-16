@@ -87,6 +87,11 @@ COOLDOWN_CANDLES = 3
 SUPERTREND_PERIOD     = 10
 SUPERTREND_MULTIPLIER = 5
 
+# C2 (VWAP touch) tolerance — a clean breakout candle whose low/high misses
+# an exact VWAP touch by a few points (noise, not a real gap away from VWAP)
+# still counts. Expressed as a percent of VWAP, e.g. 0.03 = 0.03%.
+C2_VWAP_TOUCH_TOLERANCE_PCT = 0.03
+
 # PVWAP strategy (NIFTY only — replaces C1-C4 for this instrument, see
 # src/pvwap_signals.py). BANKNIFTY/SENSEX/stocks are unaffected.
 PVWAP_LOOKBACK_DAYS      = 30
@@ -123,4 +128,5 @@ def as_dict() -> dict:
         "ATM_DELTA":                 ATM_DELTA,
         "SUPERTREND_PERIOD":         SUPERTREND_PERIOD,
         "SUPERTREND_MULTIPLIER":     SUPERTREND_MULTIPLIER,
+        "C2_VWAP_TOUCH_TOLERANCE_PCT": C2_VWAP_TOUCH_TOLERANCE_PCT,
     }
