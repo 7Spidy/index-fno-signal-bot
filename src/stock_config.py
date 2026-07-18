@@ -205,7 +205,7 @@ OPTION_CACHE_RANGE = {
 # Stocks move 2-5% daily — a flat 1.5x-risk target overstates what a 5-min
 # signal can realistically capture. Target is instead anchored to each
 # stock's own 14-day daily ATR, refreshed once per morning by morning-login.
-ATR_TARGET_K        = 0.40   # fraction of daily ATR used as intraday target
+ATR_TARGET_K        = 0.20   # was 0.40 — target halved per 2026-07-18 change
 ATR_PERIOD_DAYS      = 14
 MIN_RR               = 0.8   # below this, suppress signal (target/risk too thin)
 SLIPPAGE_PTS_EST     = 1.0   # conservative per-leg slippage estimate, in spot pts

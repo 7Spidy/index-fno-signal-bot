@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, indicators, notifier, sector_config, state, tracker_bridge
+from src import calendar_nse, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.executor_bridge import write_executor_intent
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
@@ -283,13 +283,15 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     ce_c4 = live_pdi > di_threshold and live_pdi > live_ndi and live_pdi > pdi0 > pdi1
     pe_c4 = live_ndi > di_threshold and live_ndi > live_pdi and live_ndi > ndi0 > ndi1
 
-    # C5 — Supertrend(10,5) direction: soft/informational only, never gates
-    # ce_signal/pe_signal (see the AND-chain immediately below).
+    # C5 — Supertrend(10,5) direction: HARD GATE as of 2026-07-18 (stocks only).
+    # Previously informational-only; the index path (src/signals.py) still treats
+    # its own C5 as informational and is NOT changed by this spec. Deliberate,
+    # confirmed exception to the "never touch this AND-chain" rule — stocks only.
     ce_c5 = bool(live_supertrend_dir is True)
     pe_c5 = bool(live_supertrend_dir is False)
 
-    ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
-    pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
+    ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4 and ce_c5
+    pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4 and pe_c5
 
     return {
         "name":             name,
@@ -485,18 +487,18 @@ def main() -> None:
             # newly added without a cache refresh yet).
             stock_atr = daily_atr_map.get(name)
             if stock_atr:
-                raw_target_pts = cfg.ATR_TARGET_K * stock_atr
-                floor_pts      = max(0.0015 * spot, 2 * cfg.SLIPPAGE_PTS_EST)
-                ceiling_pts    = 0.8 * cfg.OPTION_CACHE_RANGE[name]
+                raw_target_pts = cfg.ATR_TARGET_K * stock_atr   # ATR_TARGET_K already halved in config
+                floor_pts      = 0.5 * max(0.0015 * spot, 2 * cfg.SLIPPAGE_PTS_EST)   # floor halved
+                ceiling_pts    = 0.8 * cfg.OPTION_CACHE_RANGE[name]   # unchanged — see note below
                 target_pts     = max(floor_pts, min(raw_target_pts, ceiling_pts))
                 rr_effective   = round(target_pts / risk_pts, 2) if risk_pts else 0
                 target_source  = "atr"
             else:
-                target_pts    = risk_pts * 1.5
-                rr_effective  = 1.5
-                target_source = "fallback_1.5R"
+                target_pts    = risk_pts * 0.75   # fallback halved too, was 1.5R
+                rr_effective  = 0.75
+                target_source = "fallback_1.5R"   # string left as-is; it's a source tag, not a live value
 
-            rr_suppressed = stock_atr is not None and rr_effective < cfg.MIN_RR
+            rr_suppressed = False   # RR suppression removed entirely — never skip a trade for low R:R
 
             sector_key  = sector_config.STOCK_SECTOR.get(name)
             sector_data = sector_perf.get(sector_key) if sector_key else None
@@ -571,6 +573,13 @@ def main() -> None:
                 )
             except Exception as e:
                 print(f"[stock_main] tracker_bridge error (non-fatal): {e}")
+
+            # Trigger immediate paper-entry processing instead of waiting for the
+            # next externally-scheduled trade-tracker.yml run (was up to ~2 min lag).
+            try:
+                position_tracker.run_heartbeat()
+            except Exception as e:
+                print(f"[stock_main] immediate position_tracker.run_heartbeat() error (non-fatal): {e}")
 
             fired_signals.append({
                 "instrument":      name,
