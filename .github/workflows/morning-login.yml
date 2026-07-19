@@ -33,6 +33,14 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
+      - name: Backfill India VIX history (idempotent)
+        run: python -m src.condor_engine --backfill-vix-history
+        continue-on-error: true
+        env:
+          KITE_API_KEY:             ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
       - name: Cache instrument tokens
         run: python -m src.kite_client --cache-instruments
         env:
