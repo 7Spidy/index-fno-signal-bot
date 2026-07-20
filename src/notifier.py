@@ -140,8 +140,10 @@ def send_signal(instrument: str, direction: str, result: dict) -> bool:
 
     fields = _build_trade_fields(instrument, direction, result)
 
+    tag = "🔄 Dynamic Add · " if result.get("is_dynamic") else ""
+
     embed = {
-        "title":     f"{emoji} {direction.upper()} Signal — {instrument}",
+        "title":     f"{tag}{emoji} {direction.upper()} Signal — {instrument}",
         "color":     color,
         "fields":    fields,
         "footer":    {

@@ -91,15 +91,6 @@ jobs:
           UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
-      - name: Cache stock event exclusions
-        run: python -m src.stock_events --cache-event-exclusions
-        continue-on-error: true
-        env:
-          UPSTASH_REDIS_REST_URL:    ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN:  ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          MARKETAUX_API_TOKEN:       ${{ secrets.MARKETAUX_API_TOKEN }}
-          DISCORD_STOCK_WEBHOOK_URL: ${{ secrets.DISCORD_STOCK_WEBHOOK_URL }}
-
       - name: Cache sector performance
         run: python -m src.sector_performance --cache-sector-performance
         continue-on-error: true

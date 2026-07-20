@@ -221,10 +221,10 @@ DI_THRESHOLD = 24
 SUPERTREND_PERIOD     = 10
 SUPERTREND_MULTIPLIER = 5
 
-# Event exclusion — stocks with earnings/dividend/corp-action events in the
-# next N calendar days (inclusive of today) are skipped entirely by stock_main.
-EVENT_LOOKAHEAD_DAYS = 1
-REDIS_EVENT_EXCLUDED_PREFIX = "stock:event_excluded"   # + ":{YYYY-MM-DD}"
+# Dynamic gainer/loser universe (see src/dynamic_stock_universe.py)
+DYNAMIC_UNIVERSE_REDIS_KEY = "stock:dynamic_universe"
+DYNAMIC_UNIVERSE_MAX_CANDIDATE_TRIES = 5
+DYNAMIC_UNIVERSE_LOOKBACK_SESSIONS = 3
 
 # Sector-relative-strength conviction tagging (informational only — see
 # sector_performance.py and notifier.py). Static Redis key, written once

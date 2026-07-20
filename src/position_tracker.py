@@ -37,10 +37,22 @@ IST = ZoneInfo("Asia/Kolkata")
 # Legacy key — kept so existing tests against _position_key / _load_position pass
 INDEX_KEY = "position:index"
 
-# All 17 instruments: 3 indices + 14 stocks
-_INDEX_NAMES = [inst["name"] for inst in config.INSTRUMENTS]
-_STOCK_NAMES = list(stock_config.STOCK_BY_NAME.keys())
-_ALL_INSTRUMENTS = _INDEX_NAMES + _STOCK_NAMES
+# All instruments: 3 indices + 14 static stocks + today's dynamic picks (if any)
+def _index_names() -> list[str]:
+    return [inst["name"] for inst in config.INSTRUMENTS]
+
+
+def _dynamic_stock_names() -> list[str]:
+    from src import dynamic_stock_universe
+    return [p["name"] for p in dynamic_stock_universe.get_active_dynamic_stocks()]
+
+
+def _stock_names() -> list[str]:
+    return list(stock_config.STOCK_BY_NAME.keys()) + _dynamic_stock_names()
+
+
+def _all_instruments() -> list[str]:
+    return _index_names() + _stock_names()
 
 
 # ──────────────────────────────────────────────────────────────
@@ -240,28 +252,29 @@ def _delete_position(tradingsymbol: str) -> None:
 # Instrument / direction extraction from tradingsymbol
 # ──────────────────────────────────────────────────────────────
 
-_KNOWN_UNDERLYINGS = sorted(
-    set(_INDEX_NAMES) | set(_STOCK_NAMES), key=len, reverse=True
-)
-
-
 def _underlying_from_tradingsymbol(tradingsymbol: str) -> str | None:
     """Extract underlying name from a Kite tradingsymbol.
 
     Examples: NIFTY26JUN24600CE → NIFTY, MARUTI26JUL14300CE → MARUTI
     """
     sym = tradingsymbol.upper()
-    for name in _KNOWN_UNDERLYINGS:
+    known_underlyings = sorted(
+        set(_index_names()) | set(_stock_names()), key=len, reverse=True
+    )
+    for name in known_underlyings:
         if sym.startswith(name):
             return name
     return None
 
 
 def _asset_class_for(instrument: str) -> str:
-    """INDEX for config.INSTRUMENTS names, STOCK for stock_config.STOCKS names."""
-    if instrument in _INDEX_NAMES:
+    """INDEX for config.INSTRUMENTS names, STOCK for stock_config.STOCKS names
+    or today's dynamic picks."""
+    if instrument in _index_names():
         return "INDEX"
     if instrument in stock_config.STOCK_BY_NAME:
+        return "STOCK"
+    if instrument in _dynamic_stock_names():
         return "STOCK"
     return "UNKNOWN"
 
@@ -331,10 +344,14 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = 
 
         if asset_class == "STOCK":
             raw = st.redis_get(stock_config.REDIS_EQUITY_TOKENS_KEY)
-            if not raw:
-                return None
-            tokens   = json.loads(raw)
+            tokens   = json.loads(raw) if raw else {}
             token_id = tokens.get(instrument)
+            if not token_id:
+                from src import dynamic_stock_universe
+                for p in dynamic_stock_universe.get_active_dynamic_stocks():
+                    if p["name"] == instrument:
+                        token_id = p.get("equity_token")
+                        break
             if not token_id:
                 return None
         else:
@@ -386,7 +403,7 @@ def run_heartbeat() -> None:
     if kite is not None:
         # ── Step 1: process fresh intents for all 17 instruments ────────────
         if not paper_engine.entries_blocked(date_str):
-            for instrument in _ALL_INSTRUMENTS:
+            for instrument in _all_instruments():
                 intent = _load_tracker_intent(instrument)
                 if intent is None:
                     continue

@@ -1,7 +1,7 @@
 """Morning sector-relative-strength computation. Run once daily by
 morning-login.yml. Writes a static Redis snapshot for the day — never
 re-evaluated intraday. Failure is silent: missing key = no conviction tags
-fired that day (matches stock_events.py's fail-open pattern)."""
+fired that day (fails open)."""
 
 import json
 from datetime import date, timedelta

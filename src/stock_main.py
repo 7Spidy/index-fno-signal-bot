@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
+from src import calendar_nse, dynamic_stock_universe, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.executor_bridge import write_executor_intent
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
@@ -293,6 +293,12 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4 and ce_c5
     pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4 and pe_c5
 
+    direction_restriction = stock.get("direction_restriction")
+    if direction_restriction == "PE_ONLY":
+        ce_signal = False
+    elif direction_restriction == "CE_ONLY":
+        pe_signal = False
+
     return {
         "name":             name,
         "sector":           stock["sector"],
@@ -369,12 +375,11 @@ def main() -> None:
         return
     equity_tokens: dict[str, int] = json.loads(raw_equity)
 
-    # Event exclusion — skip stocks with an upcoming earnings/dividend/corp-action
-    # event. Written once daily by morning-login's stock_events.py step; a
-    # missing key just means "nothing excluded today."
-    excluded_key   = f"{cfg.REDIS_EVENT_EXCLUDED_PREFIX}:{date.today().isoformat()}"
-    raw_excluded   = state.redis_get(excluded_key)
-    event_excluded: set[str] = set(json.loads(raw_excluded)) if raw_excluded else set()
+    dynamic_stocks = dynamic_stock_universe.get_active_dynamic_stocks()
+    all_stocks = cfg.STOCKS + dynamic_stocks
+    equity_tokens = {**equity_tokens, **{p["name"]: p["equity_token"] for p in dynamic_stocks}}
+    option_cache_range_all = {**cfg.OPTION_CACHE_RANGE,
+                               **{p["name"]: p["option_cache_range"] for p in dynamic_stocks}}
 
     # Sector-relative-strength conviction tag — informational only. Missing key
     # (morning step failed, or sector unresolved) = no tag, never a blocker.
@@ -391,6 +396,7 @@ def main() -> None:
 
     raw_daily_atr = state.redis_get(cfg.REDIS_DAILY_ATR_KEY)
     daily_atr_map: dict[str, float] = json.loads(raw_daily_atr) if raw_daily_atr else {}
+    daily_atr_map = {**daily_atr_map, **{p["name"]: p["atr"] for p in dynamic_stocks if p.get("atr")}}
     if not daily_atr_map:
         print("[stock_main] WARNING — no cached daily ATR, falling back to "
               "flat 1.5R target for all stocks this run")
@@ -398,19 +404,15 @@ def main() -> None:
     # Batch-fetch live quotes for all 12 stocks in ONE Kite API call instead
     # of one call per stock — sidesteps the quote endpoint's 1 req/sec limit
     # entirely regardless of how many stocks are in cfg.STOCKS.
-    live_keys   = [f"{s['spot_exchange']}:{s['equity_symbol']}" for s in cfg.STOCKS]
+    live_keys   = [f"{s['spot_exchange']}:{s['equity_symbol']}" for s in all_stocks]
     live_quotes = get_live_quotes_batch(live_keys)
 
     # Per-stock fetch + evaluation runs concurrently (bounded by Kite's 3
     # req/sec limit inside fetch_ohlcv). History rows, dedup, and alert
     # firing below stay strictly sequential and in original stock order.
     pending = []
-    for stock in cfg.STOCKS:
+    for stock in all_stocks:
         name = stock["name"]
-        if name in event_excluded:
-            print(f"[stock_main] {name}: skipped — event within "
-                  f"{cfg.EVENT_LOOKAHEAD_DAYS}d (earnings/dividend/corp action)")
-            continue
         if not calendar_nse.in_eval_window_for(name):
             print(f"[stock_main] {name}: outside eval window "
                   f"(expiry-day cutoff applies: {calendar_nse.is_expiry_day(name)})")
@@ -489,7 +491,7 @@ def main() -> None:
             if stock_atr:
                 raw_target_pts = cfg.ATR_TARGET_K * stock_atr   # ATR_TARGET_K already halved in config
                 floor_pts      = 0.5 * max(0.0015 * spot, 2 * cfg.SLIPPAGE_PTS_EST)   # floor halved
-                ceiling_pts    = 0.8 * cfg.OPTION_CACHE_RANGE[name]   # unchanged — see note below
+                ceiling_pts    = 0.8 * option_cache_range_all.get(name, 0.05 * spot)   # unchanged — see note below
                 target_pts     = max(floor_pts, min(raw_target_pts, ceiling_pts))
                 rr_effective   = round(target_pts / risk_pts, 2) if risk_pts else 0
                 target_source  = "atr"
@@ -543,6 +545,7 @@ def main() -> None:
                 "c1": result[dkey]["c1"], "c2": result[dkey]["c2"],
                 "c3": result[dkey]["c3"], "c4": result[dkey]["c4"],
                 "c5": result[dkey]["c5"],
+                "is_dynamic": stock.get("is_dynamic", False),
             }
 
             if rr_suppressed:
@@ -554,10 +557,11 @@ def main() -> None:
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED "
                   f"(target={target_source}, RR={rr_effective})")
-            try:
-                write_executor_intent(signal_payload, stock)
-            except Exception as e:
-                print(f"[stock_main] executor_bridge error (non-fatal): {e}")
+            if not stock.get("is_dynamic"):
+                try:
+                    write_executor_intent(signal_payload, stock)
+                except Exception as e:
+                    print(f"[stock_main] executor_bridge error (non-fatal): {e}")
             try:
                 tracker_bridge.write_tracker_intent(
                     instrument=name,

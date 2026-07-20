@@ -141,6 +141,39 @@ def cache_stock_option_tokens() -> None:
     print(f"[stock_kite] Total cached: {len(result)} stock option tokens → {cfg.REDIS_OPTION_TOKENS_KEY}")
 
 
+def compute_daily_atr_for_token(kite, token: int, lookback_days: int = 30) -> float | None:
+    """Fetch `lookback_days` calendar days of daily candles for `token` and
+    return the simple-average ATR(cfg.ATR_PERIOD_DAYS), or None on any
+    failure / insufficient data. Extracted from cache_stock_daily_atr()'s
+    inner loop so dynamic_stock_universe.py can reuse the exact same math
+    without duplicating it."""
+    from datetime import date, datetime, timedelta
+    from src.kite_client import _throttle_historical_call
+
+    today = date.today()
+    from_date = datetime.combine(today - timedelta(days=lookback_days), datetime.min.time())
+    to_date = datetime.combine(today, datetime.min.time())
+
+    _throttle_historical_call()
+    try:
+        candles = kite.historical_data(
+            instrument_token=token, from_date=from_date, to_date=to_date,
+            interval="day", continuous=False, oi=False,
+        )
+    except Exception:
+        return None
+
+    if len(candles) < cfg.ATR_PERIOD_DAYS + 1:
+        return None
+
+    recent = candles[-(cfg.ATR_PERIOD_DAYS + 1):]
+    trs = []
+    for i in range(1, len(recent)):
+        high, low, prev_close = recent[i]["high"], recent[i]["low"], recent[i - 1]["close"]
+        trs.append(max(high - low, abs(high - prev_close), abs(low - prev_close)))
+    return round(sum(trs) / len(trs), 2) if trs else None
+
+
 def cache_stock_daily_atr() -> None:
     """
     Fetch ~30 calendar days of daily candles per stock from Kite historical
@@ -148,9 +181,6 @@ def cache_stock_daily_atr() -> None:
     morning-login.yml, read-only by stock_main.py thereafter (no per-signal
     re-fetch).
     """
-    import time
-    from datetime import datetime, timedelta
-    from src.kite_client import IST, _throttle_historical_call
     from src.state import redis_get
 
     kite = get_kite()
@@ -163,10 +193,6 @@ def cache_stock_daily_atr() -> None:
     equity_tokens: dict[str, int] = json.loads(raw_equity)
 
     result = {}
-    today     = date.today()
-    from_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
-    to_date   = datetime.combine(today, datetime.min.time())
-
     for stock in cfg.STOCKS:
         name  = stock["name"]
         token = equity_tokens.get(stock["equity_symbol"])
@@ -174,41 +200,12 @@ def cache_stock_daily_atr() -> None:
             print(f"[stock_kite] {name}: no equity token cached, skipping ATR")
             continue
 
-        _throttle_historical_call()
-        try:
-            candles = kite.historical_data(
-                instrument_token=token,
-                from_date=from_date,
-                to_date=to_date,
-                interval="day",
-                continuous=False,
-                oi=False,
-            )
-        except Exception as e:
-            print(f"[stock_kite] {name}: daily historical fetch failed: {e}")
+        atr = compute_daily_atr_for_token(kite, token)
+        if atr is None:
+            print(f"[stock_kite] {name}: daily ATR computation failed or insufficient data — skipping")
             continue
 
-        if len(candles) < cfg.ATR_PERIOD_DAYS + 1:
-            print(f"[stock_kite] {name}: only {len(candles)} daily candles, "
-                  f"need {cfg.ATR_PERIOD_DAYS + 1} for ATR — skipping")
-            continue
-
-        # True Range and average ATR(14), using the most recent N+1 candles
-        recent = candles[-(cfg.ATR_PERIOD_DAYS + 1):]
-        trs = []
-        for i in range(1, len(recent)):
-            high       = recent[i]["high"]
-            low        = recent[i]["low"]
-            prev_close = recent[i - 1]["close"]
-            tr = max(
-                high - low,
-                abs(high - prev_close),
-                abs(low  - prev_close),
-            )
-            trs.append(tr)
-
-        atr = sum(trs) / len(trs)
-        result[name] = round(atr, 2)
+        result[name] = atr
         print(f"[stock_kite] {name}: daily ATR({cfg.ATR_PERIOD_DAYS}) = {atr:.2f}")
 
     missing = set(cfg.STOCK_BY_NAME.keys()) - result.keys()

@@ -49,6 +49,10 @@ def _lot_size_for(instrument: str, asset_class: str) -> int | None:
     stock = stock_config.STOCK_BY_NAME.get(instrument.upper())
     if stock:
         return stock["lot_size"]
+    from src import dynamic_stock_universe
+    for p in dynamic_stock_universe.get_active_dynamic_stocks():
+        if p["name"].upper() == instrument.upper():
+            return p["lot_size"]
     return None
 
 
