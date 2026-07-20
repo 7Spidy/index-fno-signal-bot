@@ -235,6 +235,19 @@ def compute_and_cache_dynamic_universe() -> None:
 
 
 def _post_summary(gainer: dict | None, loser: dict | None) -> None:
+    """Posts the routine daily pick summary to #signals-stocks directly via
+    DISCORD_STOCK_WEBHOOK_URL — NOT via notifier.send_warning(), which reads
+    DISCORD_WEBHOOK_URL (the main channel) and would silently no-op here
+    since this job's env only sets the stock-specific webhook."""
+    import os
+    import requests
+    from datetime import datetime, timezone
+
+    webhook_url = os.environ.get("DISCORD_STOCK_WEBHOOK_URL")
+    if not webhook_url:
+        print("[dynamic_universe] DISCORD_STOCK_WEBHOOK_URL not set — skipping Discord post")
+        return
+
     lines = []
     if gainer:
         lines.append(f"📈 Top gainer (CE-only): **{gainer['name']}** "
@@ -249,7 +262,17 @@ def _post_summary(gainer: dict | None, loser: dict | None) -> None:
 
     title = "✅ Dynamic Stock Universe — computed" if (gainer or loser) \
         else "⚠️ Dynamic Stock Universe — no picks today"
-    notifier.send_warning(f"{title}\n" + "\n".join(lines))
+    embed = {
+        "title": title,
+        "description": "\n".join(lines),
+        "color": 0x00e5a0 if (gainer or loser) else 0xf59e0b,
+        "footer": {"text": "index-fno-signal-bot · dynamic_stock_universe"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
+    except Exception as e:
+        print(f"[dynamic_universe] Discord post failed: {e}")
 
 
 def get_active_dynamic_stocks() -> list[dict]:
