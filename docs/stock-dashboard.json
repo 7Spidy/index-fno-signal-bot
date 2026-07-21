@@ -1,34 +1,8 @@
 {
-  "date": "2026-07-20",
-  "last_run": "2026-07-20T15:25:40.020405+05:30",
+  "date": "2026-07-21",
+  "last_run": "2026-07-21T09:31:08.163000+05:30",
   "token_valid": true,
   "instruments": [],
   "active_signals": [],
-  "history": [
-    {
-      "time": "13:20",
-      "candle_time": "13:15 IST",
-      "instrument": "ICICIBANK",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 61.43924355390996,
-      "pdi": 26.39294163833387,
-      "ndi": 17.87024595059864,
-      "price": 1457.9
-    }
-  ]
+  "history": []
 }
