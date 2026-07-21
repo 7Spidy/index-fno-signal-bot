@@ -26,9 +26,10 @@ import json
 import sys
 from datetime import date, datetime, timedelta
 
-from src import notifier, state
+from src import calendar_nse, notifier, state
 from src import stock_config as cfg
-from src.kite_client import IST, _throttle_historical_call, get_kite
+from src.calendar_nse import IST
+from src.kite_client import _throttle_historical_call, get_kite
 from src.stock_kite_client import compute_daily_atr_for_token
 
 _INDEX_NAMES_EXCLUDE = {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50"}
@@ -38,7 +39,7 @@ def _fetch_universe_and_expiry_map(instruments: list[dict]) -> dict[str, list[da
     """name -> sorted list of distinct future monthly expiries, NFO options only,
     indices excluded. Built once from an already-fetched kite.instruments('NFO')
     dump -- no extra API call."""
-    today = date.today()
+    today = datetime.now(IST).date()
     universe: dict[str, set[date]] = {}
     for i in instruments:
         name = i.get("name")
@@ -95,7 +96,7 @@ def _resolve_strike_step_and_lot_size(
 def _compute_3session_change(kite, token: int) -> tuple[float, float] | None:
     """Returns (pct_change_3session, latest_close) or None on failure /
     insufficient data. Needs >= 4 daily closes (today's + 3 sessions back)."""
-    today = date.today()
+    today = datetime.now(IST).date()
     from_date = datetime.combine(today - timedelta(days=10), datetime.min.time())
     to_date = datetime.combine(today, datetime.min.time())
     _throttle_historical_call()
@@ -163,6 +164,10 @@ def _pick_candidate(
 
 
 def compute_and_cache_dynamic_universe() -> None:
+    if not calendar_nse.is_trading_day():
+        print("[dynamic_universe] Not a trading day — exiting")
+        return
+
     kite = get_kite()
 
     try:
@@ -224,7 +229,7 @@ def compute_and_cache_dynamic_universe() -> None:
         picks.append(loser)
 
     payload = {
-        "date": date.today().isoformat(),
+        "date": calendar_nse.next_trading_day().isoformat(),
         "picks": picks,
         "gainer_found": gainer is not None,
         "loser_found": loser is not None,
@@ -287,7 +292,7 @@ def get_active_dynamic_stocks() -> list[dict]:
         payload = json.loads(raw)
     except Exception:
         return []
-    if payload.get("date") != date.today().isoformat():
+    if payload.get("date") != datetime.now(IST).date().isoformat():
         return []
     return payload.get("picks", [])
 

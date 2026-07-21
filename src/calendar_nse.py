@@ -1,6 +1,6 @@
 """NSE trading calendar — holiday check and eval window gate."""
 import json
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -33,6 +33,20 @@ def is_trading_day(d: date | None = None) -> bool:
     if d.weekday() >= 5:  # Saturday=5, Sunday=6
         return False
     return d not in _load_holidays()
+
+
+def next_trading_day(d: date | None = None) -> date:
+    """First trading day strictly after `d` (default: today, IST). Walks
+    forward day by day, skipping weekends and NSE holidays via
+    is_trading_day(). Used by dynamic_stock_universe.py's EOD job to tag
+    cached picks with the trading day they're valid FOR, not the day the
+    job happened to run on."""
+    if d is None:
+        d = datetime.now(IST).date()
+    candidate = d + timedelta(days=1)
+    while not is_trading_day(candidate):
+        candidate += timedelta(days=1)
+    return candidate
 
 
 def in_eval_window(now: datetime | None = None) -> bool:
