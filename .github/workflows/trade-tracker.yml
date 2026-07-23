@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      - name: Record job start
+        run: echo "TRACKER_JOB_START_EPOCH=$(date +%s)" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
@@ -34,3 +37,6 @@ jobs:
           UPSTASH_REDIS_REST_URL:              ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN:            ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           DISCORD_TRADE_TRACKER_WEBHOOK_URL:   ${{ secrets.DISCORD_TRADE_TRACKER_WEBHOOK_URL }}
+          TRACKER_SUBLOOPS:                    ${{ vars.TRACKER_SUBLOOPS || '4' }}
+          TRACKER_SUBLOOP_SECS:                ${{ vars.TRACKER_SUBLOOP_SECS || '15' }}
+          TRACKER_LOOP_BUDGET_SECS:            ${{ vars.TRACKER_LOOP_BUDGET_SECS || '55' }}

@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -33,6 +35,48 @@ from src import stock_config
 from src import trade_notifier
 
 IST = ZoneInfo("Asia/Kolkata")
+
+# ──────────────────────────────────────────────────────────────
+# Sub-minute loop configuration
+# ──────────────────────────────────────────────────────────────
+# The workflow is dispatched once per minute. Within a single process we run
+# up to TRACKER_SUBLOOPS heartbeat passes spaced TRACKER_SUBLOOP_SECS apart,
+# but only while at least one paper position is open. Read from env at call
+# time (not import time) so tests can monkeypatch without module reload.
+
+_DEFAULT_SUBLOOPS      = 4
+_DEFAULT_SUBLOOP_SECS  = 15.0
+_DEFAULT_BUDGET_SECS   = 55.0
+
+
+def _loop_config() -> tuple[int, float, float]:
+    """Returns (subloops, interval_secs, budget_secs). Set TRACKER_SUBLOOPS=1
+    to fully revert to single-pass behaviour with no code change."""
+    def _num(name, default, cast):
+        try:
+            return cast(os.environ.get(name, "").strip() or default)
+        except (TypeError, ValueError):
+            return default
+
+    subloops = max(1, _num("TRACKER_SUBLOOPS", _DEFAULT_SUBLOOPS, int))
+    interval = max(1.0, _num("TRACKER_SUBLOOP_SECS", _DEFAULT_SUBLOOP_SECS, float))
+    budget   = max(1.0, _num("TRACKER_LOOP_BUDGET_SECS", _DEFAULT_BUDGET_SECS, float))
+    return subloops, interval, budget
+
+
+def _elapsed_since_job_start() -> float:
+    """Seconds consumed before this Python process started (Actions checkout +
+    pip install). The workflow exports TRACKER_JOB_START_EPOCH as its first
+    step. Returns 0.0 when absent (local runs), which makes the budget behave
+    as if measured from process start."""
+    raw = os.environ.get("TRACKER_JOB_START_EPOCH", "").strip()
+    if not raw:
+        return 0.0
+    try:
+        return max(0.0, time.time() - float(raw))
+    except (TypeError, ValueError):
+        return 0.0
+
 
 # Legacy key — kept so existing tests against _position_key / _load_position pass
 INDEX_KEY = "position:index"
@@ -332,13 +376,39 @@ def _load_intent(instrument: str) -> dict | None:
 # RSI snapshot for AI-adjusted SL
 # ──────────────────────────────────────────────────────────────
 
-def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = "INDEX") -> list[float] | None:
+# RSI cache: fetch_ohlcv() pulls 5-minute candles, which cannot change more
+# than once per 5 minutes — refetching them on every 15s sub-minute pass is
+# pure waste against the Kite historical-data quota. The cache is injected
+# per-call (see `cache` param) rather than held as module state: a single
+# dict is created once in main() and threaded through every pass of one
+# process's loop, keyed on the 5-minute bucket so it self-invalidates at
+# each candle boundary. When cache is None (e.g. direct/legacy calls),
+# caching is skipped entirely and every call fetches fresh.
+
+
+def _bucket_5m(now: datetime) -> str:
+    return now.replace(minute=(now.minute // 5) * 5,
+                       second=0, microsecond=0).isoformat()
+
+
+def _get_rsi_snapshot(
+    instrument: str,
+    today_open: datetime,
+    asset_class: str = "INDEX",
+    cache: dict[tuple[str, str], list[float]] | None = None,
+) -> list[float] | None:
     """Fetch last 3 RSI values for the instrument.
 
     INDEX: futures token from kite:instrument_tokens.
     STOCK: equity token from stock_config.REDIS_EQUITY_TOKENS_KEY.
     Returns [r_oldest, r_middle, r_newest] or None on failure.
     """
+    cache_key = (instrument, _bucket_5m(datetime.now(IST)))
+    if cache is not None:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
     try:
         from src import kite_client, indicators, state as st
 
@@ -369,7 +439,10 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = 
         last3      = rsi_series.dropna().iloc[-3:]
         if len(last3) < 3:
             return None
-        return list(last3)
+        result = list(last3)
+        if cache is not None:
+            cache[cache_key] = result
+        return result
     except Exception as e:
         print(f"[position_tracker] _get_rsi_snapshot({instrument}): {e}")
         return None
@@ -379,15 +452,25 @@ def _get_rsi_snapshot(instrument: str, today_open: datetime, asset_class: str = 
 # Heartbeat — paper-mode implementation
 # ──────────────────────────────────────────────────────────────
 
-def run_heartbeat() -> None:
+def run_heartbeat(rsi_cache: dict[tuple[str, str], list[float]] | None = None) -> dict:
     """Paper-trade cycle: process intents, trail SLs, check exits, EOD square-off.
 
     The consolidated Discord message is always sent/edited at the end of every
     cycle, even when the Kite client is unavailable (positions show stale LTP).
+
+    EOD square-off anchor is 15:10 IST, per paper_engine.is_eod().
+
+    rsi_cache: optional dict threaded through to _get_rsi_snapshot(). main()
+    creates one dict and passes the same object into every sub-minute pass so
+    RSI lookups are cached across a process's passes without module state.
+
+    Returns a status dict {"open_count": int, "is_eod": bool} so main() can
+    drive the sub-minute loop. Existing callers ignore the return value.
     """
     now        = datetime.now(IST)
     date_str   = now.strftime("%Y-%m-%d")
     today_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
+    live_ltps: dict[str, float] = {}
 
     paper_engine.get_or_init_daily_capital(date_str)
 
@@ -446,6 +529,7 @@ def run_heartbeat() -> None:
                 continue
 
             pos["current_ltp"] = ltp
+            live_ltps[tradingsymbol] = ltp
 
             if T and T > 0:
                 # In option-premium space, both CE and PE premiums RISE when the
@@ -454,7 +538,7 @@ def run_heartbeat() -> None:
                 # CE branch does exactly this, so pass direction="CE" here.
                 raw_progress = (ltp - entry) / T
 
-                rsi3 = _get_rsi_snapshot(instrument, today_open, asset_class=asset_class)
+                rsi3 = _get_rsi_snapshot(instrument, today_open, asset_class=asset_class, cache=rsi_cache)
                 market_snapshot = {
                     "rsi_last3":     rsi3,
                     "progress":      raw_progress,
@@ -470,8 +554,16 @@ def run_heartbeat() -> None:
             else:
                 final_sl = sl_stage
 
-            pos["sl_ladder_stage"] = round(final_sl, 2)
-            paper_engine.save_paper_position(tradingsymbol, pos)
+            new_stage = round(final_sl, 2)
+            prev_stage = pos.get("sl_ladder_stage")
+            pos["sl_ladder_stage"] = new_stage
+            # Persist only when the ladder actually advanced. current_ltp alone
+            # is not worth a write — the Discord embed gets it from live_ltps
+            # in Step 4 instead. save_paper_position() writes the position AND
+            # re-adds the index entry, so this halves Redis commands per pass
+            # on flat ticks.
+            if prev_stage is None or new_stage != prev_stage:
+                paper_engine.save_paper_position(tradingsymbol, pos)
 
             # SL hit: option premium dropped to or below the trailing floor
             if ltp <= final_sl:
@@ -516,19 +608,80 @@ def run_heartbeat() -> None:
     # ── Step 4: always post/edit consolidated Discord message ────────────────
     open_now   = paper_engine.get_open_positions()
     closed_now = paper_engine.get_closed_positions(date_str)
+    for p in open_now:
+        fresh = live_ltps.get(p.get("tradingsymbol"))
+        if fresh is not None:
+            p["current_ltp"] = fresh
     try:
         trade_notifier.send_paper_consolidated(open_now, closed_now, date_str)
     except Exception as e:
         print(f"[position_tracker] Discord update failed: {e}")
+
+    return {
+        "open_count": len(open_now),
+        "is_eod":     paper_engine.is_eod(now),
+    }
 
 
 # ──────────────────────────────────────────────────────────────
 # Main entrypoint
 # ──────────────────────────────────────────────────────────────
 
+def _safe_heartbeat(pass_no: int, rsi_cache: dict[tuple[str, str], list[float]] | None = None) -> dict:
+    """Run one heartbeat pass with full exception isolation. A failed pass
+    must never abort the remaining passes."""
+    try:
+        return run_heartbeat(rsi_cache=rsi_cache)
+    except Exception as e:
+        print(f"[position_tracker] pass {pass_no} FAILED (non-fatal): {e}")
+        return {"open_count": -1, "is_eod": False}
+
+
 def main() -> None:
-    print(f"[position_tracker] Run at {datetime.now(IST).isoformat()}")
-    run_heartbeat()
+    subloops, interval, budget = _loop_config()
+    started = datetime.now(IST)
+    print(f"[position_tracker] Run at {started.isoformat()} "
+          f"(subloops={subloops} interval={interval}s budget={budget}s)")
+
+    # One cache dict for the whole process, threaded into every pass so RSI
+    # lookups are cached across sub-minute passes without module state.
+    rsi_cache: dict[tuple[str, str], list[float]] = {}
+
+    status = _safe_heartbeat(1, rsi_cache)
+
+    if subloops <= 1:
+        return
+
+    # Slot schedule is anchored at pass-1 COMPLETION.
+    # Budget deadline is anchored at JOB start, so Actions cold start
+    # (checkout + pip install) is charged against the 60s cadence.
+    slot_base = time.monotonic()
+    remaining_budget = budget - _elapsed_since_job_start()
+    deadline = time.monotonic() + remaining_budget
+
+    for n in range(2, subloops + 1):
+        # open_count == -1 means the pass raised; keep looping, the next pass
+        # may recover. Only a confirmed-flat book or EOD stops the loop.
+        if status.get("is_eod"):
+            print(f"[position_tracker] loop: EOD reached — stopping before pass {n}")
+            break
+        if status.get("open_count") == 0:
+            print(f"[position_tracker] loop: no open positions — stopping before pass {n}")
+            break
+
+        next_at = slot_base + (n - 1) * interval
+        if next_at > deadline:
+            print(f"[position_tracker] loop: budget exhausted "
+                  f"({remaining_budget:.1f}s) — skipping passes {n}..{subloops}")
+            break
+
+        sleep_for = next_at - time.monotonic()
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+
+        status = _safe_heartbeat(n, rsi_cache)
+
+    # No trailing sleep after the final pass — the process exits immediately.
 
 
 if __name__ == "__main__":
