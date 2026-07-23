@@ -149,7 +149,37 @@
       "pvwap_rationale": "neutral"
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "PE",
+      "candle_time": "12:20 IST",
+      "futures_price": 76592.75,
+      "spot_ltp": 76525.89,
+      "fut_spot_spread": 66.9,
+      "tradingsymbol": "SENSEX26JUL76500PE",
+      "strike": 76500,
+      "expiry": "2026-07-30",
+      "fetch_time": "12:25:40 IST",
+      "atm_ltp": 513.55,
+      "opt_target": 578.78,
+      "opt_sl": 470.06,
+      "spot_tgt": 76392.2,
+      "spot_sl": 76615.0,
+      "raw_risk": 89.1,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 39.57798970807743,
+      "pdi": 19.157302171915504,
+      "ndi": 30.90567182067365,
+      "vwap": 76622.17014115093,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "11:31",
