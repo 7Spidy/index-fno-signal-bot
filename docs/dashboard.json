@@ -149,7 +149,37 @@
       "pvwap_rationale": "neutral"
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "PE",
+      "candle_time": "11:25 IST",
+      "futures_price": 23940.0,
+      "spot_ltp": 23944.5,
+      "fut_spot_spread": -4.5,
+      "tradingsymbol": "NIFTY26JUL23950PE",
+      "strike": 23950,
+      "expiry": "2026-07-28",
+      "fetch_time": "11:31:07 IST",
+      "atm_ltp": 133.55,
+      "opt_target": 149.14,
+      "opt_sl": 123.16,
+      "spot_tgt": 23913.8,
+      "spot_sl": 23965.0,
+      "raw_risk": 20.5,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 40.493507029340485,
+      "pdi": 14.62068821589659,
+      "ndi": 25.41187707926734,
+      "vwap": 23953.038895040787,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "11:20",
