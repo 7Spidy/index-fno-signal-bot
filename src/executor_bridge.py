@@ -122,6 +122,23 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         },
     }
 
+    is_dynamic = instrument_cfg.get("is_dynamic", False)
+    intent["is_dynamic"] = is_dynamic
+    if is_dynamic:
+        lot_size              = instrument_cfg.get("lot_size")
+        equity_token           = instrument_cfg.get("equity_token")
+        direction_restriction = instrument_cfg.get("direction_restriction")
+        if lot_size is None or equity_token is None or direction_restriction is None:
+            print(f"[executor_bridge] {instrument} is_dynamic but missing required "
+                  f"metadata (lot_size={lot_size}, equity_token={equity_token}, "
+                  f"direction_restriction={direction_restriction}) — skipping intent write")
+            return False
+        intent["lot_size"]              = lot_size
+        intent["equity_token"]          = equity_token
+        intent["fno_exchange"]          = instrument_cfg.get("fno_exchange", "NFO")
+        intent["strike_step"]           = instrument_cfg.get("strike_step")
+        intent["direction_restriction"] = direction_restriction
+
     success = _redis_setex(_intent_key(instrument), INTENT_TTL_SECONDS, json.dumps(intent))
     if success:
         print(f"[executor_bridge] Intent written to Redis: {direction} {instrument} {atm_strike}")

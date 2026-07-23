@@ -557,11 +557,10 @@ def main() -> None:
             notifier.send_signal(name, direction, signal_payload)
             print(f"[stock_main] {name}: {direction} SIGNAL FIRED "
                   f"(target={target_source}, RR={rr_effective})")
-            if not stock.get("is_dynamic"):
-                try:
-                    write_executor_intent(signal_payload, stock)
-                except Exception as e:
-                    print(f"[stock_main] executor_bridge error (non-fatal): {e}")
+            try:
+                write_executor_intent(signal_payload, stock)
+            except Exception as e:
+                print(f"[stock_main] executor_bridge error (non-fatal): {e}")
             try:
                 tracker_bridge.write_tracker_intent(
                     instrument=name,
