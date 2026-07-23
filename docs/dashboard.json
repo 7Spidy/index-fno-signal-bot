@@ -149,7 +149,37 @@
       "pvwap_rationale": "neutral"
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "PE",
+      "candle_time": "11:10 IST",
+      "futures_price": 56895.0,
+      "spot_ltp": 56793.9,
+      "fut_spot_spread": 101.1,
+      "tradingsymbol": "BANKNIFTY26JUL56800PE",
+      "strike": 56800,
+      "expiry": "2026-07-28",
+      "fetch_time": "11:15:40 IST",
+      "atm_ltp": 346.45,
+      "opt_target": 469.51,
+      "opt_sl": 264.41,
+      "spot_tgt": 56522.2,
+      "spot_sl": 56975.0,
+      "raw_risk": 181.1,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 41.489568821089804,
+      "pdi": 14.007638142933203,
+      "ndi": 23.73008918182754,
+      "vwap": 56913.4127306704,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
