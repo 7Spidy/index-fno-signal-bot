@@ -28,3 +28,11 @@ jobs:
           UPSTASH_REDIS_REST_URL:    ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN:  ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           DISCORD_STOCK_WEBHOOK_URL: ${{ secrets.DISCORD_STOCK_WEBHOOK_URL }}
+
+      - name: Worst-faller 15:15 PE entry
+        run: python -m src.worst_faller_entry --compute-and-alert
+        env:
+          KITE_API_KEY:              ${{ secrets.KITE_API_KEY }}
+          UPSTASH_REDIS_REST_URL:    ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN:  ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          DISCORD_STOCK_WEBHOOK_URL: ${{ secrets.DISCORD_STOCK_WEBHOOK_URL }}
