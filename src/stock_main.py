@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, dynamic_stock_universe, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
+from src import calendar_nse, config, dynamic_stock_universe, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.executor_bridge import write_executor_intent
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
@@ -500,6 +500,13 @@ def main() -> None:
                 rr_effective  = 0.75
                 target_source = "fallback_1.5R"   # string left as-is; it's a source tag, not a live value
 
+            # SL-basis risk for downstream paper/executor SL calcs. target_pts is
+            # ATR-anchored and decoupled from risk_pts (structural prior-candle
+            # distance) here, so unlike the index paths this is NOT equal to
+            # raw_risk — it's derived from target_pts the same way paper_engine's
+            # SL sizing does, so both consumers land on the same stop.
+            spot_risk_pts = round(target_pts / config.TARGET_RR, 2) if config.TARGET_RR > 0 else round(target_pts, 2)
+
             rr_suppressed = False   # RR suppression removed entirely — never skip a trade for low R:R
 
             sector_key  = sector_config.STOCK_SECTOR.get(name)
@@ -537,6 +544,7 @@ def main() -> None:
                 "spot_tgt":      round(spot + target_pts, 2) if direction == "CE"
                                  else round(spot - target_pts, 2),
                 "raw_risk":      round(risk_pts, 1),
+                "spot_risk_pts": spot_risk_pts,
                 "target_pts":    round(target_pts, 1),
                 "target_source": target_source,
                 "daily_atr":     stock_atr,
@@ -569,7 +577,7 @@ def main() -> None:
                     tradingsymbol=signal_payload["atm_data"].get("tradingsymbol"),
                     spot_sl=signal_payload["spot_sl"],
                     target_pts=signal_payload["target_pts"],
-                    spot_risk_pts=signal_payload["raw_risk"],
+                    spot_risk_pts=signal_payload["spot_risk_pts"],
                     target_rr=None,
                     target_source=signal_payload["target_source"],
                     atm_strike=signal_payload["atm_data"].get("strike"),

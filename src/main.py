@@ -280,6 +280,10 @@ def _evaluate_pvwap_nifty(instrument_tokens, live_quotes, today_open, now_ist):
             "spot_sl": spot_sl,
             "spot_tgt": spot_tgt,
             "raw_risk": round(raw_risk, 1),
+            # SL-basis risk for downstream paper/executor SL calcs. Equal to
+            # raw_risk here since spot_tgt = reference + rr*raw_risk, i.e.
+            # target_pts/TARGET_RR == raw_risk for this RR-based path.
+            "spot_risk_pts": round(raw_risk, 1),
             "atm_delta": delta,
             "conviction": bias_data.get("rationale", "pvwap"),
             "rr": rr,
@@ -304,7 +308,7 @@ def _evaluate_pvwap_nifty(instrument_tokens, live_quotes, today_open, now_ist):
                 tradingsymbol=pvwap_tradingsymbol,
                 spot_sl=result.get("spot_sl"),
                 target_pts=result["raw_risk"] * result["rr"],
-                spot_risk_pts=result.get("raw_risk"),
+                spot_risk_pts=result.get("spot_risk_pts"),
                 target_rr=result.get("rr"),
                 target_source="rr",
                 atm_strike=result.get("atm_strike"),
@@ -506,6 +510,9 @@ def main() -> None:
                         "spot_sl":         spot_sl,
                         "spot_tgt":        spot_tgt,
                         "raw_risk":        round(raw_risk, 1),
+                        # SL-basis risk for downstream paper/executor SL calcs — see
+                        # PVWAP-path comment above for why this equals raw_risk here.
+                        "spot_risk_pts":   round(raw_risk, 1),
                         "atm_delta":       delta,
                         "conviction":      conv,
                         "rr":              rr,
@@ -530,7 +537,7 @@ def main() -> None:
                             tradingsymbol=result.get("atm_data", {}).get("tradingsymbol"),
                             spot_sl=result.get("spot_sl"),
                             target_pts=result["raw_risk"] * result["rr"],
-                            spot_risk_pts=result.get("raw_risk"),
+                            spot_risk_pts=result.get("spot_risk_pts"),
                             target_rr=result.get("rr"),
                             target_source="rr",
                             atm_strike=result.get("atm_strike"),
