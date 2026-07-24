@@ -82,20 +82,26 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         print("[executor_bridge] tradingsymbol missing from atm_data — skipping intent write")
         return False
 
-    # SL = previous candle structural extreme.
-    # Risk = distance from spot (or futures fallback) to that structural level.
     atm_delta  = signal_result.get("atm_delta") \
                  or float(os.environ.get("ATM_DELTA", str(config.ATM_DELTA)))
     target_rr  = config.TARGET_RR
 
     reference = spot_ltp_val if spot_ltp_val is not None else futures_price
 
-    if direction == "CE":
-        spot_sl       = round(prev_candle_low,  2)
-        spot_risk_pts = max(reference - spot_sl, 0.5)
-    else:
-        spot_sl       = round(prev_candle_high, 2)
-        spot_risk_pts = max(spot_sl - reference, 0.5)
+    # Use the spot_sl/spot_risk_pts already computed by the caller (main.py /
+    # stock_main.py) instead of recomputing — the caller's spot_sl may come
+    # from a path-specific rule (e.g. pvwap_signals.compute_sl for the PVWAP
+    # path) that a generic prev-candle recompute here would get wrong.
+    spot_sl       = signal_result.get("spot_sl")
+    spot_risk_pts = signal_result.get("spot_risk_pts")
+    if spot_sl is None or spot_risk_pts is None:
+        # Defensive fallback: previous candle structural extreme.
+        if direction == "CE":
+            spot_sl       = round(prev_candle_low,  2)
+            spot_risk_pts = max(reference - spot_sl, 0.5)
+        else:
+            spot_sl       = round(prev_candle_high, 2)
+            spot_risk_pts = max(spot_sl - reference, 0.5)
 
     intent = {
         "ts":            datetime.now(timezone.utc).isoformat(),
