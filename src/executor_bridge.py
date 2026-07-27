@@ -112,6 +112,7 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
         "spot_close":    round(reference, 2),
         "spot_sl":       round(spot_sl, 2),
         "spot_risk_pts": round(spot_risk_pts, 2),
+        "opt_sl":        signal_result.get("opt_sl"),
         "target_rr":     target_rr,
         "atm_delta":     atm_delta,
         "conviction":    "label_only",

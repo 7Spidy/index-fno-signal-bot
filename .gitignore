@@ -11,3 +11,4 @@ venv/
 
 # Backtest output
 pnl_out/
+local_backtest/

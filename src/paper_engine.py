@@ -247,9 +247,7 @@ def simulate_entry(intent: dict, kite) -> None:
     direction  = intent.get("direction", "").upper()
     tradingsymbol = intent.get("tradingsymbol")
     asset_class   = intent.get("asset_class", "INDEX")
-    spot_sl       = intent.get("spot_sl")         # absolute spot price
     target_pts    = intent.get("target_pts")       # spot points
-    spot_risk_pts = intent.get("spot_risk_pts")     # canonical risk, from main.py/stock_main.py
 
     if not tradingsymbol:
         print(f"[paper_engine] {instrument}: no tradingsymbol in intent — skip entry")
@@ -300,26 +298,18 @@ def simulate_entry(intent: dict, kite) -> None:
         trade_notifier.send_trade_skipped(instrument, tradingsymbol, direction, reason)
         return
 
-    # Derive initial option SL from spot_risk_pts via delta approximation.
-    # Prefer the canonical spot_risk_pts computed upstream (main.py/stock_main.py)
-    # over back-deriving it — target_pts/TARGET_RR only equals the true risk for
-    # RR-based index targets, not ATR-based stock targets.
+    # Anchor initial option SL to the alert-time opt_sl (computed upstream in
+    # main.py/stock_main.py from atm_ltp - raw_risk*delta) rather than
+    # re-deriving it from the actual fill price — the fill can slip from the
+    # alert-time price, which previously let the SL drift on every entry.
     delta = config.ATM_DELTA
-    if spot_risk_pts and spot_risk_pts > 0:
-        option_risk_pts = spot_risk_pts * delta
-    elif spot_sl is not None and spot_sl > 0 and target_pts and target_pts > 0:
-        # Legacy fallback for intents written before spot_risk_pts existed
-        spot_risk_pts = target_pts / config.TARGET_RR if config.TARGET_RR > 0 else target_pts
-        option_risk_pts = spot_risk_pts * delta
-    else:
-        option_risk_pts = None
-
-    if option_risk_pts is not None:
-        initial_sl_option = max(entry_price - option_risk_pts, 0.05)
+    opt_sl = intent.get("opt_sl")
+    if opt_sl and opt_sl > 0:
+        initial_sl_option = max(opt_sl, 0.05)
     else:
         # Fallback: 30% of entry premium as initial SL buffer
         initial_sl_option = entry_price * 0.70
-        print(f"[paper_engine] {tradingsymbol}: spot_risk_pts missing — using 70% of entry as SL floor")
+        print(f"[paper_engine] {tradingsymbol}: opt_sl missing — using 70% of entry as SL floor")
 
     # Convert target_pts (spot points) to option premium target
     option_target_pts = (target_pts * delta) if target_pts else None
@@ -378,6 +368,8 @@ def simulate_exit(tradingsymbol: str, exit_price: float, reason: str) -> None:
         "reason":        reason,
         "entered_at":    pos.get("entered_at"),
         "exited_at":     datetime.now(IST).isoformat(),
+        "initial_sl":    pos.get("initial_sl"),
+        "exit_sl_stage": pos.get("sl_ladder_stage", pos.get("initial_sl")),
     }
     _append_closed_position(date_str, record)
 

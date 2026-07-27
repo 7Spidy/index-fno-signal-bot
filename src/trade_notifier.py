@@ -1,6 +1,7 @@
 """Discord message builders for paper-trade position tracking."""
 from __future__ import annotations
 
+import math
 import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -75,6 +76,46 @@ def _msg_id_key(date_str: str) -> str:
     return f"paper:discord_msg_id:{date_str}"
 
 
+def _ladder_progress_stages(entry, T, ltp) -> tuple[float | None, float] | None:
+    """Current (last-crossed) and next progress-ladder thresholds, as T-fractions.
+
+    Progress is always (ltp - entry) / T regardless of CE/PE -- option
+    premiums rise for both when a trade is winning (see the PE
+    sign-inversion note in _build_consolidated_embed), and this must mirror
+    position_tracker.compute_ladder_sl, which always uses its "CE" branch
+    for both directions. If that ladder ever changes, update this too.
+    """
+    if not T or T <= 0:
+        return None
+    progress = (ltp - entry) / T
+    thresholds = [0.5, 0.9, 1.0]
+    if progress > 1.0:
+        n = math.floor(round((progress - 1.0) / 0.1, 9)) + 2
+        thresholds = thresholds + [1.0 + 0.1 * i for i in range(1, n)]
+
+    crossed = [t for t in thresholds if progress >= t]
+    current_stage = crossed[-1] if crossed else None
+    remaining = [t for t in thresholds if t not in crossed]
+    next_stage = remaining[0] if remaining else thresholds[-1] + 0.1
+    return current_stage, next_stage
+
+
+def _result_and_trail_label(rec) -> str:
+    """PROFIT/LOSS (by net P&L) plus whether the trailing SL ever advanced
+    past its initial value before this exit."""
+    pnl = rec.get("pnl_net", 0)
+    result_label = "PROFIT" if pnl >= 0 else "LOSS"
+    initial_sl = rec.get("initial_sl")
+    trailed = initial_sl is not None and rec.get("exit_sl_stage") != initial_sl
+    if trailed:
+        trail_note = "SL trailed"
+    elif initial_sl is not None:
+        trail_note = "exited at initial SL"
+    else:
+        trail_note = ""
+    return f"{result_label} · {trail_note}" if trail_note else result_label
+
+
 def _build_consolidated_embed(
     open_positions: list[dict],
     closed_positions: list[dict],
@@ -90,6 +131,7 @@ def _build_consolidated_embed(
             sl    = pos.get("sl_ladder_stage", 0)
             ls    = pos.get("lot_size", 1)
             direction = pos.get("direction", "?")
+            T     = pos.get("target_t")
 
             # Unrealized gross P&L (before charges — shown as estimate)
             # Options are always bought long (CE or PE) — premium rising is
@@ -98,12 +140,20 @@ def _build_consolidated_embed(
             unreal = (ltp - entry) * ls
             sign = "+" if unreal >= 0 else ""
 
+            stages = _ladder_progress_stages(entry, T, ltp)
+            value_lines = [f"Entry ₹{entry:.2f} · LTP ₹{ltp:.2f} · SL ₹{sl:.2f}"]
+            if stages:
+                current_stage, next_stage = stages
+                parts = []
+                if current_stage is not None:
+                    parts.append(f"{current_stage:.1f}T = ₹{entry + current_stage * T:.2f} (current)")
+                parts.append(f"{next_stage:.1f}T = ₹{entry + next_stage * T:.2f} (next)")
+                value_lines.append(" · ".join(parts))
+            value_lines.append(f"Unrealized ≈ {sign}₹{unreal:.0f} (gross, est.)")
+
             fields.append({
                 "name": f"{pos.get('tradingsymbol', pos['instrument'])} {direction} {arrow} [OPEN]",
-                "value": (
-                    f"Entry ₹{entry:.2f} · LTP ₹{ltp:.2f} · SL ₹{sl:.2f}\n"
-                    f"Unrealized ≈ {sign}₹{unreal:.0f} (gross, est.)"
-                ),
+                "value": "\n".join(value_lines),
                 "inline": False,
             })
 
@@ -112,11 +162,13 @@ def _build_consolidated_embed(
             arrow = "↑" if rec.get("direction") == "CE" else "↓"
             pnl   = rec.get("pnl_net", 0)
             sign  = "+" if pnl >= 0 else ""
+            result_label = _result_and_trail_label(rec)
             fields.append({
                 "name": f"{rec.get('tradingsymbol', rec['instrument'])} {rec['direction']} {arrow} [CLOSED]",
                 "value": (
                     f"Entry ₹{rec['entry_price']:.2f} · Exit ₹{rec['exit_price']:.2f} · "
-                    f"Net {sign}₹{pnl:.2f} · {rec.get('reason', '')}"
+                    f"Net {sign}₹{pnl:.2f}\n"
+                    f"{result_label}"
                 ),
                 "inline": False,
             })
