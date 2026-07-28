@@ -26,7 +26,7 @@ import json
 import sys
 from datetime import date, datetime, timedelta
 
-from src import calendar_nse, notifier, state
+from src import calendar_nse, manual_exclusions, notifier, state
 from src import stock_config as cfg
 from src.calendar_nse import IST
 from src.kite_client import _throttle_historical_call, get_kite
@@ -197,6 +197,10 @@ def compute_and_cache_dynamic_universe() -> None:
         return
 
     static_names = set(cfg.STOCK_BY_NAME.keys())
+    excluded_for_target_date = manual_exclusions.get_excluded_symbols_for_date(
+        calendar_nse.next_trading_day()
+    )
+    static_names = static_names | excluded_for_target_date
     ranked_gainers = sorted(ranked, key=lambda r: r[1], reverse=True)
     ranked_losers = sorted(ranked, key=lambda r: r[1])
 

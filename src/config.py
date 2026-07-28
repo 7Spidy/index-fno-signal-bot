@@ -92,15 +92,6 @@ SUPERTREND_MULTIPLIER = 5
 # still counts. Expressed as a percent of VWAP, e.g. 0.03 = 0.03%.
 C2_VWAP_TOUCH_TOLERANCE_PCT = 0.03
 
-# PVWAP strategy (NIFTY only — replaces C1-C4 for this instrument, see
-# src/pvwap_signals.py). BANKNIFTY/SENSEX/stocks are unaffected.
-PVWAP_LOOKBACK_DAYS      = 30
-PVWAP_TOUCH_TOLERANCE_PCT = 0.15
-PVWAP_MIN_TOUCHES        = 2
-PVWAP_FRACTAL_WINDOW     = 5
-PVWAP_SL_CANDLES         = 5
-PVWAP_RSI_PERIOD         = 14
-
 
 def fno_exchange_for(name: str) -> str:
     """Returns the F&O exchange segment for an underlying (NFO or BFO)."""

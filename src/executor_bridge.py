@@ -90,8 +90,8 @@ def write_executor_intent(signal_result: dict, instrument_cfg: dict) -> bool:
 
     # Use the spot_sl/spot_risk_pts already computed by the caller (main.py /
     # stock_main.py) instead of recomputing — the caller's spot_sl may come
-    # from a path-specific rule (e.g. pvwap_signals.compute_sl for the PVWAP
-    # path) that a generic prev-candle recompute here would get wrong.
+    # from a path-specific rule that a generic prev-candle recompute here
+    # would get wrong.
     spot_sl       = signal_result.get("spot_sl")
     spot_risk_pts = signal_result.get("spot_risk_pts")
     if spot_sl is None or spot_risk_pts is None:

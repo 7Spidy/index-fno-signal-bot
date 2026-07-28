@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from src import calendar_nse, config, dynamic_stock_universe, indicators, notifier, position_tracker, sector_config, state, tracker_bridge
+from src import calendar_nse, config, dynamic_stock_universe, indicators, manual_exclusions, notifier, position_tracker, sector_config, state, tracker_bridge
 from src import stock_config as cfg
 from src.executor_bridge import write_executor_intent
 from src.kite_client import fetch_ohlcv, get_kite, get_live_quotes_batch
@@ -377,6 +377,10 @@ def main() -> None:
 
     dynamic_stocks = dynamic_stock_universe.get_active_dynamic_stocks()
     all_stocks = cfg.STOCKS + dynamic_stocks
+    excluded_today = manual_exclusions.get_excluded_symbols_for_date()
+    if excluded_today:
+        print(f"[stock_main] manual exclusions today: {sorted(excluded_today)}")
+    all_stocks = [s for s in all_stocks if s["name"] not in excluded_today]
     equity_tokens = {**equity_tokens, **{p["name"]: p["equity_token"] for p in dynamic_stocks}}
     option_cache_range_all = {**cfg.OPTION_CACHE_RANGE,
                                **{p["name"]: p["option_cache_range"] for p in dynamic_stocks}}

@@ -24,6 +24,7 @@ try:
 except ImportError:
     pass
 
+from src import manual_exclusions
 from src.dynamic_stock_universe import (
     _fetch_equity_tokens,
     _fetch_universe_and_expiry_map,
@@ -157,6 +158,11 @@ def pick_worst_faller(kite=None) -> dict | None:
     if not equity_tokens:
         print("[worst_faller_universe] no resolvable equity tokens")
         return None
+
+    excluded_today = manual_exclusions.get_excluded_symbols_for_date()
+    if excluded_today:
+        equity_tokens = {k: v for k, v in equity_tokens.items() if k not in excluded_today}
+        print(f"[worst_faller_universe] manual exclusions today: {sorted(excluded_today)}")
 
     w1_falls: list[tuple[str, float]] = []
     w2_falls: list[tuple[str, float]] = []

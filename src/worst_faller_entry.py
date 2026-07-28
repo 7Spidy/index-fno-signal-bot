@@ -64,12 +64,47 @@ def _resolve_pe_tradingsymbol(name: str, expiry, strike: float, instruments_nfo:
     return None, None
 
 
-def compute_and_alert(kite=None) -> None:
-    if state.redis_exists(REDIS_POSITION_KEY):
-        print("[worst_faller_entry] position already open, skipping new entry")
+def _force_close_stale_position(kite) -> None:
+    """Defensive close for a worst-faller position still open at 15:15 —
+    the primary EOD square-off (worst_faller_tracker.py, 15:10) should
+    always have cleared this already. Mirrors that tracker's close logic
+    verbatim so today's fresh entry is never blocked by a stale position."""
+    raw = state.redis_get(REDIS_POSITION_KEY)
+    if not raw:
+        return
+    try:
+        position = json.loads(raw)
+    except Exception as e:
+        print(f"[worst_faller_entry] stale position payload unreadable, clearing: {e}")
+        state.redis_delete(REDIS_POSITION_KEY)
         return
 
+    try:
+        spot_key = f"NSE:{position['equity_token']}"
+        opt_key = f"NFO:{position['pe_token']}"
+        quotes = kite.quote([spot_key, opt_key])
+        current_spot = float(quotes[spot_key]["last_price"])
+        current_opt_ltp = float(quotes[opt_key]["last_price"])
+    except Exception as e:
+        print(f"[worst_faller_entry] quote fetch failed during forced close: {e}")
+        current_spot = position.get("entry_spot")
+        current_opt_ltp = position.get("entry_opt_price")
+
+    pnl_rs = (current_opt_ltp - position["entry_opt_price"]) * position["lot_size"]
+    prior_sl = position.get("current_sl_spot", position["initial_sl_spot"])
+    worst_faller_notifier.send_close(
+        position, current_spot, prior_sl, current_opt_ltp, pnl_rs, "forced_close_stale_position"
+    )
+    state.redis_delete(REDIS_POSITION_KEY)
+
+
+def compute_and_alert(kite=None) -> None:
     kite = kite or get_kite()
+
+    if state.redis_exists(REDIS_POSITION_KEY):
+        print("[worst_faller_entry] stale position found at 15:15 — forcing close "
+              "before today's entry (primary 15:10 square-off did not run)")
+        _force_close_stale_position(kite)
 
     pick = worst_faller_universe.pick_worst_faller(kite)
     if pick is None:

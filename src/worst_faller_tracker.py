@@ -31,7 +31,7 @@ try:
 except ImportError:
     pass
 
-from src import state, worst_faller_notifier
+from src import paper_engine, state, worst_faller_notifier
 from src.indicators import rsi_wilder
 from src.kite_client import fetch_ohlcv, get_kite
 from src.position_tracker import compute_ai_adjusted_sl, compute_final_sl, compute_ladder_sl
@@ -89,6 +89,17 @@ def tracker_tick(kite=None) -> None:
     spot_high = float(ohlc.get("high") or current_spot)
     spot_low = float(ohlc.get("low") or current_spot)
     current_opt_ltp = float(opt_q["last_price"])
+    pnl_rs = (current_opt_ltp - position["entry_opt_price"]) * position["lot_size"]
+
+    now_ist = datetime.now(IST)
+    if paper_engine.is_eod(now_ist):
+        prior_sl = position.get("current_sl_spot", position["initial_sl_spot"])
+        print(f"[worst_faller_tracker] EOD SQUARE-OFF: {position['name']} pnl_rs={pnl_rs:.2f}")
+        worst_faller_notifier.send_close(
+            position, current_spot, prior_sl, current_opt_ltp, pnl_rs, "eod_squareoff"
+        )
+        state.redis_delete(REDIS_POSITION_KEY)
+        return
 
     entry_spot = position["entry_spot"]
     target_pts = position["target_pts"]
@@ -114,8 +125,6 @@ def tracker_tick(kite=None) -> None:
         exit_reason = "SL_HIT"
     elif spot_low <= entry_spot - target_pts:
         exit_reason = "TARGET_HIT"
-
-    pnl_rs = (current_opt_ltp - position["entry_opt_price"]) * position["lot_size"]
 
     if exit_reason:
         print(f"[worst_faller_tracker] EXIT ({exit_reason}): {position['name']} pnl_rs={pnl_rs:.2f}")
