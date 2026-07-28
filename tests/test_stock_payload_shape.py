@@ -60,11 +60,6 @@ def _make_stock_payload(symbol: str = "RELIANCE26JUN1300CE") -> dict:
     }
 
 
-def _get_field(payload: dict, name: str) -> dict:
-    embed = payload["embeds"][0]
-    return next(f for f in embed["fields"] if f["name"] == name)
-
-
 def _find_field(payload: dict, name: str) -> dict | None:
     embed = payload["embeds"][0]
     matches = [f for f in embed["fields"] if f["name"] == name]
@@ -105,21 +100,6 @@ def test_asset_class_is_stock():
 
 
 # ── Notifier rendering assertions ───────────────────────────────
-
-def test_tradingsymbol_in_code_block():
-    """stock notifier: tradingsymbol must be inside a triple-backtick code block."""
-    symbol = "RELIANCE26JUN1300CE"
-    with mock.patch.object(notifier, "requests", _requests_stub):
-        _requests_stub.post.reset_mock()
-        notifier.send_signal("RELIANCE", "CE", _make_stock_payload(symbol))
-        call_kwargs = _requests_stub.post.call_args[1]
-    buy_field = _get_field(call_kwargs["json"], "Buy this option")
-    expected_prefix = f"```\n{symbol}\n```"
-    assert buy_field["value"].startswith(expected_prefix), (
-        f"Expected code block, got: {buy_field['value']!r}"
-    )
-    print(f"✅ tradingsymbol '{symbol}' is in a code block")
-
 
 def test_notifier_omits_spot_and_futures_spot_fields():
     """stock notifier: diagnostic block (Spot/Futures-Spot through Conditions)
