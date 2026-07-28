@@ -149,7 +149,37 @@
       "pvwap_rationale": "neutral"
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "CE",
+      "candle_time": "09:35 IST",
+      "futures_price": 24021.2,
+      "spot_ltp": 24021.4,
+      "fut_spot_spread": -0.2,
+      "tradingsymbol": "NIFTY2680424000CE",
+      "strike": 24000,
+      "expiry": "2026-08-04",
+      "fetch_time": "09:40:52 IST",
+      "atm_ltp": 177.2,
+      "opt_target": 203.96,
+      "opt_sl": 159.36,
+      "spot_tgt": 24068.4,
+      "spot_sl": 23990.1,
+      "raw_risk": 31.3,
+      "conviction": "trap",
+      "rr": 1.5,
+      "rsi": 55.4132207333434,
+      "pdi": null,
+      "ndi": null,
+      "vwap": 24018.16,
+      "c1": false,
+      "c2": false,
+      "c3": false,
+      "c4": false,
+      "c5": null
+    }
+  ],
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
