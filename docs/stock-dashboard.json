@@ -1,59 +1,8 @@
 {
-  "date": "2026-07-28",
-  "last_run": "2026-07-28T15:25:43.610388+05:30",
+  "date": "2026-07-29",
+  "last_run": "2026-07-29T09:31:03.067962+05:30",
   "token_valid": true,
   "instruments": [],
   "active_signals": [],
-  "history": [
-    {
-      "time": "13:55",
-      "candle_time": "13:50 IST",
-      "instrument": "CIPLA",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 62.17200700174966,
-      "pdi": 28.703539424471973,
-      "ndi": 14.909406600244699,
-      "price": 1439.5
-    },
-    {
-      "time": "11:25",
-      "candle_time": "11:20 IST",
-      "instrument": "LT",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 47.9418646757271,
-      "pdi": 23.94573940721008,
-      "ndi": 25.073043466671884,
-      "price": 3807.7
-    }
-  ]
+  "history": []
 }
