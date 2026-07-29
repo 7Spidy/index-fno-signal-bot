@@ -85,13 +85,15 @@ def evaluate(df: pd.DataFrame, vwap: pd.Series, rsi: pd.Series,
             ce_c4 = ce_c4 and pdi_rising
             pe_c4 = pe_c4 and ndi_rising
 
-    # C5 — Supertrend(10,5) direction: soft/informational only, never gates
-    # ce_signal/pe_signal (see the AND-chain immediately below).
+    # C5 — Supertrend(10,5) direction: HARD GATE as of 2026-07-29 (indices).
+    # Mirrors src/stock_main.py._evaluate, which made this same change for
+    # stocks on 2026-07-18. No longer informational-only — see
+    # claude_change_spec.md (2026-07-29) for the full rationale.
     ce_c5 = bool(live_supertrend_dir is True)
     pe_c5 = bool(live_supertrend_dir is False)
 
-    ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4
-    pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4
+    ce_signal = ce_c1 and ce_c2 and ce_c3 and ce_c4 and ce_c5
+    pe_signal = pe_c1 and pe_c2 and pe_c3 and pe_c4 and pe_c5
 
     # Guard — both firing simultaneously is theoretically impossible
     if ce_signal and pe_signal:

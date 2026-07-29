@@ -82,8 +82,9 @@ RSI_SLOPE_CANDLES = 3
 # Cooldown: minimum candles between same-direction signals
 COOLDOWN_CANDLES = 3
 
-# Supertrend params for C5 — soft/informational condition only, does not
-# participate in the ce_signal/pe_signal gating chain (see signals.evaluate).
+# Supertrend params for C5 — hard gate as of 2026-07-29 (indices) / 2026-07-18
+# (stocks). Participates in the ce_signal/pe_signal AND-chain in both
+# src/signals.py and src/stock_main.py.
 SUPERTREND_PERIOD     = 10
 SUPERTREND_MULTIPLIER = 5
 

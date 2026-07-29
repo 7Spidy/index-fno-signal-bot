@@ -343,6 +343,7 @@ def main() -> None:
                             direction=dir_up,
                             tradingsymbol=result.get("atm_data", {}).get("tradingsymbol"),
                             spot_sl=result.get("spot_sl"),
+                            opt_sl=result.get("opt_sl"),
                             target_pts=result["raw_risk"] * result["rr"],
                             spot_risk_pts=result.get("spot_risk_pts"),
                             target_rr=result.get("rr"),

@@ -189,11 +189,6 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 }
 .sig-cond-pass { color: var(--green); }
 .sig-cond-fail { color: #f8717160; }
-.sig-cond-soft { color: var(--amber); opacity: .85; }
-.sig-cond-soft-badge {
-  font-size: 8px; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--text-muted); margin-left: 4px; opacity: .8;
-}
 
 /* INSTRUMENT CARDS */
 .instrument-card {
@@ -217,12 +212,6 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .cond-row { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-dim); padding: 2px 0; }
 .check-pass { color: var(--green); }
 .check-fail { color: #f8717160; }
-.check-soft { color: var(--amber); }
-.cond-row-soft { opacity: .85; }
-.soft-badge {
-  font-size: 8px; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--text-muted); margin-left: 4px; opacity: .8;
-}
 .cond-status { font-size: 10px; margin-top: 7px; font-weight: 600; letter-spacing: .05em; }
 .status-signal-ce { color: var(--green); }
 .status-signal-pe { color: var(--red); }
@@ -394,14 +383,18 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
     <div class="empty-state">Loading instruments…</div>
   </div>
 
-  <!-- STOCK CARDS -->
-  <div class="section-title" style="padding: 16px 16px 6px; margin-top: 8px;">
-    NSE Stocks <span style="font-size:9px;color:var(--text-muted);font-weight:400;margin-left:6px;">ALERT ONLY · MONTHLY EXPIRY</span>
+  <!-- MANUAL EXCLUSION LINK — own row, normal flow, no float/overlap -->
+  <div style="display:flex; justify-content:flex-end; padding: 8px 16px 0;">
     <a href="https://github.com/7Spidy/index-fno-signal-bot/edit/main/config/manual_exclusions.json"
        target="_blank"
-       style="float:right;font-size:9px;color:var(--amber);text-decoration:none;border:1px solid var(--amber);padding:2px 8px;border-radius:3px;">
+       style="font-size:9px;color:var(--amber);text-decoration:none;border:1px solid var(--amber);padding:2px 8px;border-radius:3px;">
       Set tomorrow's exclusions
     </a>
+  </div>
+
+  <!-- STOCK CARDS -->
+  <div class="section-title" style="padding: 10px 16px 6px;">
+    NSE Stocks <span style="font-size:9px;color:var(--text-muted);font-weight:400;margin-left:6px;">ALERT ONLY · MONTHLY EXPIRY</span>
   </div>
   <div id="stock-area">
     <div class="empty-state">Loading stocks…</div>
@@ -534,10 +527,6 @@ function fmtExpiry(isoDate) {
 
 function condItem(pass, label) {
   return `<span class="${pass ? 'sig-cond-pass' : 'sig-cond-fail'}">${pass ? '✅' : '❌'} ${escHtml(label)}</span>`;
-}
-
-function condItemSoft(pass, label) {
-  return `<span class="sig-cond-soft">${pass ? '✅' : '➖'} ${escHtml(label)}<span class="sig-cond-soft-badge">soft</span></span>`;
 }
 
 function copyTs(text, btn) {
@@ -675,7 +664,7 @@ function buildSignalBanner(s) {
       ${condItem(s.c2, c2lbl)}
       ${condItem(s.c3, c3lbl)}
       ${condItem(s.c4, c4lbl)}
-      ${condItemSoft(s.c5, c5lbl)}
+      ${condItem(s.c5, c5lbl)}
     </div>`;
 
   return `<div class="signal-banner ${cls}">${header}${optBox}${prices}${meta}${conds}</div>`;
@@ -737,15 +726,14 @@ function buildInstrumentCard(inst) {
 function buildCondRows(side, labels) {
   if (!side) return labels.map(l => condRow(false, l)).join('');
   const keys = ['c1', 'c2', 'c3', 'c4', 'c5'];
-  return keys.map((k, i) => condRow(!!side[k], labels[i], k === 'c5')).join('');
+  return keys.map((k, i) => condRow(!!side[k], labels[i])).join('');
 }
 
-function condRow(pass, label, soft) {
+function condRow(pass, label) {
   const icon = pass
-    ? `<span class="${soft ? 'check-soft' : 'check-pass'}">${soft ? '●' : '✓'}</span>`
+    ? '<span class="check-pass">✓</span>'
     : '<span class="check-fail">✗</span>';
-  const badge = soft ? '<span class="soft-badge">soft</span>' : '';
-  return `<div class="cond-row${soft ? ' cond-row-soft' : ''}">${icon}<span>${escHtml(label)}</span>${badge}</div>`;
+  return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
 }
 
 /* ── Stock rows (compact) ───────────────────────────────────── */

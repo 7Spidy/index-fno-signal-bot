@@ -1,7 +1,10 @@
 """Writes a per-instrument trade intent to Redis for position_tracker.py to
 consume — decoupled from executor_bridge.py (that channel is a safety
 boundary for a separate, external, real-money auto-executor and must not be
-touched or reused here)."""
+touched or reused here).
+
+The payload carries both `opt_sl` (option-premium SL, matching the Discord
+alert) and `spot_sl` (index-point SL, informational only downstream)."""
 import json
 from datetime import datetime, timezone
 
@@ -26,6 +29,7 @@ def write_tracker_intent(
     direction: str,         # "CE" | "PE"
     tradingsymbol: str | None,
     spot_sl: float | None,
+    opt_sl: float | None = None,
     target_pts: float | None,   # unified T — already correct for both RR-based (index) and ATR-based (stock) targets
     spot_risk_pts: float | None = None,   # optional, debugging/logging only
     target_rr: float | None = None,       # optional, INDEX only, debugging/logging only
@@ -48,6 +52,7 @@ def write_tracker_intent(
         "direction":     direction.upper(),
         "tradingsymbol": tradingsymbol,
         "spot_sl":       round(spot_sl, 2) if spot_sl is not None else None,
+        "opt_sl":        round(opt_sl, 2) if opt_sl is not None else None,
         "target_pts":    round(target_pts, 2),
         "spot_risk_pts": round(spot_risk_pts, 2) if spot_risk_pts is not None else None,
         "target_rr":     target_rr,

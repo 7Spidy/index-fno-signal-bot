@@ -1,4 +1,5 @@
-"""Tests for C5: Supertrend(10,5) live direction — soft/informational only."""
+"""Tests for C5: Supertrend(10,5) live direction — hard gate as of 2026-07-29
+(mirrors src/stock_main.py since 2026-07-18)."""
 import numpy as np
 import pandas as pd
 
@@ -76,10 +77,10 @@ def test_c5_defaults_to_none_when_not_passed():
 
 # ── Critical regression guard ────────────────────────────────────────────────
 
-def test_c5_false_never_suppresses_a_real_ce_signal():
-    # Same fixture as test_c4_ce_passes_index_threshold_25 (all of C1-C4 pass),
-    # but with a downtrend Supertrend (C5 == False for CE). ce_signal must
-    # still fire — C5 is soft and must never enter the gating AND-chain.
+def test_c5_false_now_suppresses_a_real_ce_signal():
+    # Same fixture as before (all of C1-C4 pass), but with a downtrend
+    # Supertrend (C5 == False for CE). As of 2026-07-29, C5 is a hard gate —
+    # ce_signal must NOT fire.
     df   = _make_df()
     vwap = _warmup(N, 22990.0, 22990.0, 22990.0)
     rsi  = _warmup(N, 50.0, 55.0, 58.0)
@@ -96,4 +97,4 @@ def test_c5_false_never_suppresses_a_real_ce_signal():
     assert result["ce"]["c3"] is True
     assert result["ce"]["c4"] is True
     assert result["ce"]["c5"] is False
-    assert result["ce"]["signal"] is True
+    assert result["ce"]["signal"] is False

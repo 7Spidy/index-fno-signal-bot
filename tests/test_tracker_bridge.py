@@ -72,3 +72,24 @@ class TestWriteTrackerIntent:
                 tradingsymbol="MARUTI26JUL14300CE", spot_sl=14150.0, target_pts=42.5,
             )
         assert ok is False
+
+    def test_opt_sl_included_in_payload_when_provided(self):
+        with patch("src.tracker_bridge.state.redis_set", return_value=True) as mock_set:
+            tracker_bridge.write_tracker_intent(
+                instrument="MARUTI", asset_class="STOCK", direction="CE",
+                tradingsymbol="MARUTI26JUL14300CE", spot_sl=14150.0, opt_sl=123.45,
+                target_pts=42.5,
+            )
+        _, value = mock_set.call_args[0]
+        payload = json.loads(value)
+        assert payload["opt_sl"] == 123.45
+
+    def test_opt_sl_defaults_to_none_when_omitted(self):
+        with patch("src.tracker_bridge.state.redis_set", return_value=True) as mock_set:
+            tracker_bridge.write_tracker_intent(
+                instrument="MARUTI", asset_class="STOCK", direction="CE",
+                tradingsymbol="MARUTI26JUL14300CE", spot_sl=14150.0, target_pts=42.5,
+            )
+        _, value = mock_set.call_args[0]
+        payload = json.loads(value)
+        assert payload["opt_sl"] is None

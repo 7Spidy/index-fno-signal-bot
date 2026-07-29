@@ -283,10 +283,9 @@ def _evaluate(stock: dict, df, live_quotes: dict) -> dict:
     ce_c4 = live_pdi > di_threshold and live_pdi > live_ndi and live_pdi > pdi0 > pdi1
     pe_c4 = live_ndi > di_threshold and live_ndi > live_pdi and live_ndi > ndi0 > ndi1
 
-    # C5 — Supertrend(10,5) direction: HARD GATE as of 2026-07-18 (stocks only).
-    # Previously informational-only; the index path (src/signals.py) still treats
-    # its own C5 as informational and is NOT changed by this spec. Deliberate,
-    # confirmed exception to the "never touch this AND-chain" rule — stocks only.
+    # C5 — Supertrend(10,5) direction: HARD GATE since 2026-07-18 (stocks).
+    # The index path (src/signals.py) adopted the same hard gate on
+    # 2026-07-29 — both paths are now consistent.
     ce_c5 = bool(live_supertrend_dir is True)
     pe_c5 = bool(live_supertrend_dir is False)
 
@@ -580,6 +579,7 @@ def main() -> None:
                     direction=direction,
                     tradingsymbol=signal_payload["atm_data"].get("tradingsymbol"),
                     spot_sl=signal_payload["spot_sl"],
+                    opt_sl=signal_payload["opt_sl"],
                     target_pts=signal_payload["target_pts"],
                     spot_risk_pts=signal_payload["spot_risk_pts"],
                     target_rr=None,

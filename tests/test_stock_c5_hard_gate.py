@@ -2,7 +2,7 @@
 Unit tests: Supertrend (C5) is now a HARD GATE on ce_signal/pe_signal for
 stocks (src/stock_main.py._evaluate), as of the 2026-07-18 change spec.
 
-The index path (src/signals.py) is untouched and keeps C5 informational —
+The index path (src/signals.py) adopted the same hard gate on 2026-07-29 —
 covered separately by tests/test_signals_c5_live_supertrend.py.
 
 All indicator computation inside _evaluate is mocked so this test controls
