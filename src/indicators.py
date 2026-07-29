@@ -139,6 +139,37 @@ def _dx(pdi: float, ndi: float) -> float:
     return 100.0 * abs(pdi - ndi) / denom
 
 
+def atr_wilder(df: pd.DataFrame, period: int = 10) -> pd.Series:
+    """
+    Wilder-smoothed ATR, standalone (mirrors the internal ATR calc inside
+    supertrend_wilder — duplicated rather than refactored out of it, to
+    avoid touching supertrend_wilder's tested signature/behavior).
+    Returns a Series aligned to df.index; NaN until `period` bars in.
+    """
+    high = df["high"].values.astype(float)
+    low = df["low"].values.astype(float)
+    close = df["close"].values.astype(float)
+    n = len(close)
+
+    atr_arr = np.full(n, np.nan)
+    if n < period + 1:
+        return pd.Series(atr_arr, index=df.index, name="atr")
+
+    tr = np.zeros(n)
+    for i in range(1, n):
+        tr[i] = max(
+            high[i] - low[i],
+            abs(high[i] - close[i - 1]),
+            abs(low[i] - close[i - 1]),
+        )
+
+    atr_arr[period] = tr[1:period + 1].mean()
+    for i in range(period + 1, n):
+        atr_arr[i] = atr_arr[i - 1] - atr_arr[i - 1] / period + tr[i] / period
+
+    return pd.Series(atr_arr, index=df.index, name="atr")
+
+
 def supertrend_wilder(df: pd.DataFrame, period: int = 10,
                        multiplier: float = 5.0) -> tuple[pd.Series, pd.Series]:
     """

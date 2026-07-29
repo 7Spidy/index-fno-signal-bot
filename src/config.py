@@ -65,6 +65,14 @@ OPTION_CACHE_RANGE = {
 # Conviction label is still surfaced in the alert for context.
 TARGET_RR = 1.5
 
+# ATR multiplier for index target sizing (2026-07-29 change — caps SL/target
+# that were previously uncapped structural-candle-gap risk). PLACEHOLDER —
+# tune from backtest before treating as final; not yet validated.
+ATR_TARGET_K_INDEX = 3.0
+
+# No new ceiling constant needed — reuses existing OPTION_CACHE_RANGE
+# (see main.py step 4) with the same 0.8x multiplier stocks apply.
+
 # Delta used to convert spot risk → option premium SL / Target.
 # 0.50 is a reliable approximation for liquid ATM index options.
 ATM_DELTA = 0.50

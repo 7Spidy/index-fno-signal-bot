@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 from src import (
     calendar_nse,
     config,
@@ -118,6 +120,10 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
         _live_dir_val = live_st_dir_s.iloc[-1]
         live_supertrend_dir = bool(_live_dir_val) if _live_dir_val is not None else None
 
+        live_atr_s = indicators.atr_wilder(live_df, cfg["SUPERTREND_PERIOD"])
+        _live_atr_val = live_atr_s.iloc[-1]
+        live_atr = float(_live_atr_val) if pd.notna(_live_atr_val) else None
+
         inst_cfg = dict(cfg)
         inst_cfg["strike_step"] = inst["strike_step"]
         inst_cfg["instrument_name"] = name
@@ -134,6 +140,7 @@ def _evaluate_instrument(inst, token_info, live_quotes, today_open, now_ist, cfg
         result["name"] = name
         result["symbol"] = token_info["tradingsymbol"]
         result["strike_step"] = inst["strike_step"]
+        result["live_atr"] = live_atr
         return (result, df)
 
     except Exception as e:
@@ -277,14 +284,32 @@ def main() -> None:
                     else:              conv = "Building"
                     rr = config.TARGET_RR
 
-                    if dir_up == "CE":
-                        spot_sl  = round(result["prev_candle_low"],  1)
-                        raw_risk = max(reference - spot_sl, inst["min_risk"])
-                        spot_tgt = round(reference + rr * raw_risk,  1)
+                    # Structural candle-gap kept only as a floor input (min_risk
+                    # already serves this), never as the uncapped driver — see
+                    # claude_change_spec.md 2026-07-29.
+                    floor_pts = inst["min_risk"]
+                    ceiling_pts = 0.8 * config.OPTION_CACHE_RANGE[name]   # same formula stocks use
+
+                    live_atr = result.get("live_atr")
+                    if live_atr:
+                        raw_target_pts = config.ATR_TARGET_K_INDEX * live_atr
+                        target_pts     = max(floor_pts, min(raw_target_pts, ceiling_pts))
+                        target_source  = "atr"
                     else:
-                        spot_sl  = round(result["prev_candle_high"], 1)
-                        raw_risk = max(spot_sl - reference, inst["min_risk"])
-                        spot_tgt = round(reference - rr * raw_risk,  1)
+                        # Fallback if ATR unavailable this run — same shape as stocks' fallback.
+                        target_pts    = floor_pts * rr
+                        target_source = "fallback_floor_rr"
+
+                    spot_risk_pts = round(target_pts / rr, 2) if rr > 0 else round(target_pts, 2)
+
+                    if dir_up == "CE":
+                        spot_sl  = round(reference - spot_risk_pts, 1)
+                        spot_tgt = round(reference + target_pts,    1)
+                    else:
+                        spot_sl  = round(reference + spot_risk_pts, 1)
+                        spot_tgt = round(reference - target_pts,    1)
+
+                    raw_risk = spot_risk_pts  # keep downstream variable name/shape unchanged
 
                     atm_data = kite_client.get_atm_option(
                         instrument_name=name,
@@ -347,7 +372,7 @@ def main() -> None:
                             target_pts=result["raw_risk"] * result["rr"],
                             spot_risk_pts=result.get("spot_risk_pts"),
                             target_rr=result.get("rr"),
-                            target_source="rr",
+                            target_source=target_source,
                             atm_strike=result.get("atm_strike"),
                         )
                     except Exception as e:
