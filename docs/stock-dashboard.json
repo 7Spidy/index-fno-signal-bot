@@ -1,6 +1,6 @@
 {
   "date": "2026-07-30",
-  "last_run": "2026-07-30T14:35:39.633058+05:30",
+  "last_run": "2026-07-30T14:40:47.400576+05:30",
   "token_valid": true,
   "instruments": [
     {
@@ -10,7 +10,7 @@
       "ce": {
         "c1": true,
         "c2": false,
-        "c3": false,
+        "c3": true,
         "c4": false,
         "c5": true,
         "signal": false
@@ -23,21 +23,21 @@
         "c5": false,
         "signal": false
       },
-      "futures_price": 1737.7,
-      "candle_high": 1738.9,
-      "candle_low": 1737.0,
-      "prev_candle_high": 1739.7,
-      "prev_candle_low": 1733.3,
-      "candle_time": "14:30 IST",
-      "vwap": 1748.7345838758472,
-      "rsi": 35.40487556190024,
-      "pdi": 12.739364935549306,
-      "ndi": 29.298836902420977,
-      "live_price": 1738.2,
-      "live_vwap": 1749.07,
-      "live_rsi": 36.499832941778685,
-      "live_pdi": 12.636236186955403,
-      "live_ndi": 29.061654562462113,
+      "futures_price": 1738.7,
+      "candle_high": 1738.7,
+      "candle_low": 1735.6,
+      "prev_candle_high": 1738.9,
+      "prev_candle_low": 1737.0,
+      "candle_time": "14:35 IST",
+      "vwap": 1748.6757441726788,
+      "rsi": 37.55828765243919,
+      "pdi": 12.125795197780922,
+      "ndi": 30.062824859011496,
+      "live_price": 1739.1,
+      "live_vwap": 1748.99,
+      "live_rsi": 38.442292246679166,
+      "live_pdi": 12.709998001557627,
+      "live_ndi": 29.862962036791806,
       "atm_strike": 1740.0,
       "strike_step": 20.0
     }
