@@ -1,8 +1,47 @@
 {
   "date": "2026-07-30",
-  "last_run": "2026-07-30T13:45:48.356553+05:30",
+  "last_run": "2026-07-30T13:50:41.911754+05:30",
   "token_valid": true,
-  "instruments": [],
+  "instruments": [
+    {
+      "name": "COFORGE",
+      "sector": null,
+      "lot_size": 475,
+      "ce": {
+        "c1": false,
+        "c2": false,
+        "c3": false,
+        "c4": false,
+        "c5": true,
+        "signal": false
+      },
+      "pe": {
+        "c1": true,
+        "c2": false,
+        "c3": true,
+        "c4": false,
+        "c5": false,
+        "signal": false
+      },
+      "futures_price": 1737.3,
+      "candle_high": 1743.4,
+      "candle_low": 1736.3,
+      "prev_candle_high": 1747.9,
+      "prev_candle_low": 1742.2,
+      "candle_time": "13:45 IST",
+      "vwap": 1749.5669252279815,
+      "rsi": 28.22384435399887,
+      "pdi": 11.170409344154537,
+      "ndi": 34.43790404656798,
+      "live_price": 1737.2,
+      "live_vwap": 1749.93,
+      "live_rsi": 28.137347341614714,
+      "live_pdi": 11.151873460277653,
+      "live_ndi": 34.38075869309849,
+      "atm_strike": 1740.0,
+      "strike_step": 20.0
+    }
+  ],
   "active_signals": [],
   "history": [
     {
