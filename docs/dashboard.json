@@ -119,7 +119,37 @@
       "live_atr": 51.93575003770484
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "PE",
+      "candle_time": "10:10 IST",
+      "futures_price": 57000.0,
+      "spot_ltp": 56834.45,
+      "fut_spot_spread": 165.6,
+      "tradingsymbol": "BANKNIFTY26AUG56800PE",
+      "strike": 56800,
+      "expiry": "2026-08-25",
+      "fetch_time": "10:15:49 IST",
+      "atm_ltp": 758.7,
+      "opt_target": 833.63,
+      "opt_sl": 708.75,
+      "spot_tgt": 56663.4,
+      "spot_sl": 56948.5,
+      "raw_risk": 114.0,
+      "conviction": "Strong",
+      "rr": 1.5,
+      "rsi": 29.346572358208732,
+      "pdi": 11.691639950764483,
+      "ndi": 35.136410761670255,
+      "vwap": 57057.42115912209,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "09:40",
