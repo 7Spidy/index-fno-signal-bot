@@ -119,7 +119,37 @@
       "live_atr": 36.806116770012906
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "PE",
+      "candle_time": "12:05 IST",
+      "futures_price": 77641.9,
+      "spot_ltp": 77640.19,
+      "fut_spot_spread": 1.7,
+      "tradingsymbol": "SENSEX2680677600PE",
+      "strike": 77600,
+      "expiry": "2026-08-06",
+      "fetch_time": "12:10:53 IST",
+      "atm_ltp": 468.05,
+      "opt_target": 522.1,
+      "opt_sl": 432.01,
+      "spot_tgt": 77522.2,
+      "spot_sl": 77718.9,
+      "raw_risk": 78.7,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 47.719334543238084,
+      "pdi": 22.79827123882656,
+      "ndi": 36.131676230113165,
+      "vwap": 77638.84285087718,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "10:15",
