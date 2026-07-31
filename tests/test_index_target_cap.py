@@ -67,7 +67,7 @@ def test_atr_wilder_does_not_mutate_supertrend_wilder_signature():
 # ── config constants ─────────────────────────────────────────────────────────
 
 def test_atr_target_k_index_defined():
-    assert config.ATR_TARGET_K_INDEX == 3.0
+    assert config.ATR_TARGET_K_INDEX == 2.25
 
 
 def test_no_new_ceiling_constant_reuses_option_cache_range():
@@ -95,13 +95,13 @@ def test_wide_range_candle_no_longer_balloons_target():
     """Regression for the 2026-07-29 13:45 BANKNIFTY PE case: a ~213pt
     structural candle gap must NOT translate into an uncapped target anymore —
     it should be clamped to ceiling_pts regardless of how wide the candle is."""
-    name, min_risk, rr = "BANKNIFTY", 30, config.TARGET_RR
+    name, min_risk, rr = "BANKNIFTY", 22.5, config.TARGET_RR
     ceiling_pts = 0.8 * config.OPTION_CACHE_RANGE[name]
 
     # A huge ATR (proxy for the wide-range candle) would blow way past ceiling
-    # under the raw ATR_TARGET_K_INDEX multiplier if unclamped: 3.0 * 500 = 1500pts,
+    # under the raw ATR_TARGET_K_INDEX multiplier if unclamped: 2.25 * 600 = 1350pts,
     # vs. a ceiling of 0.8 * 1500 = 1200pts.
-    huge_atr = 500.0
+    huge_atr = 600.0
     target_pts, spot_risk_pts, source = _compute_target(name, huge_atr, min_risk, rr)
 
     assert source == "atr"
@@ -110,8 +110,8 @@ def test_wide_range_candle_no_longer_balloons_target():
 
 
 def test_small_atr_respects_floor_not_raw_atr():
-    name, min_risk, rr = "NIFTY", 10, config.TARGET_RR
-    tiny_atr = 1.0  # ATR_TARGET_K_INDEX * 1.0 = 3.0, below floor of 10
+    name, min_risk, rr = "NIFTY", 7.5, config.TARGET_RR
+    tiny_atr = 1.0  # ATR_TARGET_K_INDEX * 1.0 = 2.25, below floor of 7.5
     target_pts, spot_risk_pts, source = _compute_target(name, tiny_atr, min_risk, rr)
 
     assert source == "atr"
@@ -119,7 +119,7 @@ def test_small_atr_respects_floor_not_raw_atr():
 
 
 def test_missing_atr_falls_back_to_floor_times_rr():
-    name, min_risk, rr = "SENSEX", 30, config.TARGET_RR
+    name, min_risk, rr = "SENSEX", 22.5, config.TARGET_RR
     target_pts, spot_risk_pts, source = _compute_target(name, None, min_risk, rr)
 
     assert source == "fallback_floor_rr"
@@ -127,7 +127,7 @@ def test_missing_atr_falls_back_to_floor_times_rr():
 
 
 def test_spot_sl_and_target_land_within_ceiling_of_reference():
-    name, min_risk, rr = "BANKNIFTY", 30, config.TARGET_RR
+    name, min_risk, rr = "BANKNIFTY", 22.5, config.TARGET_RR
     reference = 51000.0
     ceiling_pts = 0.8 * config.OPTION_CACHE_RANGE[name]
 
