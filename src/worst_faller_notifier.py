@@ -1,4 +1,4 @@
-"""Discord message builder + poster for the 15:15 Worst-Faller PE tracker.
+"""Discord message builder + poster for the 15:00 Worst-Faller PE tracker.
 
 Modeled line-for-line on src/condor_notifier.py's _post_new / _edit_existing /
 _one_off_post + persistent msg-id lifecycle: one Discord message spans the
@@ -94,7 +94,7 @@ def _one_off_post(embed: dict) -> bool:
 
 
 def _subject(position: dict, closed: bool, reason: str | None) -> str:
-    title = f"15:15 Worst-Faller PE — {position.get('name', '?')}"
+    title = f"15:00 Worst-Faller PE — {position.get('name', '?')}"
     if closed:
         title += f" — CLOSED ({reason})"
     return title
@@ -163,7 +163,7 @@ def build_embed(
         "title":     _subject(position, closed, reason),
         "color":     color,
         "fields":    fields,
-        "footer":    {"text": "Paper simulation only - no real orders - 15:15 Worst-Faller PE"},
+        "footer":    {"text": "Paper simulation only - no real orders - 15:00 Worst-Faller PE"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -219,10 +219,10 @@ def send_close(position: dict, final_spot: float, final_sl: float,
 def send_skip(reason: str) -> bool:
     """One-off gray line when today's entry is skipped or aborted."""
     embed = {
-        "title": "15:15 Worst-Faller PE — SKIPPED",
+        "title": "15:00 Worst-Faller PE — SKIPPED",
         "color": SKIP_COLOR,
         "description": reason,
-        "footer": {"text": "Paper simulation only - no real orders - 15:15 Worst-Faller PE"},
+        "footer": {"text": "Paper simulation only - no real orders - 15:00 Worst-Faller PE"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return _one_off_post(embed)

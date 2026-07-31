@@ -1,7 +1,7 @@
 """
 worst_faller_universe.py — live 3-window worst-faller frequency-vote ranking.
 
-Runs once per trading day at 15:15 IST (via dynamic-universe.yml's second
+Runs once per trading day at 15:00 IST (via dynamic-universe.yml's second
 step). Ported from the chat backtest (experiment_315pm_worst_faller_pe.py)
 to operate on LIVE Kite data at call time, not historical replay.
 
@@ -35,7 +35,7 @@ from src.kite_client import _throttle_historical_call, get_kite
 IST = ZoneInfo("Asia/Kolkata")
 
 TOP_N_PER_WINDOW = 3
-ENTRY_HHMM = (15, 15)
+ENTRY_HHMM = (15, 0)
 
 
 def _fetch_daily_ohlc(kite, token: int, days_back: int = 10) -> list[dict]:
@@ -79,8 +79,8 @@ def _candle_at_or_before(candles: list[dict], target: datetime):
 
 
 def _resolve_windows(kite, name: str, token: int) -> dict | None:
-    """Returns {"today_open": f, "ltp_1515": f, "w1_pct": f, "w2_pct": f|None,
-    "w3_pct": f|None} or None if today's open / 15:15 LTP can't be resolved."""
+    """Returns {"today_open": f, "ltp_entry": f, "w1_pct": f, "w2_pct": f|None,
+    "w3_pct": f|None} or None if today's open / 15:00 LTP can't be resolved."""
     daily = _fetch_daily_ohlc(kite, token)
     if len(daily) < 1:
         return None
@@ -111,25 +111,25 @@ def _resolve_windows(kite, name: str, token: int) -> dict | None:
     ltp_row = _candle_at_or_before(intraday, target_ts)
     if ltp_row is None:
         return None
-    ltp_1515 = float(ltp_row["close"])
+    ltp_entry = float(ltp_row["close"])
 
-    w1_pct = (ltp_1515 - today_open) / today_open * 100
+    w1_pct = (ltp_entry - today_open) / today_open * 100
 
     w2_pct = None
     if prior_1 is not None:
         base = float(daily_by_date[prior_1]["open"])
         if base > 0:
-            w2_pct = (ltp_1515 - base) / base * 100
+            w2_pct = (ltp_entry - base) / base * 100
 
     w3_pct = None
     if prior_2 is not None:
         base = float(daily_by_date[prior_2]["open"])
         if base > 0:
-            w3_pct = (ltp_1515 - base) / base * 100
+            w3_pct = (ltp_entry - base) / base * 100
 
     return {
         "today_open": today_open,
-        "ltp_1515": ltp_1515,
+        "ltp_entry": ltp_entry,
         "w1_pct": w1_pct,
         "w2_pct": w2_pct,
         "w3_pct": w3_pct,
@@ -168,14 +168,14 @@ def pick_worst_faller(kite=None) -> dict | None:
     w2_falls: list[tuple[str, float]] = []
     w3_falls: list[tuple[str, float]] = []
     today_open_map: dict[str, float] = {}
-    ltp_1515_map: dict[str, float] = {}
+    ltp_entry_map: dict[str, float] = {}
 
     for name, token in equity_tokens.items():
         windows = _resolve_windows(kite, name, token)
         if windows is None:
             continue
         today_open_map[name] = windows["today_open"]
-        ltp_1515_map[name] = windows["ltp_1515"]
+        ltp_entry_map[name] = windows["ltp_entry"]
         w1_falls.append((name, windows["w1_pct"]))
         if windows["w2_pct"] is not None:
             w2_falls.append((name, windows["w2_pct"]))
@@ -228,7 +228,7 @@ def pick_worst_faller(kite=None) -> dict | None:
         "strike_step": strike_step,
         "lot_size": lot_size,
         "today_open": today_open_map[winner],
-        "ltp_1515": ltp_1515_map[winner],
+        "ltp_entry": ltp_entry_map[winner],
         "pct_falls": {
             "w1": round(w1_dict.get(winner, 0.0), 2),
             "w2": round(w2_dict.get(winner, 0.0), 2),

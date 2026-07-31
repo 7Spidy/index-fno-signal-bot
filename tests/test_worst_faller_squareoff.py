@@ -21,7 +21,7 @@ def _position(**overrides) -> dict:
         "strike": 100,
         "expiry": "2026-07-30",
         "lot_size": 500,
-        "entry_time": "2026-07-29T15:15:00+05:30",
+        "entry_time": "2026-07-29T15:00:00+05:30",
         "entry_spot": 100.0,
         "entry_opt_price": 5.0,
         "initial_sl_spot": 102.0,

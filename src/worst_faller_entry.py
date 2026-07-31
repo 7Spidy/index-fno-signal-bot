@@ -1,8 +1,8 @@
 """
-worst_faller_entry.py — 15:15 Worst-Faller PE entry orchestration.
+worst_faller_entry.py — 15:00 Worst-Faller PE entry orchestration.
 
 Called as the second step of dynamic-universe.yml (same job, same
-15:15-IST-triggered run as dynamic_stock_universe.py's existing gainer/loser
+15:00-IST-triggered run as dynamic_stock_universe.py's existing gainer/loser
 computation). Fully independent of that gainer/loser path: only the
 loser/PE side gets this new 3-window frequency-vote logic (spec decision 1).
 
@@ -36,7 +36,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 REDIS_POSITION_KEY = "worst_faller:position"   # no TTL — persists until the tracker closes it
 
-ENTRY_HHMM = (15, 15)
+ENTRY_HHMM = (15, 0)
 
 
 def _candle_at_or_before(df, ts: datetime):
@@ -65,7 +65,7 @@ def _resolve_pe_tradingsymbol(name: str, expiry, strike: float, instruments_nfo:
 
 
 def _force_close_stale_position(kite) -> None:
-    """Defensive close for a worst-faller position still open at 15:15 —
+    """Defensive close for a worst-faller position still open at 15:00 —
     the primary EOD square-off (worst_faller_tracker.py, 15:10) should
     always have cleared this already. Mirrors that tracker's close logic
     verbatim so today's fresh entry is never blocked by a stale position."""
@@ -102,7 +102,7 @@ def compute_and_alert(kite=None) -> None:
     kite = kite or get_kite()
 
     if state.redis_exists(REDIS_POSITION_KEY):
-        print("[worst_faller_entry] stale position found at 15:15 — forcing close "
+        print("[worst_faller_entry] stale position found at 15:00 — forcing close "
               "before today's entry (primary 15:10 square-off did not run)")
         _force_close_stale_position(kite)
 
@@ -115,10 +115,10 @@ def compute_and_alert(kite=None) -> None:
 
     name = pick["name"]
     strike_step = pick["strike_step"]
-    ltp_1515 = pick["ltp_1515"]
+    ltp_entry = pick["ltp_entry"]
     expiry = pick["expiry"]
 
-    atm_strike = round(ltp_1515 / strike_step) * strike_step
+    atm_strike = round(ltp_entry / strike_step) * strike_step
 
     try:
         instruments_nfo = kite.instruments("NFO")
@@ -169,14 +169,14 @@ def compute_and_alert(kite=None) -> None:
         worst_faller_notifier.send_skip(reason)
         return
     sl_spot = float(prior_candle["high"])
-    risk_pts = abs(ltp_1515 - sl_spot)
+    risk_pts = abs(ltp_entry - sl_spot)
 
     # ── ATR-anchored target, verbatim formula from src/stock_main.py ──
     stock_atr = compute_daily_atr_for_token(kite, pick["equity_token"])
-    option_cache_range = round(0.05 * ltp_1515, 1)   # dynamic_stock_universe.py convention
+    option_cache_range = round(0.05 * ltp_entry, 1)   # dynamic_stock_universe.py convention
     if stock_atr:
         raw_target_pts = cfg.ATR_TARGET_K * stock_atr
-        floor_pts = 0.5 * max(0.0015 * ltp_1515, 2 * cfg.SLIPPAGE_PTS_EST)
+        floor_pts = 0.5 * max(0.0015 * ltp_entry, 2 * cfg.SLIPPAGE_PTS_EST)
         ceiling_pts = 0.8 * option_cache_range
         target_pts = max(floor_pts, min(raw_target_pts, ceiling_pts))
         target_source = "atr"
@@ -193,7 +193,7 @@ def compute_and_alert(kite=None) -> None:
         "expiry": expiry.isoformat(),
         "lot_size": pick["lot_size"],
         "entry_time": datetime.now(IST).isoformat(),
-        "entry_spot": round(ltp_1515, 2),
+        "entry_spot": round(ltp_entry, 2),
         "entry_opt_price": round(entry_opt_price, 2),
         "initial_sl_spot": round(sl_spot, 2),
         "target_pts": round(target_pts, 2),

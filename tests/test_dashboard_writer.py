@@ -28,7 +28,7 @@ def test_both_absent_returns_none_none():
 def test_worst_faller_populated_from_valid_json():
     wf_payload = {
         "name": "SBIN",
-        "entry_time": "2026-07-31T15:15:04.123456+05:30",
+        "entry_time": "2026-07-31T15:00:04.123456+05:30",
         "entry_spot": 812.4,
         "target_pts": 6.5,
         "target_source": "atr",
@@ -40,7 +40,7 @@ def test_worst_faller_populated_from_valid_json():
     assert result["dynamic_universe"] is None
     assert result["worst_faller"] == {
         "name": "SBIN",
-        "entry_time": "2026-07-31T15:15:04.123456+05:30",
+        "entry_time": "2026-07-31T15:00:04.123456+05:30",
         "entry_spot": 812.4,
         "target_pts": 6.5,
         "target_source": "atr",
@@ -102,7 +102,7 @@ def test_malformed_dynamic_universe_json_degrades_to_none():
 
 def test_both_present_populates_both_independently():
     wf_payload = {
-        "name": "HINDALCO", "entry_time": "2026-07-31T15:15:00+05:30",
+        "name": "HINDALCO", "entry_time": "2026-07-31T15:00:00+05:30",
         "entry_spot": 700.0, "target_pts": 5.0, "target_source": "fallback_1.5R",
     }
     du_payload = {

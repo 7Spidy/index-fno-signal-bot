@@ -1,5 +1,5 @@
 """
-worst_faller_tracker.py — per-minute tracker tick for the 15:15 Worst-Faller
+worst_faller_tracker.py — per-minute tracker tick for the 15:00 Worst-Faller
 PE paper position.
 
 Mirrors src/condor_engine.py's --tracker-tick entry point. Reads the open
