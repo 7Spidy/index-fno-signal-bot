@@ -69,7 +69,67 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 /* MAIN CONTENT */
 .content { padding: 16px; max-width: 680px; margin: 0 auto; }
 
-/* ── SIGNAL BANNER (new rich layout) ───────────────────────── */
+/* ── SIGNAL TICKER ──────────────────────────────────────────── */
+.ticker-wrap { margin-bottom: 14px; }
+.ticker-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.ticker-strip::-webkit-scrollbar { height: 4px; }
+.ticker-strip::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.ticker-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 9px;
+  text-decoration: none;
+  min-width: 74px;
+}
+.ticker-chip-fire-ce { border-color: var(--green); background: var(--green-dim); }
+.ticker-chip-fire-pe { border-color: var(--red); background: var(--red-dim); }
+.ticker-name {
+  font-family: var(--display); font-weight: 700; font-size: 10px;
+  color: var(--text); white-space: nowrap;
+}
+.ticker-segments { display: flex; gap: 2px; }
+.ticker-seg { width: 9px; height: 4px; border-radius: 2px; background: var(--border2); }
+.ticker-seg.seg-ce { background: var(--green); }
+.ticker-seg.seg-pe { background: var(--red); }
+
+/* ── EXCLUSIONS PANEL ───────────────────────────────────────── */
+.exclusions-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.exclusions-panel-title {
+  font-family: var(--display); font-weight: 700; font-size: 12px; color: var(--amber);
+}
+.exclusions-panel-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.exclusions-panel-btn {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 600; letter-spacing: .03em;
+  color: var(--amber); text-decoration: none;
+  border: 1px solid var(--amber); border-radius: 6px;
+  padding: 6px 10px; white-space: nowrap;
+}
+.exclusions-panel-btn:hover { background: #f59e0b15; }
+
+/* ── SIGNAL BANNER (rich layout) ────────────────────────────── */
 #signal-area { margin-bottom: 16px; }
 
 .signal-banner {
@@ -197,6 +257,7 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 12px;
+  scroll-margin-top: 64px;
 }
 .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .card-name { font-family: var(--display); font-weight: 700; font-size: 16px; color: #fff; }
@@ -217,7 +278,44 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 .status-signal-pe { color: var(--red); }
 .status-none { color: var(--text-muted); }
 
-/* STOCK ROWS (compact, mobile-friendly) */
+/* ── STRATEGY MODULES STRIP ─────────────────────────────────── */
+.strategy-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.strategy-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.strategy-card-title {
+  font-family: var(--display); font-weight: 700; font-size: 11px;
+  color: var(--text); margin-bottom: 8px;
+  letter-spacing: .03em;
+}
+.strategy-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 10px; padding: 3px 0; gap: 8px;
+}
+.strategy-label { color: var(--text-muted); flex-shrink: 0; }
+.strategy-val { color: var(--text-dim); text-align: right; word-break: break-word; }
+.strategy-card-empty .empty-state { padding: 8px 0 2px; font-size: 11px; }
+
+/* STOCK SECTION */
+.sector-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 16px 10px; }
+.sector-chip {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-muted); background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 20px;
+  padding: 3px 9px; cursor: pointer;
+}
+.sector-chip:hover { color: var(--text-dim); }
+.sector-chip-active { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+
 .stock-row {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -229,19 +327,25 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
   justify-content: space-between;
   gap: 10px;
   cursor: pointer;
+  scroll-margin-top: 64px;
 }
 .stock-row:hover { background: var(--surface2); }
-.stock-row-left { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.stock-row-left { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; flex-shrink: 0; }
 .stock-name { font-family: var(--display); font-weight: 700; font-size: 13px; color: #fff; white-space: nowrap; }
 .stock-sector-chip {
   font-size: 8px; letter-spacing: .05em; text-transform: uppercase;
   color: var(--text-muted); border: 1px solid var(--border2);
   padding: 1px 5px; border-radius: 3px; white-space: nowrap;
 }
-.stock-row-mid { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.stock-price { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
-.stock-dots-group { display: flex; align-items: center; gap: 4px; }
-.stock-dots-label { font-size: 8px; color: var(--text-muted); margin-right: 2px; }
+.stock-row-mid { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; justify-content: flex-end; }
+.stock-price { font-size: 12px; color: var(--text-dim); font-family: var(--mono); white-space: nowrap; }
+.stock-rail-group { display: flex; flex-direction: column; gap: 3px; }
+.stock-rail-row { display: flex; align-items: center; gap: 4px; }
+.stock-rail-label { font-size: 8px; color: var(--text-muted); width: 14px; flex-shrink: 0; }
+.stock-rail { display: flex; gap: 2px; }
+.rail-seg { width: 10px; height: 4px; border-radius: 2px; background: var(--border2); }
+.rail-seg-ce-on { background: var(--green); }
+.rail-seg-pe-on { background: var(--red); }
 .stock-row-right { flex-shrink: 0; }
 .stock-status-chip {
   font-size: 9px; font-weight: 700; letter-spacing: .05em;
@@ -375,6 +479,22 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
 <!-- CONTENT -->
 <div class="content">
 
+  <!-- SIGNAL TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker-strip" id="ticker-strip"></div>
+  </div>
+
+  <!-- EXCLUSIONS PANEL -->
+  <div class="exclusions-panel">
+    <div>
+      <div class="exclusions-panel-title">Set tomorrow's exclusions</div>
+      <div class="exclusions-panel-sub">Edit the manual exclusion list for the next trading day</div>
+    </div>
+    <a class="exclusions-panel-btn"
+       href="https://github.com/7Spidy/index-fno-signal-bot/edit/main/config/manual_exclusions.json"
+       target="_blank" rel="noopener">Edit list →</a>
+  </div>
+
   <!-- SIGNAL BANNERS -->
   <div id="signal-area" style="display:none"></div>
 
@@ -383,19 +503,14 @@ body { font-family: var(--mono); background: var(--bg); color: var(--text); min-
     <div class="empty-state">Loading instruments…</div>
   </div>
 
-  <!-- MANUAL EXCLUSION LINK — own row, normal flow, no float/overlap -->
-  <div style="display:flex; justify-content:flex-end; padding: 8px 16px 0;">
-    <a href="https://github.com/7Spidy/index-fno-signal-bot/edit/main/config/manual_exclusions.json"
-       target="_blank"
-       style="font-size:9px;color:var(--amber);text-decoration:none;border:1px solid var(--amber);padding:2px 8px;border-radius:3px;">
-      Set tomorrow's exclusions
-    </a>
-  </div>
+  <!-- STRATEGY MODULES -->
+  <div class="strategy-strip" id="strategy-strip"></div>
 
   <!-- STOCK CARDS -->
   <div class="section-title" style="padding: 10px 16px 6px;">
     NSE Stocks <span style="font-size:9px;color:var(--text-muted);font-weight:400;margin-left:6px;">ALERT ONLY · MONTHLY EXPIRY</span>
   </div>
+  <div class="sector-chips" id="sector-chips"></div>
   <div id="stock-area">
     <div class="empty-state">Loading stocks…</div>
   </div>
@@ -428,6 +543,8 @@ let lastRunISO = null;
 let activeSignalsMap = {};
 let signalRows = [];
 let stockRows = [];
+let stockHistoryFallback = [];
+let activeSectorFilter = 'All';
 
 async function fetchData() {
   const t = Date.now();
@@ -462,11 +579,14 @@ function render(indexData, stockData) {
     }
   }
   updateHeader(indexData);
+  renderTicker(indexData.instruments || [], stockData ? (stockData.instruments || []) : []);
   renderSignalBanners(indexData.active_signals || []);  // index banners only
   renderInstruments(indexData.instruments || []);        // index cards only
+  renderStrategyModules(indexData.strategy_modules || null);
   if (stockData) {
-    renderStockRows(stockData.instruments || []);
+    renderStockSection(stockData.instruments || [], stockData.history || []);
   } else {
+    document.getElementById('sector-chips').innerHTML = '';
     document.getElementById('stock-area').innerHTML = '<div class="empty-state">Stock dashboard unavailable.</div>';
   }
 
@@ -505,6 +625,40 @@ function updateTimeAgo() {
   } catch { el.textContent = 'Unknown'; }
 }
 
+/* ── Signal ticker ──────────────────────────────────────────── */
+
+function tickerDirection(inst) {
+  if (inst.ce?.c1) return 'ce';
+  if (inst.pe?.c1) return 'pe';
+  return null;
+}
+
+function renderTicker(indexInstruments, stockInstruments) {
+  const strip = document.getElementById('ticker-strip');
+  const all = [...indexInstruments, ...stockInstruments];
+  if (all.length === 0) {
+    strip.innerHTML = '';
+    return;
+  }
+  strip.innerHTML = all.map(inst => buildTickerChip(inst)).join('');
+}
+
+function buildTickerChip(inst) {
+  const dir = tickerDirection(inst);
+  const side = dir === 'ce' ? inst.ce : (dir === 'pe' ? inst.pe : null);
+  const conds = side ? ['c1', 'c2', 'c3', 'c4', 'c5'].map(k => !!side[k]) : [false, false, false, false, false];
+  const segClass = dir === 'ce' ? 'seg-ce' : (dir === 'pe' ? 'seg-pe' : '');
+  const segs = conds.map(v => `<span class="ticker-seg ${v ? segClass : ''}"></span>`).join('');
+  const fired = !!side?.signal;
+  const fireClass = fired ? (dir === 'ce' ? 'ticker-chip-fire-ce' : 'ticker-chip-fire-pe') : '';
+  const anchor = `c-${inst.name || ''}`;
+  return `
+    <a href="#${anchor}" class="ticker-chip ${fireClass}">
+      <span class="ticker-name">${escHtml(inst.name || '')}</span>
+      <span class="ticker-segments">${segs}</span>
+    </a>`;
+}
+
 /* ── Signal banner helpers ──────────────────────────────────── */
 
 function fp(v) {
@@ -523,6 +677,14 @@ function fmtExpiry(isoDate) {
     const dayStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
     return dayStr + (day === 2 ? ' weekly' : ' monthly');
   } catch { return isoDate; }
+}
+
+function fmtTimeIST(isoTs) {
+  if (!isoTs) return '—';
+  try {
+    const d = new Date(isoTs);
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  } catch { return '—'; }
 }
 
 function condItem(pass, label) {
@@ -575,7 +737,6 @@ function buildSignalBanner(s) {
         <div class="sig-unavail">Option data unavailable — check morning-login ran correctly.</div>
       </div>`;
   } else {
-    const copyId = `copy_${s.instrument}_${dir}`;
     const ltpNum = s.atm_ltp != null ? Number(s.atm_ltp).toFixed(2) : '';
     const expiryFmt = fmtExpiry(s.expiry);
     optBox = `
@@ -681,7 +842,7 @@ function renderInstruments(instruments, targetId = 'instrument-area') {
   area.innerHTML = instruments.map(inst => buildInstrumentCard(inst)).join('');
 }
 
-function buildInstrumentCard(inst) {
+function buildInstrumentCard(inst, withAnchor = true) {
   const price = inst.futures_price;
   const priceStr = price ? Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–';
   const vwap = inst.vwap ? Number(inst.vwap).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '–';
@@ -689,8 +850,11 @@ function buildInstrumentCard(inst) {
   const pdi = inst.pdi ? Number(inst.pdi).toFixed(1) : '–';
   const ndi = inst.ndi ? Number(inst.ndi).toFixed(1) : '–';
 
-  const priceArrow = inst.ce?.c1 ? ' ↑' : (inst.pe?.c1 ? ' ↓' : '');
-  const priceColor = inst.ce?.signal ? 'var(--green)' : (inst.pe?.signal ? 'var(--red)' : 'var(--green)');
+  // Direction is derived purely from c1 (momentum) — no fallback default.
+  // If neither side's c1 is true, no arrow and no directional tint is shown.
+  const dir = inst.ce?.c1 ? 'up' : (inst.pe?.c1 ? 'down' : null);
+  const priceArrow = dir === 'up' ? ' ↑' : (dir === 'down' ? ' ↓' : '');
+  const priceColor = dir === 'up' ? 'var(--green)' : (dir === 'down' ? 'var(--red)' : 'var(--text)');
 
   const ceConds = buildCondRows(inst.ce, CE_LABELS);
   const peConds = buildCondRows(inst.pe, PE_LABELS);
@@ -701,8 +865,10 @@ function buildInstrumentCard(inst) {
     ? '<div class="cond-status status-signal-pe">● SIGNAL</div>'
     : '<div class="cond-status status-none">── no signal</div>';
 
+  const idAttr = withAnchor ? ` id="c-${escHtml(inst.name || '')}"` : '';
+
   return `
-    <div class="instrument-card">
+    <div class="instrument-card"${idAttr}>
       <div class="card-head">
         <span class="card-name">${escHtml(inst.name || '')}</span>
         <span class="card-price" style="color:${priceColor}">${priceStr}${priceArrow}</span>
@@ -736,16 +902,124 @@ function condRow(pass, label) {
   return `<div class="cond-row">${icon}<span>${escHtml(label)}</span></div>`;
 }
 
-/* ── Stock rows (compact) ───────────────────────────────────── */
+/* ── Strategy modules (Worst-Faller / Dynamic Universe) ─────── */
+
+function renderStrategyModules(strategyModules) {
+  const strip = document.getElementById('strategy-strip');
+  strip.innerHTML = buildStrategyModulesStrip(strategyModules);
+}
+
+function buildStrategyModulesStrip(sm) {
+  const wf = sm?.worst_faller || null;
+  const du = sm?.dynamic_universe || null;
+  return buildWorstFallerCard(wf) + buildDynamicUniverseCard(du);
+}
+
+function buildWorstFallerCard(wf) {
+  if (!wf) {
+    return `
+      <div class="strategy-card strategy-card-empty">
+        <div class="strategy-card-title">Worst-Faller</div>
+        <div class="empty-state">No open position</div>
+      </div>`;
+  }
+  return `
+    <div class="strategy-card">
+      <div class="strategy-card-title">Worst-Faller</div>
+      <div class="strategy-row"><span class="strategy-label">Name</span><span class="strategy-val">${escHtml(wf.name || '—')}</span></div>
+      <div class="strategy-row"><span class="strategy-label">Entry time</span><span class="strategy-val">${fmtTimeIST(wf.entry_time)}</span></div>
+      <div class="strategy-row"><span class="strategy-label">Entry spot</span><span class="strategy-val">${fi(wf.entry_spot)}</span></div>
+      <div class="strategy-row"><span class="strategy-label">Target</span><span class="strategy-val">${wf.target_pts !== null && wf.target_pts !== undefined ? Number(wf.target_pts).toFixed(1) + ' pts' : '—'}</span></div>
+    </div>`;
+}
+
+function buildDynamicUniverseCard(du) {
+  if (!du) {
+    return `
+      <div class="strategy-card strategy-card-empty">
+        <div class="strategy-card-title">Dynamic Universe</div>
+        <div class="empty-state">No active pick</div>
+      </div>`;
+  }
+  return `
+    <div class="strategy-card">
+      <div class="strategy-card-title">Dynamic Universe</div>
+      <div class="strategy-row"><span class="strategy-label">Gainer</span><span class="strategy-val">${escHtml(du.gainer_name || '—')}</span></div>
+      <div class="strategy-row"><span class="strategy-label">Loser</span><span class="strategy-val">${escHtml(du.loser_name || '—')}</span></div>
+      <div class="strategy-row"><span class="strategy-label">Valid for</span><span class="strategy-val">${escHtml(du.valid_for_date || '—')}</span></div>
+    </div>`;
+}
+
+/* ── Stock rows (CE/PE rail rows + sector filters) ──────────── */
+
+function renderStockSection(instruments, history) {
+  if (instruments && instruments.length > 0) {
+    stockRows = instruments;
+    stockHistoryFallback = [];
+    renderSectorChips(instruments);
+    renderStockRows(filteredStockRows());
+    return;
+  }
+
+  // Outside the eval window (or before first run) instruments can be empty —
+  // this is expected behavior, not a bug. Fall back to the most recent
+  // history row per instrument rather than fabricating rows.
+  stockRows = [];
+  document.getElementById('sector-chips').innerHTML = '';
+  const seen = new Set();
+  const fallback = [];
+  for (const h of (history || [])) {
+    if (seen.has(h.instrument)) continue;
+    seen.add(h.instrument);
+    fallback.push(h);
+  }
+  stockHistoryFallback = fallback;
+  const area = document.getElementById('stock-area');
+  if (fallback.length === 0) {
+    area.innerHTML = '<div class="empty-state">Loading stocks…</div>';
+    return;
+  }
+  area.innerHTML = fallback.map(row => buildStockFallbackRow(row)).join('');
+}
+
+function filteredStockRows() {
+  if (activeSectorFilter === 'All') return stockRows;
+  return stockRows.filter(inst => (inst.sector || '') === activeSectorFilter);
+}
+
+function renderSectorChips(instruments) {
+  const el = document.getElementById('sector-chips');
+  const sectors = Array.from(new Set(instruments.map(i => i.sector).filter(Boolean))).sort();
+  if (sectors.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const chips = ['All', ...sectors];
+  el.innerHTML = chips.map(s => `
+    <button class="sector-chip ${activeSectorFilter === s ? 'sector-chip-active' : ''}"
+            onclick="setSectorFilter('${escHtml(s)}')">${escHtml(s)}</button>
+  `).join('');
+}
+
+function setSectorFilter(sector) {
+  activeSectorFilter = sector;
+  renderSectorChips(stockRows);
+  renderStockRows(filteredStockRows());
+}
 
 function renderStockRows(instruments) {
   const area = document.getElementById('stock-area');
   if (!instruments || instruments.length === 0) {
-    area.innerHTML = '<div class="empty-state">Loading stocks…</div>';
+    area.innerHTML = '<div class="empty-state">No stocks in this sector.</div>';
     return;
   }
-  stockRows = instruments;
   area.innerHTML = instruments.map((inst, idx) => buildStockRow(inst, idx)).join('');
+}
+
+function buildRail(conds, kind) {
+  const onClass = kind === 'ce' ? 'rail-seg-ce-on' : 'rail-seg-pe-on';
+  return (conds || [false, false, false, false, false])
+    .map(v => `<span class="rail-seg ${v ? onClass : ''}"></span>`).join('');
 }
 
 function buildStockRow(inst, idx) {
@@ -756,20 +1030,49 @@ function buildStockRow(inst, idx) {
   const statusCls = inst.ce?.signal ? 'stock-status-signal-ce'
     : (inst.pe?.signal ? 'stock-status-signal-pe' : 'stock-status-none');
   const statusTxt = inst.ce?.signal ? 'CE SIGNAL' : (inst.pe?.signal ? 'PE SIGNAL' : '—');
-  const ceDots = buildDots([inst.ce?.c1, inst.ce?.c2, inst.ce?.c3, inst.ce?.c4, inst.ce?.c5]);
-  const peDots = buildDots([inst.pe?.c1, inst.pe?.c2, inst.pe?.c3, inst.pe?.c4, inst.pe?.c5]);
+  const ceRail = buildRail(['c1', 'c2', 'c3', 'c4', 'c5'].map(k => !!inst.ce?.[k]), 'ce');
+  const peRail = buildRail(['c1', 'c2', 'c3', 'c4', 'c5'].map(k => !!inst.pe?.[k]), 'pe');
 
   return `
-    <div class="stock-row" onclick="openStockDrawer(${idx})" role="button" tabindex="0">
+    <div class="stock-row" id="c-${escHtml(inst.name || '')}" onclick="openStockDrawer(${idx})" role="button" tabindex="0">
       <div class="stock-row-left">
         <span class="stock-name">${escHtml(inst.name || '')}</span>
         <span class="stock-sector-chip">${escHtml(inst.sector || '')}</span>
       </div>
       <div class="stock-row-mid">
         <span class="stock-price">${priceStr}</span>
-        <div class="stock-dots-group">
-          <span class="stock-dots-label">CE</span>${ceDots}
-          <span class="stock-dots-label">PE</span>${peDots}
+        <div class="stock-rail-group">
+          <div class="stock-rail-row"><span class="stock-rail-label">CE</span><div class="stock-rail">${ceRail}</div></div>
+          <div class="stock-rail-row"><span class="stock-rail-label">PE</span><div class="stock-rail">${peRail}</div></div>
+        </div>
+      </div>
+      <div class="stock-row-right">
+        <span class="stock-status-chip ${statusCls}">${statusTxt}</span>
+      </div>
+    </div>`;
+}
+
+function buildStockFallbackRow(row) {
+  const priceStr = row.price
+    ? Number(row.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '–';
+  const statusCls = row.ce_signal ? 'stock-status-signal-ce'
+    : (row.pe_signal ? 'stock-status-signal-pe' : 'stock-status-none');
+  const statusTxt = row.ce_signal ? 'CE SIGNAL' : (row.pe_signal ? 'PE SIGNAL' : '—');
+  const ceRail = buildRail(row.ce_conditions || [], 'ce');
+  const peRail = buildRail(row.pe_conditions || [], 'pe');
+
+  return `
+    <div class="stock-row" id="c-${escHtml(row.instrument || '')}">
+      <div class="stock-row-left">
+        <span class="stock-name">${escHtml(row.instrument || '')}</span>
+        <span class="stock-sector-chip">${escHtml(row.time || '')}</span>
+      </div>
+      <div class="stock-row-mid">
+        <span class="stock-price">${priceStr}</span>
+        <div class="stock-rail-group">
+          <div class="stock-rail-row"><span class="stock-rail-label">CE</span><div class="stock-rail">${ceRail}</div></div>
+          <div class="stock-rail-row"><span class="stock-rail-label">PE</span><div class="stock-rail">${peRail}</div></div>
         </div>
       </div>
       <div class="stock-row-right">
@@ -779,9 +1082,9 @@ function buildStockRow(inst, idx) {
 }
 
 function openStockDrawer(idx) {
-  const inst = stockRows[idx];
+  const inst = filteredStockRows()[idx];
   if (!inst) return;
-  document.getElementById('drawer-content').innerHTML = buildInstrumentCard(inst);
+  document.getElementById('drawer-content').innerHTML = buildInstrumentCard(inst, false);
   document.getElementById('drawer-overlay').classList.add('open');
   document.getElementById('drawer-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -848,7 +1151,6 @@ function buildHistoryDetail(row, dir) {
   const isCE   = dir === 'CE';
   const cls    = isCE ? 'signal-banner-ce' : 'signal-banner-pe';
   const emoji  = isCE ? '🟢' : '🔴';
-  const arrow  = isCE ? '↑' : '↓';
   const conds  = isCE ? (row.ce_conditions || []) : (row.pe_conditions || []);
   const labels = isCE ? CE_LABELS : PE_LABELS;
   const meta = `

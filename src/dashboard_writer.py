@@ -47,6 +47,7 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     data["token_valid"] = True
     data["token_refreshed_at"] = token_refreshed_at
     data["instruments"] = instruments_results
+    data["strategy_modules"] = _build_strategy_modules_block()
 
     # Prune active_signals: remove banners whose signal is no longer firing.
     # Only clear entries for instruments that were successfully evaluated this
@@ -89,6 +90,50 @@ def update_and_commit(instruments_results: list, token_refreshed_at: str | None 
     FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(f"[dashboard] Written {FILE} at {now.strftime('%H:%M IST')}")
     _git_commit(now)
+
+
+def _build_strategy_modules_block() -> dict:
+    from src import state as _state
+    import json as _json
+
+    # Worst-Faller — read-only from worst_faller:position (no TTL, persists
+    # until worst_faller_tracker.py closes it). See src/worst_faller_entry.py.
+    wf_raw = _state.redis_get("worst_faller:position")
+    worst_faller = None
+    if wf_raw:
+        try:
+            wf = _json.loads(wf_raw)
+            worst_faller = {
+                "name": wf.get("name"),
+                "entry_time": wf.get("entry_time"),
+                "entry_spot": wf.get("entry_spot"),
+                "target_pts": wf.get("target_pts"),
+                "target_source": wf.get("target_source"),
+            }
+        except Exception:
+            worst_faller = None
+
+    # Dynamic Universe — read-only from stock:dynamic_universe
+    # (src/stock_config.py DYNAMIC_UNIVERSE_REDIS_KEY, TTL 93600s / 26h).
+    du_raw = _state.redis_get("stock:dynamic_universe")
+    dynamic_universe = None
+    if du_raw:
+        try:
+            du = _json.loads(du_raw)
+            picks = du.get("picks", [])
+            gainer = next((p for p in picks if p.get("direction_restriction") == "CE_ONLY"), None)
+            loser  = next((p for p in picks if p.get("direction_restriction") == "PE_ONLY"), None)
+            dynamic_universe = {
+                "valid_for_date": du.get("date"),
+                "gainer_found": du.get("gainer_found", False),
+                "loser_found": du.get("loser_found", False),
+                "gainer_name": gainer.get("name") if gainer else None,
+                "loser_name": loser.get("name") if loser else None,
+            }
+        except Exception:
+            dynamic_universe = None
+
+    return {"worst_faller": worst_faller, "dynamic_universe": dynamic_universe}
 
 
 def _build_signal_entry(instrument: str, direction: str, result: dict) -> dict:
