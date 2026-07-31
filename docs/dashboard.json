@@ -1,8 +1,8 @@
 {
-  "date": "2026-07-30",
+  "date": "2026-07-31",
   "last_run": "2026-07-30T14:40:45.292095+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-07-30T09:05:33.421214+05:30",
+  "token_refreshed_at": "2026-07-31T09:05:59.118427+05:30",
   "instruments": [
     {
       "ce": {
@@ -44,79 +44,6 @@
     }
   ],
   "active_signals": [],
-  "history": [
-    {
-      "time": "12:10",
-      "instrument": "SENSEX",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 47.719334543238084,
-      "pdi": 22.79827123882656,
-      "ndi": 36.131676230113165,
-      "price": 77641.9
-    },
-    {
-      "time": "10:15",
-      "instrument": "BANKNIFTY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 29.346572358208732,
-      "pdi": 11.691639950764483,
-      "ndi": 35.136410761670255,
-      "price": 57000.0
-    },
-    {
-      "time": "09:40",
-      "instrument": "BANKNIFTY",
-      "ce_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "pe_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "ce_signal": false,
-      "pe_signal": true,
-      "rsi": 17.374085030045052,
-      "pdi": 5.462544997399843,
-      "ndi": 45.8625021795772,
-      "price": 56977.0
-    }
-  ],
+  "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run."
 }
