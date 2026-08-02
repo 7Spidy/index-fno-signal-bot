@@ -66,8 +66,8 @@ def _resolve_pe_tradingsymbol(name: str, expiry, strike: float, instruments_nfo:
 
 def _force_close_stale_position(kite) -> None:
     """Defensive close for a worst-faller position still open at 15:00 —
-    the primary EOD square-off (worst_faller_tracker.py, 15:10) should
-    always have cleared this already. Mirrors that tracker's close logic
+    the primary EOD square-off (worst_faller_tracker.py, 15:00, next-day only)
+    should always have cleared this already. Mirrors that tracker's close logic
     verbatim so today's fresh entry is never blocked by a stale position."""
     raw = state.redis_get(REDIS_POSITION_KEY)
     if not raw:
@@ -103,7 +103,7 @@ def compute_and_alert(kite=None) -> None:
 
     if state.redis_exists(REDIS_POSITION_KEY):
         print("[worst_faller_entry] stale position found at 15:00 — forcing close "
-              "before today's entry (primary 15:10 square-off did not run)")
+              "before today's entry (primary 15:00 next-day square-off did not run)")
         _force_close_stale_position(kite)
 
     pick = worst_faller_universe.pick_worst_faller(kite)

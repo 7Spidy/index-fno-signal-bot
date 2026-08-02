@@ -9,7 +9,7 @@
 
 ## What This Project Does
 
-A Python service that runs on GitHub Actions every 5 minutes from 09:40–14:45 IST
+A Python service that runs on GitHub Actions every 5 minutes from 09:40–14:30 IST
 on NSE trading days. It fetches 5-minute OHLCV candles for NIFTY, BANKNIFTY,
 FINNIFTY, and MIDCPNIFTY futures from Zerodha Kite Connect, computes session VWAP,
 RSI(14), and DMI(14) using Wilder smoothing, evaluates 4 CE (bullish) and 4 PE
@@ -310,7 +310,7 @@ USE_ADX_FILTER = False
 ADX_MIN = 20
 COOLDOWN_CANDLES = 3
 SESSION_START_IST = "09:15"
-EVAL_WINDOW_IST = ("09:40", "14:45")
+EVAL_WINDOW_IST = ("09:40", "14:30")
 ```
 
 ### Step 8 — `docs/dashboard.json` seed

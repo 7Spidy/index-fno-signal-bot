@@ -30,8 +30,10 @@ INDEX_LOT_SIZES: dict[str, int] = {
     "SENSEX":    20,
 }
 
-# EOD square-off: matches Repo 2's SQUAREOFF_IST exactly (both must agree)
-_EOD_HOUR, _EOD_MINUTE = 15, 10
+# EOD square-off: derived from config.SQUAREOFF_IST, which is itself required
+# to match Repo 2's executor/config.py SQUAREOFF_IST exactly (both must agree).
+# Names kept for backward compatibility with existing callers/tests.
+_EOD_HOUR, _EOD_MINUTE = config.SQUAREOFF_HHMM
 
 # Intent-consumed flag TTL: 2 hours (longer than intent's own 30-min TTL)
 _CONSUMED_TTL = 7200
@@ -398,6 +400,6 @@ def mark_eod_posted(date_str: str) -> None:
 
 
 def is_eod(now: datetime | None = None) -> bool:
-    """True if current IST time is at or past 15:10."""
+    """True if current IST time is at or past config.SQUAREOFF_IST (15:00)."""
     now = now or datetime.now(IST)
     return (now.hour, now.minute) >= (_EOD_HOUR, _EOD_MINUTE)

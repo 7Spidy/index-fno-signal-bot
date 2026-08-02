@@ -1,5 +1,5 @@
 """Unit tests for the worst-faller EOD square-off gap fix:
-- worst_faller_tracker.tracker_tick() unconditional 15:10 EOD square-off
+- worst_faller_tracker.tracker_tick() same-day-guarded 15:00 EOD square-off
 - worst_faller_entry.compute_and_alert() self-healing stale-position guard
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ def _quotes():
     }
 
 
-def test_tracker_tick_pre_1510_runs_normal_ladder_logic():
+def test_tracker_tick_pre_squareoff_runs_normal_ladder_logic():
     from src import worst_faller_tracker
 
     mock_kite = MagicMock()
@@ -60,7 +60,7 @@ def test_tracker_tick_pre_1510_runs_normal_ladder_logic():
         patch("src.worst_faller_tracker.worst_faller_notifier.send_close") as mock_close,
         patch("src.worst_faller_tracker.worst_faller_notifier.send_update") as mock_update,
     ):
-        mock_dt.now.return_value = datetime(2026, 7, 29, 15, 0, tzinfo=IST)
+        mock_dt.now.return_value = datetime(2026, 7, 29, 14, 55, tzinfo=IST)
         worst_faller_tracker.tracker_tick(kite=mock_kite)
 
     mock_ladder.assert_called_once()
@@ -70,7 +70,39 @@ def test_tracker_tick_pre_1510_runs_normal_ladder_logic():
     mock_set.assert_called_once()
 
 
-def test_tracker_tick_post_1510_force_closes_eod():
+def test_tracker_tick_post_squareoff_same_day_does_not_close():
+    """Position entered today at 15:00 survives ticks past the 15:00 anchor —
+    the same-day carry guard defers EOD close to a later trading day."""
+    from src import worst_faller_tracker
+
+    mock_kite = MagicMock()
+    mock_kite.quote.return_value = _quotes()
+
+    with (
+        patch("src.worst_faller_tracker._load_position", return_value=_position()),
+        patch("src.worst_faller_tracker.datetime") as mock_dt,
+        patch("src.worst_faller_tracker._rsi_last3", return_value=None),
+        patch("src.worst_faller_tracker.compute_ladder_sl", return_value=101.5) as mock_ladder,
+        patch("src.worst_faller_tracker.compute_ai_adjusted_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.compute_final_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.state.redis_set") as mock_set,
+        patch("src.worst_faller_tracker.state.redis_delete") as mock_delete,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_close") as mock_close,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_update") as mock_update,
+    ):
+        mock_dt.now.return_value = datetime(2026, 7, 29, 15, 1, tzinfo=IST)
+        worst_faller_tracker.tracker_tick(kite=mock_kite)
+
+    mock_ladder.assert_called_once()
+    mock_close.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_update.assert_called_once()
+    mock_set.assert_called_once()
+
+
+def test_tracker_tick_next_day_past_squareoff_force_closes_eod():
+    """Carried position (entered 2026-07-29) closes at the first >=15:00 tick
+    on a LATER trading day."""
     from src import worst_faller_tracker
 
     mock_kite = MagicMock()
@@ -83,13 +115,70 @@ def test_tracker_tick_post_1510_force_closes_eod():
         patch("src.worst_faller_tracker.state.redis_delete") as mock_delete,
         patch("src.worst_faller_tracker.worst_faller_notifier.send_close") as mock_close,
     ):
-        mock_dt.now.return_value = datetime(2026, 7, 29, 15, 10, tzinfo=IST)
+        mock_dt.now.return_value = datetime(2026, 7, 30, 15, 0, tzinfo=IST)
         worst_faller_tracker.tracker_tick(kite=mock_kite)
 
     mock_ladder.assert_not_called()
     mock_close.assert_called_once()
     assert mock_close.call_args[0][-1] == "eod_squareoff"
     mock_delete.assert_called_once()
+
+
+def test_tracker_tick_next_day_before_squareoff_runs_normal_ladder():
+    """Carried position trades normally on day 2 until the 15:00 anchor."""
+    from src import worst_faller_tracker
+
+    mock_kite = MagicMock()
+    mock_kite.quote.return_value = _quotes()
+
+    with (
+        patch("src.worst_faller_tracker._load_position", return_value=_position()),
+        patch("src.worst_faller_tracker.datetime") as mock_dt,
+        patch("src.worst_faller_tracker._rsi_last3", return_value=None),
+        patch("src.worst_faller_tracker.compute_ladder_sl", return_value=101.5) as mock_ladder,
+        patch("src.worst_faller_tracker.compute_ai_adjusted_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.compute_final_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.state.redis_set"),
+        patch("src.worst_faller_tracker.state.redis_delete") as mock_delete,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_close") as mock_close,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_update"),
+    ):
+        mock_dt.now.return_value = datetime(2026, 7, 30, 11, 0, tzinfo=IST)
+        worst_faller_tracker.tracker_tick(kite=mock_kite)
+
+    mock_ladder.assert_called_once()
+    mock_close.assert_not_called()
+    mock_delete.assert_not_called()
+
+
+def test_tracker_tick_missing_entry_time_does_not_force_close():
+    """Malformed metadata must not trigger a blind close — fall through to the
+    ladder and let the entry-run stale sweeper handle it."""
+    from src import worst_faller_tracker
+
+    mock_kite = MagicMock()
+    mock_kite.quote.return_value = _quotes()
+    pos = _position()
+    pos.pop("entry_time")
+
+    with (
+        patch("src.worst_faller_tracker._load_position", return_value=pos),
+        patch("src.worst_faller_tracker.datetime") as mock_dt,
+        patch("src.worst_faller_tracker._rsi_last3", return_value=None),
+        patch("src.worst_faller_tracker.compute_ladder_sl", return_value=101.5) as mock_ladder,
+        patch("src.worst_faller_tracker.compute_ai_adjusted_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.compute_final_sl", return_value=101.5),
+        patch("src.worst_faller_tracker.state.redis_set"),
+        patch("src.worst_faller_tracker.state.redis_delete") as mock_delete,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_close") as mock_close,
+        patch("src.worst_faller_tracker.worst_faller_notifier.send_update"),
+    ):
+        mock_dt.now.return_value = datetime(2026, 7, 30, 15, 5, tzinfo=IST)
+        worst_faller_tracker.tracker_tick(kite=mock_kite)
+
+    mock_ladder.assert_called_once()
+    mock_close.assert_not_called()
+    mock_delete.assert_not_called()
 
 
 def test_compute_and_alert_force_closes_stale_position_then_enters():

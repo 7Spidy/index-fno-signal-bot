@@ -44,7 +44,7 @@ WEEKLY_EXPIRY_WEEKDAY = {
 MONTHLY_EXPIRY_INSTRUMENTS = {"BANKNIFTY"}  # stocks handled via stock_config.STOCKS
 
 # Cutoff time on an instrument's own expiry day — no alerts fired after this,
-# even though the normal EVAL_WINDOW_END (14:45) is later. Does not affect
+# even though the normal EVAL_WINDOW_END (14:30) is later. Does not affect
 # instruments that are NOT expiring today.
 EXPIRY_DAY_CUTOFF = "13:30"
 
@@ -82,11 +82,26 @@ ATR_TARGET_K_INDEX = 2.25
 ATM_DELTA = 0.50
 
 # Evaluation window (IST)
+# EVAL_WINDOW_END moved 14:45 -> 14:30 (2026-08-02) alongside the square-off
+# anchor move to 15:00. Keeps a 30-min runway between last possible entry and
+# hard square-off, which is 2x the theta time-stop (15 min).
 EVAL_WINDOW_START = "09:40"
-EVAL_WINDOW_END   = "14:45"
+EVAL_WINDOW_END   = "14:30"
 
 # Compatibility alias used by calendar_nse.py and log messages
 EVAL_WINDOW_IST = (EVAL_WINDOW_START, EVAL_WINDOW_END)
+
+# ── Hard intraday square-off anchor ──────────────────────────────────────────
+# SINGLE SOURCE OF TRUTH for Repo 1. Both src/paper_engine.py (live paper
+# EOD) and tools/pnl_replay.py (backtester) derive from this — never hardcode
+# the time in either place again.
+#
+# INVARIANT: must equal Repo 2's executor/config.py SQUAREOFF_IST. Changing one
+# without the other makes paper and live diverge silently.
+#
+# Moved 15:10 -> 15:00 (2026-08-02) per changed square-off guidelines.
+SQUAREOFF_IST  = "15:00"
+SQUAREOFF_HHMM = tuple(int(x) for x in SQUAREOFF_IST.split(":"))   # (15, 0)
 
 # RSI candles for slope check
 RSI_SLOPE_CANDLES = 3
@@ -127,6 +142,7 @@ def as_dict() -> dict:
         "COOLDOWN_CANDLES":          COOLDOWN_CANDLES,
         "SESSION_START_IST":         "09:15",
         "EVAL_WINDOW_IST":           EVAL_WINDOW_IST,
+        "SQUAREOFF_IST":             SQUAREOFF_IST,
         "INSTRUMENTS":               INSTRUMENTS,
         "TARGET_RR":                 TARGET_RR,
         "ATM_DELTA":                 ATM_DELTA,

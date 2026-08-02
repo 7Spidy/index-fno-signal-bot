@@ -8,7 +8,8 @@ Flow:
      If a fresh, unconsumed intent exists, call paper_engine.simulate_entry().
   2. For each open paper position, fetch live option LTP, compute the ladder SL,
      and check whether the SL has been crossed. If crossed, call simulate_exit().
-  3. At 15:30 IST, square off any remaining open positions at live LTP (EOD).
+  3. At config.SQUAREOFF_IST (15:00), square off any remaining open positions
+     at live LTP (EOD).
   4. Post/edit the single consolidated Discord message each cycle.
   5. After EOD square-off, post the daily summary exactly once.
 """
@@ -458,7 +459,8 @@ def run_heartbeat(rsi_cache: dict[tuple[str, str], list[float]] | None = None) -
     The consolidated Discord message is always sent/edited at the end of every
     cycle, even when the Kite client is unavailable (positions show stale LTP).
 
-    EOD square-off anchor is 15:10 IST, per paper_engine.is_eod().
+    EOD square-off anchor is config.SQUAREOFF_IST (15:00 IST), per
+    paper_engine.is_eod().
 
     rsi_cache: optional dict threaded through to _get_rsi_snapshot(). main()
     creates one dict and passes the same object into every sub-minute pass so
@@ -574,7 +576,7 @@ def run_heartbeat(rsi_cache: dict[tuple[str, str], list[float]] | None = None) -
                 except Exception as e:
                     print(f"[position_tracker] {tradingsymbol}: simulate_exit error: {e}")
 
-        # ── Step 3: EOD square-off at 15:30 IST ─────────────────────────────
+        # ── Step 3: EOD square-off at config.SQUAREOFF_IST (15:00) ─────────
         if paper_engine.is_eod(now):
             for pos in paper_engine.get_open_positions():
                 tradingsymbol = pos["tradingsymbol"]

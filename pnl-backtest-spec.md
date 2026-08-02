@@ -90,7 +90,7 @@ A signal at candle `i` (instrument, direction in {CE,PE}) is **taken** iff:
 
 1. `result[dir]["signal"]` is True.
 2. Signal candle time (the `iloc[-2]` timestamp) is within the eval window
-   **09:40–14:45 IST inclusive** (`EVAL_WINDOW_START/END`). No entries after 14:45.
+   **09:40–14:30 IST inclusive** (`EVAL_WINDOW_START/END`). No entries after 14:30.
 3. **Cooldown:** fewer than `COOLDOWN_CANDLES` (3) five-minute candles have
    elapsed since the last *taken* same-direction signal **for that instrument**.
    Track last-taken candle-ts per `(instrument, direction)`; suppress if
@@ -149,7 +149,7 @@ candle until end of that session:
 - **Intrabar tie-break (pessimistic):** if a single candle's range touches both
   SL and target, record **SL** (assume the stop fills first).
 - **Hard square-off:** if neither level is hit by the candle whose time is
-  **15:10 IST** (or the last candle ≤ 15:10 in that session), exit at that
+  **15:00 IST** (or the last candle ≤ 15:00 in that session), exit at that
   candle's **close** (TIME exit).
 
 Exit outcome per trade:
@@ -167,7 +167,7 @@ pnl_rupees_per_lot = pnl_pts * delta * lot_size      # 1 lot, delta-approx
 
 `lot_size` is fetched per instrument from the instruments dump (current value);
 do not hardcode. The whole trade lives within one session (intraday system,
-15:10 square-off), so no multi-day walk.
+15:00 square-off), so no multi-day walk.
 
 ---
 

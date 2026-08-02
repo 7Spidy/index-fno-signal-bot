@@ -17,7 +17,7 @@ A Python service that monitors Indian index futures and individual stock options
                                    → stock equity + option token cache
                                    → dashboard reset
 
-09:40 IST  signal.yml (every 5 min until 14:45)          ← index bot
+09:40 IST  signal.yml (every 5 min until 14:30)          ← index bot
                │
                ├─ Gate: trading day? eval window?
                ├─ Fetch 5-min OHLCV candles (today + 5-day warm-up tail)
@@ -28,7 +28,7 @@ A Python service that monitors Indian index futures and individual stock options
                ├─ On signal: dedup + cooldown → Discord alert → dashboard → Notion journal
                └─ Always: write docs/dashboard.json → git push → GitHub Pages
 
-09:40 IST  stock-signal.yml (every 5 min until 14:45)    ← stock bot
+09:40 IST  stock-signal.yml (every 5 min until 14:30)    ← stock bot
                │
                ├─ Gate: trading day? eval window? event-excluded?
                ├─ Fetch 5-min equity OHLCV candles (today + 5-day warm-up)
@@ -377,7 +377,7 @@ All stocks use **monthly expiry only** (no weekly — post SEBI Nov 2024 restric
 5. **Stock equity token cache** — `src/stock_kite_client.py --cache-equity-tokens` resolves NSE equity instrument tokens for all 14 tracked stocks and stores them in Redis.
 6. **Stock option token cache** — `src/stock_kite_client.py --cache-stock-options` pre-caches monthly ATM ± range option tokens for each stock.
 
-### Signal Evaluation (~09:40–14:45 IST, every 5 min)
+### Signal Evaluation (~09:40–14:30 IST, every 5 min)
 
 `signal.yml` is triggered every 5 minutes by cron-job.org (GitHub Actions native cron is too imprecise for market data).
 
@@ -522,7 +522,7 @@ Repo Settings → Pages → Source: **main branch, /docs folder**
 
 `signal.yml` uses `workflow_dispatch` only (no native GitHub cron) because GitHub's scheduled workflows can be delayed 10–30 minutes, which is unacceptable for market-hour signal evaluation.
 
-Point cron-job.org (or equivalent) to trigger the workflow every 5 minutes between 09:40–14:45 IST on weekdays. Use the GitHub API dispatch endpoint with a repo-scoped PAT.
+Point cron-job.org (or equivalent) to trigger the workflow every 5 minutes between 09:40–14:30 IST on weekdays. Use the GitHub API dispatch endpoint with a repo-scoped PAT.
 
 ### 5. Test manually
 
@@ -540,7 +540,7 @@ All tunable parameters are in `src/config.py`:
 | Parameter | Value | Meaning |
 |---|---|---|
 | `EVAL_WINDOW_START` | `09:40` | Earliest time signals can fire (IST) |
-| `EVAL_WINDOW_END` | `14:45` | Latest time (IST) |
+| `EVAL_WINDOW_END` | `14:30` | Latest time (IST) |
 | `DI_THRESHOLD` | `25` | Minimum DI value for C4 to pass |
 | `REQUIRE_DI_DOMINANCE` | `True` | Dominant DI must exceed opposing DI |
 | `DI_TREND_CHECK` | `True` | DI must be rising across 3 points |

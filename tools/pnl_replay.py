@@ -36,7 +36,9 @@ MAX_RISK_POINTS = {"NIFTY": 20, "BANKNIFTY": 100, "SENSEX": 80}
 # These never change — they identify the continuous index, not a derivative.
 SPOT_INDEX_TOKENS = {"NIFTY": 256265, "BANKNIFTY": 260105, "SENSEX": 265}
 
-SQUAREOFF_TIME = dtime(15, 10)   # hard intraday square-off (§5)
+# Derived from Repo 1's single source of truth so the backtester can never
+# drift from live. Do NOT hardcode a time here again.
+SQUAREOFF_TIME = dtime(*config.SQUAREOFF_HHMM)   # hard intraday square-off (§5)
 CANDLE_SECONDS = 5 * 60
 
 
@@ -204,7 +206,8 @@ def simulate_exit(forward: pd.DataFrame, direction: str,
                   spot_sl: float, spot_tgt: float, ref: float):
     """Walk forward candles (same session, after the signal candle) until SL/
     target/square-off. Returns (outcome, exit_price). §5 semantics:
-    intrabar SL-first tie-break; 15:10 hard square-off at that candle's close.
+    intrabar SL-first tie-break; config.SQUAREOFF_IST hard square-off at that
+    candle's close.
     """
     squareoff = forward[forward["timestamp"].dt.time <= SQUAREOFF_TIME]
     for _, c in squareoff.iterrows():
@@ -218,10 +221,10 @@ def simulate_exit(forward: pd.DataFrame, direction: str,
             return "SL", spot_sl
         if tg_hit:
             return "TARGET", spot_tgt
-    # No level hit by square-off → TIME exit at last candle's close ≤ 15:10
+    # No level hit by square-off → TIME exit at last candle's close ≤ config.SQUAREOFF_IST
     if len(squareoff) > 0:
         return "TIME", float(squareoff.iloc[-1]["close"])
-    return "TIME", ref                   # degenerate: no candle before 15:10
+    return "TIME", ref                   # degenerate: no candle before config.SQUAREOFF_IST
 
 
 # --------------------------------------------------------------------------- #
@@ -327,7 +330,7 @@ def replay_instrument(kite, name: str, strike_step: int, min_risk: int,
                 candle_ts = full.at[i, "timestamp"]
                 ts_time = candle_ts.time()
 
-                # Gate 2: eval window 09:40–14:45 IST inclusive (§3.2)
+                # Gate 2: eval window per config.EVAL_WINDOW_START/END, inclusive (§3.2)
                 if ts_time < ew_start or ts_time > ew_end:
                     continue
 

@@ -11,9 +11,10 @@ SL/target breach, and posts an edit-in-place update or a close embed.
 
 Runs every 1 minute during market hours (workflow_dispatch, triggered by
 cron-job.org — see .github/workflows/worst-faller-tracker.yml). Continues
-across days automatically if the position carries overnight, since it just
-reads Redis state each tick (no special-casing needed), exactly like
-condor-tracker.yml.
+across days automatically if the position carries overnight: the EOD
+square-off branch is gated on a same-day carry guard, so a position entered
+today at 15:00 survives past the 15:00 anchor and is closed at the first
+>=15:00 tick on a LATER trading day.
 
 CLI:
     python -m src.worst_faller_tracker --tracker-tick
@@ -92,9 +93,17 @@ def tracker_tick(kite=None) -> None:
     pnl_rs = (current_opt_ltp - position["entry_opt_price"]) * position["lot_size"]
 
     now_ist = datetime.now(IST)
-    if paper_engine.is_eod(now_ist):
+    # Same-day carry guard. Entry fires at ENTRY_HHMM (15:00), which is the
+    # same minute as the shared square-off anchor — so without this guard the
+    # tick immediately after entry would EOD-close a position that is seconds
+    # old. This strategy is designed to carry overnight, so the EOD branch is
+    # only valid for a position opened on a PREVIOUS trading day.
+    entered_on = str(position.get("entry_time", ""))[:10]
+    is_carried = bool(entered_on) and entered_on != now_ist.strftime("%Y-%m-%d")
+    if paper_engine.is_eod(now_ist) and is_carried:
         prior_sl = position.get("current_sl_spot", position["initial_sl_spot"])
-        print(f"[worst_faller_tracker] EOD SQUARE-OFF: {position['name']} pnl_rs={pnl_rs:.2f}")
+        print(f"[worst_faller_tracker] EOD SQUARE-OFF: {position['name']} "
+              f"(entered {entered_on}) pnl_rs={pnl_rs:.2f}")
         worst_faller_notifier.send_close(
             position, current_spot, prior_sl, current_opt_ltp, pnl_rs, "eod_squareoff"
         )

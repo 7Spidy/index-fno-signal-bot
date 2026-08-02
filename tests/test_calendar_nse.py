@@ -122,7 +122,7 @@ class TestIsExpiryDayMonthly(unittest.TestCase):
 # ── in_eval_window_for ────────────────────────────────────────────────────────
 
 class TestInEvalWindowFor(unittest.TestCase):
-    """Per-instrument eval window: expiry-day cutoff at 13:30 vs normal 14:45."""
+    """Per-instrument eval window: expiry-day cutoff at 13:30 vs normal 14:30."""
 
     def test_13_00_on_expiry_day_is_in_window(self):
         """13:00 is within 09:40–13:30 on expiry day."""
@@ -141,20 +141,36 @@ class TestInEvalWindowFor(unittest.TestCase):
             self.assertFalse(calendar_nse.in_eval_window_for("NIFTY", now))
 
     def test_13_31_on_non_expiry_day_is_in_window(self):
-        """13:31 is within normal 09:40–14:45 window on non-expiry day."""
+        """13:31 is within normal 09:40–14:30 window on non-expiry day."""
         d = date(2026, 7, 7)
         now = _dt(13, 31, d)
         with patch("src.calendar_nse.is_expiry_day", return_value=False):
             from src import calendar_nse
             self.assertTrue(calendar_nse.in_eval_window_for("NIFTY", now))
 
-    def test_14_30_on_non_expiry_day_is_in_window(self):
-        """14:30 is within normal window on non-expiry day."""
+    def test_14_29_on_non_expiry_day_is_in_window(self):
+        """14:29 is within normal 09:40-14:30 window on non-expiry day."""
+        d = date(2026, 7, 7)
+        now = _dt(14, 29, d)
+        with patch("src.calendar_nse.is_expiry_day", return_value=False):
+            from src import calendar_nse
+            self.assertTrue(calendar_nse.in_eval_window_for("NIFTY", now))
+
+    def test_14_30_boundary_is_inclusive_on_non_expiry_day(self):
+        """14:30 is the inclusive end of the normal window."""
         d = date(2026, 7, 7)
         now = _dt(14, 30, d)
         with patch("src.calendar_nse.is_expiry_day", return_value=False):
             from src import calendar_nse
             self.assertTrue(calendar_nse.in_eval_window_for("NIFTY", now))
+
+    def test_14_31_on_non_expiry_day_is_outside_window(self):
+        """14:31 is past the new 14:30 cutoff."""
+        d = date(2026, 7, 7)
+        now = _dt(14, 31, d)
+        with patch("src.calendar_nse.is_expiry_day", return_value=False):
+            from src import calendar_nse
+            self.assertFalse(calendar_nse.in_eval_window_for("NIFTY", now))
 
     def test_14_30_on_expiry_day_is_outside_window(self):
         """14:30 is past 13:30 cutoff on expiry day."""
