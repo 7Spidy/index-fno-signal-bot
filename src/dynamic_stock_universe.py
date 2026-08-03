@@ -242,6 +242,12 @@ def compute_and_cache_dynamic_universe() -> None:
 
     _post_summary(gainer, loser)
 
+    try:
+        from src import dashboard_writer
+        dashboard_writer.refresh_strategy_modules()
+    except Exception as e:
+        print(f"[dynamic_universe] dashboard refresh failed: {e}")
+
 
 def _post_summary(gainer: dict | None, loser: dict | None) -> None:
     """Posts the routine daily pick summary to #signals-stocks directly via

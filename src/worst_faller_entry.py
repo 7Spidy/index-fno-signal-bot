@@ -207,6 +207,12 @@ def compute_and_alert(kite=None) -> None:
     print(f"[worst_faller_entry] ENTRY: {name} PE {pe_symbol} entry_opt={entry_opt_price:.2f} "
           f"sl_spot={sl_spot:.2f} target_pts={target_pts:.2f} ({target_source})")
 
+    try:
+        from src import dashboard_writer
+        dashboard_writer.refresh_strategy_modules()
+    except Exception as e:
+        print(f"[worst_faller_entry] dashboard refresh failed: {e}")
+
 
 def main() -> None:
     if "--compute-and-alert" in sys.argv:

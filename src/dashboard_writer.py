@@ -184,6 +184,20 @@ def update_active_signal(instrument: str, direction: str, result: dict) -> None:
     _git_commit(now)
 
 
+def refresh_strategy_modules() -> None:
+    """Re-read worst_faller:position / stock:dynamic_universe from Redis
+    and commit just the strategy_modules block. Called directly by
+    dynamic_stock_universe.py and worst_faller_entry.py so the EOD compute
+    step deploys itself instead of waiting on signal.yml's next run."""
+    data = load()
+    data["strategy_modules"] = _build_strategy_modules_block()
+    now = datetime.now(IST)
+    DOCS.mkdir(exist_ok=True)
+    FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(f"[dashboard] strategy_modules refreshed at {now.strftime('%H:%M IST')}")
+    _git_commit(now)
+
+
 def reset_day() -> None:
     data = load()
     now = datetime.now(IST)
