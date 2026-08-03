@@ -119,7 +119,37 @@
       "live_atr": 21.716139072237326
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "13:15 IST",
+      "futures_price": 78945.0,
+      "spot_ltp": 78705.43,
+      "fut_spot_spread": 239.6,
+      "tradingsymbol": "SENSEX2680678700CE",
+      "strike": 78700,
+      "expiry": "2026-08-06",
+      "fetch_time": "13:21:19 IST",
+      "atm_ltp": 350.4,
+      "opt_target": 379.49,
+      "opt_sl": 331.01,
+      "spot_tgt": 78760.9,
+      "spot_sl": 78668.4,
+      "raw_risk": 37.0,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 47.891560854379875,
+      "pdi": 30.1478300316631,
+      "ndi": 24.49585583203964,
+      "vwap": 78962.91699150424,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
