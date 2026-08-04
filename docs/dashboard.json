@@ -112,11 +112,11 @@
   "strategy_modules": {
     "worst_faller": null,
     "dynamic_universe": {
-      "valid_for_date": "2026-08-04",
+      "valid_for_date": "2026-08-05",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "HYUNDAI",
-      "loser_name": "LICHSGFIN"
+      "gainer_name": "KEI",
+      "loser_name": "KALYANKJIL"
     }
   }
 }
