@@ -110,7 +110,13 @@
   ],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
-    "worst_faller": null,
+    "worst_faller": {
+      "name": "LICI",
+      "entry_time": "2026-08-04T15:04:47.698422+05:30",
+      "entry_spot": 394.8,
+      "target_pts": 1.93,
+      "target_source": "atr"
+    },
     "dynamic_universe": {
       "valid_for_date": "2026-08-05",
       "gainer_found": true,
