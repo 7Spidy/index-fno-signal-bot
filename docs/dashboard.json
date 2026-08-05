@@ -204,11 +204,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-05",
+      "valid_for_date": "2026-08-06",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "KEI",
-      "loser_name": "KALYANKJIL"
+      "gainer_name": "JUBLFOOD",
+      "loser_name": "LICI"
     }
   }
 }
