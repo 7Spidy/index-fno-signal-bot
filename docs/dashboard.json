@@ -135,10 +135,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "KALYANKJIL",
-      "entry_time": "2026-08-05T15:04:51.168648+05:30",
-      "entry_spot": 571.8,
-      "target_pts": 5.15,
+      "name": "BLUESTARCO",
+      "entry_time": "2026-08-06T15:04:48.120133+05:30",
+      "entry_spot": 1565.0,
+      "target_pts": 10.87,
       "target_source": "atr"
     },
     "dynamic_universe": {
