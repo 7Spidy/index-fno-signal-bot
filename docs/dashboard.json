@@ -174,9 +174,9 @@
   "strategy_modules": {
     "worst_faller": {
       "name": "BLUESTARCO",
-      "entry_time": "2026-08-06T15:04:48.120133+05:30",
-      "entry_spot": 1565.0,
-      "target_pts": 10.87,
+      "entry_time": "2026-08-07T15:04:42.255888+05:30",
+      "entry_spot": 1506.8,
+      "target_pts": 11.61,
       "target_source": "atr"
     },
     "dynamic_universe": {
