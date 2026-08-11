@@ -118,11 +118,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-11",
+      "valid_for_date": "2026-08-12",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "POWERINDIA",
-      "loser_name": "BLUESTARCO"
+      "gainer_name": "PAYTM",
+      "loser_name": "CROMPTON"
     }
   }
 }
