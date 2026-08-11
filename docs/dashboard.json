@@ -111,10 +111,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "PFC",
-      "entry_time": "2026-08-10T15:04:43.973948+05:30",
-      "entry_spot": 384.7,
-      "target_pts": 1.95,
+      "name": "BHARATFORG",
+      "entry_time": "2026-08-11T15:04:54.961506+05:30",
+      "entry_spot": 2050.3,
+      "target_pts": 12.87,
       "target_source": "atr"
     },
     "dynamic_universe": {
