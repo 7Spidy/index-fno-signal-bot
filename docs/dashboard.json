@@ -119,7 +119,37 @@
       "live_atr": 55.234195785332496
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "PE",
+      "candle_time": "09:45 IST",
+      "futures_price": 24481.0,
+      "spot_ltp": 24393.8,
+      "fut_spot_spread": 87.2,
+      "tradingsymbol": "NIFTY2681824400PE",
+      "strike": 24400,
+      "expiry": "2026-08-18",
+      "fetch_time": "09:50:49 IST",
+      "atm_ltp": 112.2,
+      "opt_target": 134.3,
+      "opt_sl": 97.46,
+      "spot_tgt": 24342.6,
+      "spot_sl": 24427.9,
+      "raw_risk": 34.1,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 32.845465791831444,
+      "pdi": 15.196850341862822,
+      "ndi": 26.353052923995282,
+      "vwap": 24510.823528044177,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "09:40",
