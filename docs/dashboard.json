@@ -228,11 +228,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-12",
+      "valid_for_date": "2026-08-13",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "PAYTM",
-      "loser_name": "CROMPTON"
+      "gainer_name": "MCX",
+      "loser_name": "GODREJCP"
     }
   }
 }
