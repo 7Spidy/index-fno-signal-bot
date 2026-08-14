@@ -292,7 +292,13 @@
   ],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
-    "worst_faller": null,
+    "worst_faller": {
+      "name": "ZYDUSLIFE",
+      "entry_time": "2026-08-14T15:04:46.115000+05:30",
+      "entry_spot": 1139.5,
+      "target_pts": 6.27,
+      "target_source": "atr"
+    },
     "dynamic_universe": {
       "valid_for_date": "2026-08-17",
       "gainer_found": true,
