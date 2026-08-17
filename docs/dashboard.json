@@ -1,8 +1,8 @@
 {
   "date": "2026-08-17",
-  "last_run": "2026-08-14T14:25:33.613966+05:30",
+  "last_run": "2026-08-17T09:40:39.823196+05:30",
   "token_valid": true,
-  "token_refreshed_at": "2026-08-17T09:05:45.162369+05:30",
+  "token_refreshed_at": "2026-08-17T09:05:33.740555+05:30",
   "instruments": [
     {
       "ce": {
@@ -10,48 +10,40 @@
         "c2": false,
         "c3": true,
         "c4": false,
-        "c5": true,
-        "signal": false
-      },
-      "pe": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
         "c5": false,
         "signal": false
       },
-      "futures_price": 24457.0,
-      "candle_high": 24458.7,
-      "candle_low": 24451.0,
-      "prev_candle_high": 24464.0,
-      "prev_candle_low": 24450.2,
-      "candle_time": "14:20 IST",
-      "vwap": 24408.676728973485,
-      "rsi": 63.3184748382849,
-      "pdi": 27.807261194255926,
-      "ndi": 16.540912015099853,
-      "live_price": 24457.9,
-      "live_vwap": 24408.1,
-      "live_rsi": 63.65198166290346,
-      "live_pdi": 27.673826850357614,
-      "live_ndi": 16.461539734356485,
-      "atm_strike": 24450,
-      "name": "NIFTY",
-      "symbol": "NIFTY26AUGFUT",
-      "strike_step": 50,
-      "live_atr": 12.957413103353376
-    },
-    {
-      "ce": {
+      "pe": {
         "c1": false,
-        "c2": false,
+        "c2": true,
         "c3": false,
         "c4": false,
         "c5": true,
         "signal": false
       },
-      "pe": {
+      "futures_price": 24340.0,
+      "candle_high": 24356.1,
+      "candle_low": 24330.2,
+      "prev_candle_high": 24357.9,
+      "prev_candle_low": 24325.9,
+      "candle_time": "09:35 IST",
+      "vwap": 24361.008815015826,
+      "rsi": 25.526001866769704,
+      "pdi": 7.142016676108892,
+      "ndi": 38.33506910061867,
+      "live_price": 24340.2,
+      "live_vwap": 24351.89,
+      "live_rsi": 25.62282329723105,
+      "live_pdi": 7.136713896263947,
+      "live_ndi": 38.30660621107357,
+      "atm_strike": 24350,
+      "name": "NIFTY",
+      "symbol": "NIFTY26AUGFUT",
+      "strike_step": 50,
+      "live_atr": 20.508803566623726
+    },
+    {
+      "ce": {
         "c1": true,
         "c2": false,
         "c3": true,
@@ -59,26 +51,34 @@
         "c5": false,
         "signal": false
       },
-      "futures_price": 57770.0,
-      "candle_high": 57782.6,
-      "candle_low": 57738.8,
-      "prev_candle_high": 57794.0,
-      "prev_candle_low": 57765.4,
-      "candle_time": "14:20 IST",
-      "vwap": 57699.260845708835,
-      "rsi": 66.23158705587264,
-      "pdi": 30.83131895792049,
-      "ndi": 16.41297974178871,
-      "live_price": 57753.8,
-      "live_vwap": 57697.17,
-      "live_rsi": 61.968750151233905,
-      "live_pdi": 29.837843672812706,
-      "live_ndi": 15.884105522988776,
-      "atm_strike": 57800,
+      "pe": {
+        "c1": false,
+        "c2": true,
+        "c3": false,
+        "c4": false,
+        "c5": true,
+        "signal": false
+      },
+      "futures_price": 57387.0,
+      "candle_high": 57428.0,
+      "candle_low": 57375.0,
+      "prev_candle_high": 57404.0,
+      "prev_candle_low": 57351.0,
+      "candle_time": "09:35 IST",
+      "vwap": 57423.48311111111,
+      "rsi": 18.735614823137254,
+      "pdi": 9.731095386424283,
+      "ndi": 40.49548656021258,
+      "live_price": 57393.8,
+      "live_vwap": 57407.13,
+      "live_rsi": 20.244533327985735,
+      "live_pdi": 9.645287440684875,
+      "live_ndi": 40.13840091101657,
+      "atm_strike": 57400,
       "name": "BANKNIFTY",
       "symbol": "BANKNIFTY26AUGFUT",
       "strike_step": 100,
-      "live_atr": 36.08511065809061
+      "live_atr": 59.27345434015769
     },
     {
       "ce": {
@@ -86,7 +86,7 @@
         "c2": false,
         "c3": false,
         "c4": false,
-        "c5": true,
+        "c5": false,
         "signal": false
       },
       "pe": {
@@ -94,29 +94,29 @@
         "c2": false,
         "c3": false,
         "c4": false,
-        "c5": false,
+        "c5": true,
         "signal": false
       },
-      "futures_price": 78270.0,
-      "candle_high": 78297.95,
-      "candle_low": 78262.3,
-      "prev_candle_high": 78297.95,
-      "prev_candle_low": 78287.2,
-      "candle_time": "14:20 IST",
-      "vwap": 78156.8178403756,
-      "rsi": 57.14501039681848,
-      "pdi": 34.148779405128224,
-      "ndi": 24.334942527706968,
-      "live_price": 78270.0,
-      "live_vwap": 78149.02,
-      "live_rsi": 57.14501039681848,
-      "live_pdi": 34.148779405128224,
-      "live_ndi": 24.334942527706968,
-      "atm_strike": 78300,
+      "futures_price": 77939.0,
+      "candle_high": 77939.0,
+      "candle_low": 77925.0,
+      "prev_candle_high": 77998.15,
+      "prev_candle_low": 77915.0,
+      "candle_time": "09:35 IST",
+      "vwap": 78016.50854700855,
+      "rsi": 28.528716518936804,
+      "pdi": 11.296627665268717,
+      "ndi": 45.72555548211398,
+      "live_price": 77939.0,
+      "live_vwap": 77972.33,
+      "live_rsi": 28.528716518936804,
+      "live_pdi": 11.296627665268717,
+      "live_ndi": 45.72555548211398,
+      "atm_strike": 77900,
       "name": "SENSEX",
       "symbol": "SENSEX26AUGFUT",
       "strike_step": 100,
-      "live_atr": 40.52704869394768
+      "live_atr": 51.37432012429329
     }
   ],
   "active_signals": [],
@@ -130,12 +130,6 @@
       "target_pts": 6.27,
       "target_source": "atr"
     },
-    "dynamic_universe": {
-      "valid_for_date": "2026-08-17",
-      "gainer_found": true,
-      "loser_found": true,
-      "gainer_name": "IDEA",
-      "loser_name": "PIIND"
-    }
+    "dynamic_universe": null
   }
 }
