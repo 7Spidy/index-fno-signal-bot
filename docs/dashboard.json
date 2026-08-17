@@ -124,10 +124,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "ZYDUSLIFE",
-      "entry_time": "2026-08-14T15:04:46.115000+05:30",
-      "entry_spot": 1139.5,
-      "target_pts": 6.27,
+      "name": "BSE",
+      "entry_time": "2026-08-17T15:04:42.936219+05:30",
+      "entry_spot": 3346.3,
+      "target_pts": 21.8,
       "target_source": "atr"
     },
     "dynamic_universe": {
