@@ -130,6 +130,12 @@
       "target_pts": 6.27,
       "target_source": "atr"
     },
-    "dynamic_universe": null
+    "dynamic_universe": {
+      "valid_for_date": "2026-08-18",
+      "gainer_found": true,
+      "loser_found": true,
+      "gainer_name": "OBEROIRLTY",
+      "loser_name": "NATIONALUM"
+    }
   }
 }
