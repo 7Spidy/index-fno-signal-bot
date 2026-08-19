@@ -173,10 +173,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "HCLTECH",
-      "entry_time": "2026-08-18T15:04:53.385808+05:30",
-      "entry_spot": 1298.2,
-      "target_pts": 6.37,
+      "name": "POWERINDIA",
+      "entry_time": "2026-08-19T15:04:50.272688+05:30",
+      "entry_spot": 33510.0,
+      "target_pts": 236.36,
       "target_source": "atr"
     },
     "dynamic_universe": {
