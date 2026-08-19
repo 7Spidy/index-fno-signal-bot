@@ -200,10 +200,48 @@ def run_morning_login() -> None:
         state.redis_set("kite:token_refreshed_at", now_ist)
         print(f"[auth] ✓ Token stored in Redis at {now_ist}")
 
+        _write_to_journal_supabase(token, now_ist)
+
     except Exception as e:
         print(f"[auth] ✗ Login failed: {e}")
         _send_login_failure_alert(str(e))
         sys.exit(1)
+
+
+def _write_to_journal_supabase(token: str, issued_at_ist: str) -> None:
+    """Best-effort mirror of today's token to the journal's Supabase project.
+
+    Never allowed to fail the bot's own login — Redis above is this bot's
+    real source of truth. This is purely so the trading journal (a separate
+    project, separate Supabase instance) can read the same token without
+    doing its own independent Kite login, which would risk invalidating
+    this session.
+    """
+    url = os.environ.get("JOURNAL_SUPABASE_URL")
+    key = os.environ.get("JOURNAL_SUPABASE_SECRET_KEY")
+    if not url or not key:
+        print("[auth] journal Supabase vars not set — skipping mirror write")
+        return
+    try:
+        r = requests.post(
+            f"{url}/rest/v1/broker_sessions",
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates",
+            },
+            json={
+                "broker": "kite",
+                "access_token": token,
+                "issued_at": datetime.now(timezone.utc).isoformat(),
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        print("[auth] ✓ Mirrored token to journal Supabase")
+    except Exception as e:
+        print(f"[auth] ⚠ Journal Supabase mirror failed (non-fatal): {e}")
 
 
 def _send_login_failure_alert(error_msg: str) -> None:
