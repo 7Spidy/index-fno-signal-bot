@@ -180,11 +180,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-19",
+      "valid_for_date": "2026-08-20",
       "gainer_found": true,
       "loser_found": true,
       "gainer_name": "TIINDIA",
-      "loser_name": "TMPV"
+      "loser_name": "VOLTAS"
     }
   }
 }
