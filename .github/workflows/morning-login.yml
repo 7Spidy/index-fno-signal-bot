@@ -32,6 +32,8 @@ jobs:
           UPSTASH_REDIS_REST_URL:   ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          JOURNAL_SUPABASE_URL:        ${{ secrets.JOURNAL_SUPABASE_URL }}
+          JOURNAL_SUPABASE_SECRET_KEY: ${{ secrets.JOURNAL_SUPABASE_SECRET_KEY }}
 
       - name: Backfill India VIX history (idempotent)
         run: python -m src.condor_engine --backfill-vix-history
