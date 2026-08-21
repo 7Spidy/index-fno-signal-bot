@@ -86,10 +86,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "BDL",
-      "entry_time": "2026-08-20T15:05:04.348860+05:30",
-      "entry_spot": 1310.8,
-      "target_pts": 8.64,
+      "name": "KEI",
+      "entry_time": "2026-08-21T15:03:28.162487+05:30",
+      "entry_spot": 5512.6,
+      "target_pts": 33.96,
       "target_source": "atr"
     },
     "dynamic_universe": {
