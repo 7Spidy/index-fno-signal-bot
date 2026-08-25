@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INOXWIND F&amp;O Read, 25 Aug 2026</title>
+<style>
+  :root{
+    --bg:#FAF8F3;
+    --card:#FFFFFF;
+    --ink:#2B2A28;
+    --ink-soft:#5B584F;
+    --gold:#B8860B;
+    --gold-light:#D4AF37;
+    --gold-hair:#E9DFC4;
+    --green:#1E6B45;
+    --green-bg:#EAF4EE;
+    --red:#8C3B3B;
+    --red-bg:#F7ECEC;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Times New Roman", "Noto Serif", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    padding:16px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  header.masthead{
+    text-align:center;
+    padding:22px 12px 18px;
+    border-bottom:2px solid var(--gold);
+    margin-bottom:22px;
+  }
+  header.masthead .kicker{
+    font-family:var(--sans);
+    font-size:13px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    font-weight:600;
+  }
+  header.masthead h1{
+    font-family:var(--serif);
+    font-size:30px;
+    margin:8px 0 6px;
+    color:var(--ink);
+  }
+  header.masthead .meta{
+    font-size:14px;
+    color:var(--ink-soft);
+    font-family:var(--mono);
+  }
+  header.masthead .expiry-pill{
+    display:inline-block;
+    margin-top:10px;
+    padding:6px 14px;
+    border:1px solid var(--gold);
+    border-radius:999px;
+    font-size:13px;
+    color:var(--gold);
+    font-weight:600;
+    background:#FFFDF6;
+  }
+  .rule{
+    border:none;
+    border-top:1px solid var(--gold-hair);
+    margin:6px 0 16px;
+  }
+  section{margin-bottom:28px;}
+  h2.section-title{
+    font-family:var(--serif);
+    font-size:20px;
+    margin:0 0 4px;
+    color:var(--ink);
+    position:relative;
+  }
+  h2.section-title::after{
+    content:"";
+    display:block;
+    width:52px;
+    height:2px;
+    background:var(--gold);
+    margin-top:6px;
+  }
+  .brief-card{
+    background:var(--card);
+    border:1px solid var(--gold-hair);
+    border-radius:14px;
+    padding:18px 18px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    font-size:15.5px;
+    color:var(--ink-soft);
+    margin-top:14px;
+  }
+  .brief-card p{margin:0 0 12px;}
+  .brief-card p:last-child{margin-bottom:0;}
+  .sw-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:12px;
+  }
+  @media(min-width:520px){
+    .sw-grid{grid-template-columns:1fr 1fr;}
+  }
+  .sw-box{
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:14.5px;
+  }
+  .sw-box.strengths{background:var(--green-bg); color:var(--green);}
+  .sw-box.watch{background:var(--red-bg); color:var(--red);}
+  .sw-box h3{margin:0 0 6px; font-size:13px; text-transform:uppercase; letter-spacing:.06em;}
+  .sw-box ul{margin:0; padding-left:18px;}
+  .sw-box li{margin-bottom:4px;}
+  .data-flag{
+    display:inline-block;
+    font-size:13px;
+    color:#9C6B00;
+    background:#FFF6E0;
+    border:1px solid #EBD48A;
+    border-radius:6px;
+    padding:1px 7px;
+    margin-left:2px;
+  }
+
+  /* Pick card */
+  .pick-card{
+    position:relative;
+    background:var(--card);
+    border:1px solid var(--gold-hair);
+    border-radius:16px;
+    padding:20px 20px 22px;
+    box-shadow:0 3px 14px rgba(184,134,11,0.10);
+    overflow:hidden;
+  }
+  .pick-card::before{
+    content:"₹";
+    position:absolute;
+    right:10px;
+    top:-6px;
+    font-family:var(--serif);
+    font-size:96px;
+    color:rgba(184,134,11,0.06);
+    line-height:1;
+    pointer-events:none;
+  }
+  .pick-card.primary{border:1.5px solid var(--gold);}
+  .pick-label{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  .pick-name{
+    font-family:var(--serif);
+    font-size:22px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .pick-sub{
+    font-size:14px;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+  .conviction{
+    display:inline-block;
+    font-size:12.5px;
+    font-weight:700;
+    padding:3px 10px;
+    border-radius:999px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+  .conviction.high{background:var(--green-bg); color:var(--green);}
+  .thesis{
+    font-size:15px;
+    color:var(--ink);
+    margin:12px 0 16px;
+    padding:12px 14px;
+    background:#FFFDF6;
+    border-left:3px solid var(--gold);
+    border-radius:4px;
+  }
+  .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:9px 0;
+    border-bottom:1px solid var(--gold-hair);
+    font-size:14.5px;
+    gap:10px;
+  }
+  .row:last-child{border-bottom:none;}
+  .row .label{color:var(--ink-soft); flex-shrink:0;}
+  .row .value{
+    font-family:var(--mono);
+    text-align:right;
+    color:var(--ink);
+    font-weight:600;
+  }
+  .row .value.green{color:var(--green);}
+  .row .value.red{color:var(--red);}
+  @media(max-width:600px){
+    .row{flex-wrap:wrap;}
+    .row .label{width:100%;}
+    .row .value{width:100%; text-align:left;}
+  }
+  .rr-badge{
+    display:inline-block;
+    margin-top:10px;
+    font-family:var(--mono);
+    font-size:14px;
+    font-weight:700;
+    color:var(--green);
+    background:var(--green-bg);
+    padding:5px 12px;
+    border-radius:8px;
+  }
+  .note{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin-top:14px;
+    line-height:1.5;
+  }
+  .oi-note{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    background:#FBF8EF;
+    border:1px solid var(--gold-hair);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-top:14px;
+  }
+  .why-structure{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px dashed var(--gold-hair);
+  }
+
+  .copy-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:96px;
+    min-height:44px;
+    padding:0 16px;
+    margin:16px 0 8px;
+    background:var(--gold);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:600;
+    font-family:var(--sans);
+    cursor:pointer;
+  }
+  .copy-btn:active{background:var(--gold-light);}
+  .copy-btn.copied{background:var(--green);}
+  pre.ledger{
+    background:#FBF8EF;
+    border:1px solid var(--gold-hair);
+    border-radius:10px;
+    padding:14px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color:var(--ink);
+    margin:0;
+  }
+
+  .rejected-alt{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    background:var(--card);
+    border:1px dashed var(--gold-hair);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-top:14px;
+  }
+  .rejected-alt b{color:var(--ink);}
+
+  footer.disclaimer{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    border-top:2px solid var(--gold);
+    padding-top:14px;
+    margin-top:8px;
+  }
+  footer.disclaimer p{margin:0 0 8px;}
+
+  @media print{
+    body{background:#fff; color:#000;}
+    .brief-card, .pick-card, pre.ledger, .oi-note, .rejected-alt{
+      box-shadow:none !important;
+      border:1px solid #999 !important;
+    }
+    .pick-card::before{display:none;}
+    .copy-btn{display:none;}
+    .sw-box.strengths, .sw-box.watch{background:#fff !important; color:#000 !important; border:1px solid #999;}
+    .row .value.green, .row .value.red{color:#000 !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">NSE F&amp;O Instrument Read</div>
+    <h1>INOXWIND</h1>
+    <div class="meta">Generated 25 Aug 2026, 15:20 IST &middot; Live via Kite MCP</div>
+    <div class="expiry-pill">Trading the SEP 2026 expiry (29 Sep 2026)</div>
+  </header>
+
+  <section>
+    <h2 class="section-title">Brief</h2>
+    <div class="brief-card">
+      <p>Inox Wind is an NSE/BSE-listed wind turbine generator (WTG) manufacturer transitioning from a turnkey EPC model to an asset-light equipment-supply model, alongside an August 2026 demerger of its O&amp;M arm into INOX Renewable Solutions. CMP ₹73.39 (Kite, live). P/E is unusually noisy across sources right now (25x&ndash;37x TTM <span class="data-flag">verify at screener.in</span>), likely reflecting post-demerger EPS distortion, but sits at a discount to the ~48&ndash;53x electrical-equipment sector average. ROE ~6&ndash;10% and ROCE ~12.3% (Jul 2026) &mdash; both below the &gt;15% "good" bar. Debt/equity figures conflict sharply across sources (0.09x&ndash;1.5x) <span class="data-flag">unverified this session</span>; qualitatively, long-term borrowings have been cut sharply. Growth: multi-year revenue CAGR (~36%) has been strong, but Q1 FY27 revenue was flat and profit fell YoY during the business-model pivot.</p>
+      <div class="sw-grid">
+        <div class="sw-box strengths">
+          <h3>Strengths</h3>
+          <ul>
+            <li>4.4 GW order book gives multi-year revenue visibility</li>
+            <li>Actively deleveraging; recent ₹175 Cr stake sale in IRSL strengthens the balance sheet</li>
+            <li>Asset-light structure post O&amp;M demerger (completed 1 Aug 2026)</li>
+          </ul>
+        </div>
+        <div class="sw-box watch">
+          <h3>Watch-points</h3>
+          <ul>
+            <li>Q1 FY27 profit fell YoY, revenue flat &mdash; execution risk mid-transition</li>
+            <li>ROE/ROCE below "good" threshold; leverage figures unverified/conflicting across sources</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Primary Pick</h2>
+    <div class="pick-card primary">
+      <div class="pick-label">Bearish &middot; Long Put <span class="conviction high">Conviction: High</span></div>
+      <h3 class="pick-name">INOXWIND SEP 70 PE</h3>
+      <div class="pick-sub">Lot size 6400 &middot; Expiry 29 Sep 2026 &middot; Horizon 3&ndash;5 sessions</div>
+
+      <div class="thesis">
+        Price is below its 20/50/200-day averages at a fresh 52-week (and multi-year) low, with the September futures OI having built up sharply while price fell over the last two weeks &mdash; a short-buildup pattern. RSI(14) ~39, with room to fall before oversold. No earnings fall inside this expiry window (Q2 FY27 results are due after 29 Sep).
+      </div>
+
+      <div class="row"><span class="label">Entry (LTP)</span><span class="value">₹1.24</span></div>
+      <div class="row"><span class="label">Underlying spot / SEP fut</span><span class="value">₹73.39 / ₹73.83</span></div>
+      <div class="row"><span class="label">Trend vs 20/50/200-DMA</span><span class="value red">Below all three</span></div>
+      <div class="row"><span class="label">20 / 50 / 200-DMA</span><span class="value">₹75.70 / ₹80.90 / ₹100.26</span></div>
+      <div class="row"><span class="label">RSI(14), daily</span><span class="value">~39</span></div>
+      <div class="row"><span class="label">Stop-loss (underlying)</span><span class="value red">Close back above ₹76</span></div>
+      <div class="row"><span class="label">Stop-loss (premium, ~30% backstop)</span><span class="value red">₹0.87 (approx, whichever hits first)</span></div>
+      <div class="row"><span class="label">Target (underlying, next round level)</span><span class="value green">₹70</span></div>
+      <div class="row"><span class="label">Target (premium, approx)</span><span class="value green">₹2.30</span></div>
+
+      <div class="rr-badge">R:R ≈ 1 : 2.6</div>
+
+      <div class="oi-note">
+        <b>OI read:</b> SEP futures OI rose from ~6.4L shares (7 Aug) to ~11.9 Cr shares (25 Aug) as price fell from ₹78 to ₹73.8 &mdash; consistent with short buildup. Note today is the AUG monthly expiry, so part of this OI increase is rollover flow into SEP rather than pure fresh conviction; the directional read (price down, OI up) still holds but treat the magnitude as noisy. Near-the-money SEP call OI (75/80 strikes) currently exceeds equivalent put OI in this narrow sample &mdash; verify a full-chain PCR at NSE/Sensibull before sizing up.
+      </div>
+
+      <div class="why-structure">
+        <b>Why a long put over futures:</b> a SEP futures short at the same SL/target (₹76 / ₹70) only clears ~1 : 1.6 R:R &mdash; below the 1:2 floor. The OTM put's convexity clears ~1 : 2.6 for the same underlying move, so it's the cleaner risk-defined structure here.
+      </div>
+
+      <button class="copy-btn" onclick="copyLedger(this)">Copy</button>
+      <pre class="ledger" id="ledger-1">INOXWIND SEP 70 PE | Entry 1.24
+Thesis: Structural downtrend, fresh 52w low below all DMAs, SEP fut short buildup, RSI ~39
+SL: 0.87 (~30% backstop) / underlying closes above 76
+Target: 2.30 (underlying 70) | R:R ~1:2.6
+Lots: ~4 per Rs 1,00,000 capital @ 10% risk (~Rs 2,368 risk/lot)
+Tags: #INOXWIND #PE #SEP2026 #shortbuildup #belowDMA
+Conviction: High | Alert only, verify LTP before entry</pre>
+    </div>
+
+    <div class="rejected-alt">
+      <b>Alternate considered &amp; dropped:</b> INOXWIND SEP FUT short at the same SL/target only clears ~1:1.6 R:R (fails the 1:2 minimum), so it isn't published here. A 70PE/65PE debit put spread was also considered but caps upside for a stock still 3%+ away from any historical support &mdash; the naked OTM put was judged the cleaner asymmetry for this specific setup.
+    </div>
+  </section>
+
+  <footer class="disclaimer">
+    <p><b>Disclaimer:</b> Data-backed technical and sentiment setups for the stated window, not predictions and not a guarantee of any outcome. Options are leveraged, time-decaying instruments &mdash; the full premium can be lost. Position sizing, final contract choice, and entry/exit timing are the user's call. Verify all live levels independently before acting.</p>
+    <p>Fundamentals (P/E, D/E) carried source-to-source discrepancies this session &mdash; verify at screener.in/company/INOXWIND before using them to size a position. Live spot, futures, options LTP/OI and daily OHLC were pulled live via Kite MCP on 25 Aug 2026, 15:20 IST.</p>
+  </footer>
+
+</div>
+<script>
+function copyLedger(btn){
+  var text = document.getElementById('ledger-1').innerText;
+  function done(){
+    var original = "Copy";
+    btn.textContent = "Copied";
+    btn.classList.add("copied");
+    setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1600);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, cb){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  if(cb) cb();
+}
+</script>
+</body>
+</html>
