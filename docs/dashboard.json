@@ -118,11 +118,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-25",
+      "valid_for_date": "2026-08-26",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "MUTHOOTFIN",
-      "loser_name": "GMRAIRPORT"
+      "gainer_name": "VMM",
+      "loser_name": "RVNL"
     }
   }
 }
