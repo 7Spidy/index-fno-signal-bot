@@ -149,10 +149,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "FEDERALBNK",
-      "entry_time": "2026-08-25T15:04:48.090186+05:30",
-      "entry_spot": 348.15,
-      "target_pts": 1.31,
+      "name": "PREMIERENE",
+      "entry_time": "2026-08-26T15:04:42.633388+05:30",
+      "entry_spot": 991.8,
+      "target_pts": 5.72,
       "target_source": "atr"
     },
     "dynamic_universe": {
