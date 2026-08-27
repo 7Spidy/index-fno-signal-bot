@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDL F&amp;O Read, 27 Aug 2026</title>
+<style>
+:root{
+  --paper:#FAF8F3; --card:#FFFDF8; --ink:#22262E; --ink-soft:#4A515E; --ink-mute:#6E7684;
+  --gold:#B8860B; --gold-lt:#D4AF37; --gold-bg:#F5EEDC; --rule:#E3DACA;
+  --bull:#1B7A54; --bull-bg:#E8F3ED; --bear:#8C2F39; --bear-bg:#F6EAEB;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:Georgia,"Times New Roman","Noto Serif",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0 auto; max-width:720px; padding:16px;
+  background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.6;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:var(--serif); font-weight:600; line-height:1.25; margin:0}
+h1{font-size:27px; letter-spacing:-.01em}
+h2{font-size:20px; margin:34px 0 0}
+h3{font-size:17px; margin:0 0 6px}
+p{margin:10px 0}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.rule{height:2px; background:linear-gradient(90deg,var(--gold) 0%,var(--gold-lt) 45%,rgba(184,134,11,0) 100%); margin:7px 0 14px; border:0}
+
+/* header */
+header{border-bottom:1px solid var(--rule); padding-bottom:16px; margin-bottom:6px}
+.eyebrow{font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin:0 0 6px}
+.meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.chip{font-family:var(--mono); font-size:13px; background:var(--gold-bg); color:#6D5106;
+      border:1px solid #E8DBB8; border-radius:999px; padding:4px 11px; white-space:nowrap}
+.chip.live{background:var(--bull-bg); border-color:#BFDDCE; color:var(--bull)}
+
+/* cards */
+.card{background:var(--card); border:1px solid var(--rule); border-radius:12px;
+      padding:18px; margin:16px 0; box-shadow:0 1px 3px rgba(60,50,20,.06),0 6px 18px rgba(60,50,20,.04)}
+.card.primary{border:1px solid #E0CB8E; box-shadow:0 0 0 3px #FBF4E2, 0 2px 5px rgba(120,95,20,.10), 0 10px 26px rgba(120,95,20,.07)}
+.card.primary::before{content:"₹"; float:right; font-family:var(--serif); font-size:34px; color:#E4D3A2; line-height:1; margin:-2px 0 0 10px}
+.tag{display:inline-block; font-family:var(--mono); font-size:12px; letter-spacing:.09em;
+     text-transform:uppercase; padding:3px 9px; border-radius:4px; vertical-align:2px}
+.tag.bear{background:var(--bear-bg); color:var(--bear); border:1px solid #E4C6CA}
+.tag.med{background:var(--gold-bg); color:#6D5106; border:1px solid #E8DBB8}
+.contract{font-family:var(--mono); font-size:19px; font-weight:600; color:var(--ink);
+          word-break:break-word; margin:8px 0 2px; line-height:1.35}
+
+/* label / value rows — stacked, never a fixed-width table */
+.rows{margin:14px 0 0; border-top:1px solid var(--rule)}
+.row{display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:space-between;
+     align-items:baseline; padding:9px 0; border-bottom:1px solid #EFE9DC}
+.row .k{color:var(--ink-mute); font-size:14px; flex:0 0 auto}
+.row .v{font-family:var(--mono); text-align:right; flex:1 1 auto; min-width:0; word-break:break-word}
+.row .v small{font-family:var(--sans); color:var(--ink-mute); font-size:13px}
+.up{color:var(--bull)} .dn{color:var(--bear)} .gd{color:var(--gold)}
+.note{font-size:14px; color:var(--ink-soft); margin:12px 0 0}
+ul{margin:8px 0; padding-left:20px} li{margin:5px 0}
+.stack{display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 0}
+.stat{flex:1 1 150px; background:#FCFAF4; border:1px solid var(--rule); border-radius:9px; padding:10px 12px}
+.stat .k{display:block; font-size:13px; color:var(--ink-mute)}
+.stat .v{font-family:var(--mono); font-size:19px; display:block; margin-top:1px}
+
+/* ledger */
+.ledger{margin-top:20px; border-top:2px solid var(--rule); padding-top:14px}
+.ledgerhead{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+.ledgerhead span{font-family:var(--mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold)}
+button{font-family:var(--mono); font-size:14px; min-height:44px; min-width:88px; padding:0 18px;
+       background:var(--gold); color:#fff; border:0; border-radius:7px; cursor:pointer}
+button:active{background:#96700A}
+pre{font-family:var(--mono); font-size:13px; line-height:1.65; background:#F4F0E4;
+    border:1px solid var(--rule); border-left:3px solid var(--gold); border-radius:7px;
+    padding:13px; margin:10px 0 0; white-space:pre-wrap; word-break:break-word; overflow-x:auto}
+
+.callout{background:var(--gold-bg); border:1px solid #E8DBB8; border-radius:9px; padding:13px 15px; margin:16px 0; font-size:15px}
+.callout.warn{background:var(--bear-bg); border-color:#E4C6CA}
+footer{margin-top:36px; border-top:1px solid var(--rule); padding-top:14px;
+       font-size:13px; color:var(--ink-soft); line-height:1.65}
+.src{font-size:13px; color:var(--ink-mute); word-break:break-word}
+.src a{color:var(--gold); text-decoration:none; border-bottom:1px solid #E4D3A2}
+
+@media (max-width:600px){ h1{font-size:23px} body{padding:16px 14px} .row .v{text-align:left; flex-basis:100%} }
+@media print{
+  body{background:#fff; color:#000; max-width:none}
+  .card,.card.primary,.stat,pre,.chip,.callout{box-shadow:none!important; background:#fff!important; border-color:#999!important}
+  .card.primary::before{display:none} button{display:none} .rule{background:#000; height:1px}
+  a{color:#000; text-decoration:underline}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">NSE F&amp;O Instrument Read</p>
+  <h1>Vedanta Ltd &middot; VEDL</h1>
+  <hr class="rule">
+  <div class="meta">
+    <span class="chip live">Kite live &middot; 27 Aug 2026, 14:25 IST</span>
+    <span class="chip">Trading SEP expiry &middot; Tue 29 Sep 2026</span>
+    <span class="chip">33 days &middot; ~22 sessions to expiry</span>
+    <span class="chip">Lot 1,150</span>
+  </div>
+  <div class="callout warn" style="margin-top:16px">
+    <strong>Market is still open.</strong> Every level here is an intraday snapshot at 14:25 IST — today's daily candle is not final and the close can change the read. Re-verify LTP before entry.
+  </div>
+</header>
+
+<h2>The brief</h2>
+<hr class="rule">
+<div class="card">
+<p>What trades as "VEDL" today is not the old Vedanta. The demerger went ex on 30 Apr 2026 and completed 15 Jun 2026, spinning out Aluminium, Oil &amp; Gas, Power and Iron &amp; Steel. The residual company is a <strong>zinc-silver-copper business anchored on a 60.7% stake in Hindustan Zinc</strong>, plus Zinc International (Gamsberg, Black Mountain, Skorpion), copper smelting, nickel and ferroalloys.</p>
+<p>Q1 FY27 — the first clean post-demerger quarter — showed revenue of <span class="num">₹23,456 cr</span> (−1% QoQ) and PAT of <span class="num">₹5,473 cr</span>, down 18% sequentially on higher input costs. Note the shape of that number: Hindustan Zinc alone earned <span class="num">₹5,469 cr</span> (revenue <span class="num">₹13,033 cr</span>, +71.6% YoY). Strip out minorities and VEDL is substantially a leveraged holding vehicle on HZL, with the copper and international-zinc assets as the swing factor.</p>
+<p><strong>Three strengths:</strong> HZL is a first-quartile-cost, 25-year-mine-life zinc-silver asset; the parent's <span class="num">54.72%</span> share encumbrance was fully released on 21 Aug 2026 after Vedanta Resources repaid its facilities, removing a long-standing overhang; returns remain high (ROE <span class="num">32.4%</span> TTM, ROCE <span class="num">58.0%</span> — both flagged below).</p>
+<p><strong>Two watch-points:</strong> leverage is still real (D/E <span class="num">1.82</span> TTM, improved from 2.37) and the holdco structure means group cash calls land here; and the restructuring is not finished — the board approved a further property-business demerger at the Q1 results, so corporate-action headlines keep arriving.</p>
+<div class="callout">
+  <strong>🚩 Valuation flagged, not stated.</strong> Trailing P/E is not meaningful for VEDL right now — public sources disagree violently (17.73 as on 24-Jun-26 vs 6.02 as on 15-Jul-26) because trailing earnings still blend in four businesses that no longer belong to the company. ROE/ROCE and D/E above are TTM/Dec-25 figures that span the same break. Market cap is <span class="num">~₹1.09 lakh cr</span> (≈391 cr shares × CMP), which cross-checks against reported ₹1.05–1.08 lakh cr. <strong>Verify a clean post-demerger multiple at Screener.in or NSE before using any of it.</strong> None of this drives the trade below — that rests on price, OI and vol, all pulled live from Kite.
+</div>
+</div>
+
+<h2>Primary pick</h2>
+<hr class="rule">
+<div class="card primary">
+  <span class="tag bear">Bearish</span> <span class="tag med">Conviction: Medium</span>
+  <p class="contract">VEDL SEP 275 PE</p>
+  <p class="note" style="margin-top:2px">Long put, September expiry (29 Sep 2026). Horizon 3–5 trading sessions.</p>
+
+  <div class="stack">
+    <div class="stat"><span class="k">Entry (LTP)</span><span class="v">₹6.30</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹4.48</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹14.85</span></div>
+  </div>
+
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">₹280.65 &nbsp;/&nbsp; ₹282.15</span></div>
+    <div class="row"><span class="k">Bid / Ask</span><span class="v">₹6.30 / ₹6.40 <small>(1.6% spread)</small></span></div>
+    <div class="row"><span class="k">Delta / IV</span><span class="v">−0.38 &nbsp;/&nbsp; 27.7%</span></div>
+    <div class="row"><span class="k">Premium backstop (−30%)</span><span class="v dn">₹4.48 <small>triggers first</small></span></div>
+    <div class="row"><span class="k">Technical invalidation</span><span class="v dn">SEP FUT &gt; ₹290 → ≈ ₹3.10</span></div>
+    <div class="row"><span class="k">Target level</span><span class="v up">SEP FUT ₹265 → ≈ ₹14.85</span></div>
+    <div class="row"><span class="k">R:R on technical stop</span><span class="v up">2.56 : 1</span></div>
+    <div class="row"><span class="k">R:R on 30% backstop</span><span class="v up">4.40 : 1</span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,00,000 <small>capital</small></span></div>
+    <div class="row"><span class="k">Premium outlay / lot</span><span class="v">₹7,245 <small>7.2% of ₹1L</small></span></div>
+    <div class="row"><span class="k">Risk at backstop / lot</span><span class="v dn">≈ ₹2,093</span></div>
+    <div class="row"><span class="k">Event risk</span><span class="v">None scheduled <small>— see caveat</small></span></div>
+  </div>
+
+  <h3 style="margin-top:22px">The read</h3>
+  <p>Today is a failed breakout being sold all day. VEDL gapped up to ₹289 and printed ₹291 — the highest level since 15 Jun — then gave the whole thing back and more: every single 15-minute candle from 09:15 onward has closed lower, and it now trades ₹280.65, below yesterday's ₹286.50 close. That erases the entire 26 Aug rally (+4.2% on 24.2m shares), which was itself the market chasing the 21 Aug encumbrance-release headline. Buy-the-rumour, sell-the-news, completed inside two sessions.</p>
+  <p>The derivatives confirm it rather than contradict it. September futures OI has climbed to <span class="num">65.94m</span> and is sitting at the day's high while the contract is down 2.6% — <strong>price down on rising OI is a short buildup</strong>, and it is fresh, not rollover noise, since August expired on 25 Aug. On the chain, calls are being written into every strike above spot (280CE +730 lots, 290CE +549, 300CE +1,416 — all with premiums collapsing), while puts are being <em>bought</em> below (275PE +1,416 lots with the premium up 4.30 → 6.30; 265PE +1,976 lots). PCR sits at <span class="num">0.76</span>, call-heavy. Max call OI at 300 is a hard ceiling; max put OI at 275 is not support, because today's flow there is buying, not writing.</p>
+  <p>The honest counterweight, and the reason this is Medium and not High: price is still <em>above</em> the 20-DMA (₹273.29) and 50-DMA (₹273.40), and daily MACD is still positive. The short-term trend has not actually broken — the trade is a rejection at resistance inside an intermediate downtrend from the ₹360 May high, not a breakdown. RSI at 54.7 rolling over from 60.9 fits that, but does not prove it.</p>
+
+  <h3 style="margin-top:22px">Why a long put, and not the alternatives</h3>
+  <p>Implied vol is trading <strong>below</strong> realised on every window — ATM IV is <span class="num">27.5%</span> against realised of <span class="num">37.6%</span> (10d), <span class="num">32.6%</span> (20d) and <span class="num">30.4%</span> (30d) — so movement is cheap here. That kills the case for anything short-premium, and it makes a bear put spread self-defeating: selling the 265 leg hands away the cheapest vega on the board to save ₹3.40, and caps the payoff at 2.05:1 held to expiry versus 2.56:1 on the naked put in four sessions. Short SEP futures expresses the same view with undefined gap risk and only 1.82:1 to the same target. The 275 strike over the 270 (R:R 2.69:1) is a deliberate liquidity trade-off: 275PE turned over 3,477 lots today against 1,372, on a 1.6% spread against 2.1%, and its higher delta captures the first leg into the moving-average cluster better.</p>
+
+  <div class="callout warn">
+    <strong>Read the stop honestly.</strong> The ₹4.48 backstop sits only about <span class="num">4–5</span> futures points above entry — roughly half of one ATR (₹8.05). It will do its job on a real reversal, and it will also stop you out on ordinary noise. That is the cost of buying a 33-day put with a 4-session horizon, and it is why R:R looks generous on the backstop (4.40:1) and merely adequate on the technical level (2.56:1). Treat 2.56:1 as the number that matters.
+  </div>
+  <div class="callout warn">
+    <strong>The 1:2 gate is met only on the full target.</strong> The first magnet down is the 20/50-DMA cluster at ₹273.3, which is a likely bounce zone — at that interim level R:R is about 0.97:1 on the technical stop. Book partial there (275PE ≈ ₹9.71, +54%) but understand that the published 2.56:1 requires the cluster to <em>break</em> and the move to extend toward ₹265. ₹265 is a 1.2-sigma move over 4 sessions on current realised vol. Achievable, not a base case.
+  </div>
+
+  <div class="ledger">
+    <div class="ledgerhead"><span>Ledger-ready</span><button id="cp" type="button">Copy</button></div>
+<pre id="lg">VEDL SEP 275 PE — LONG PUT
+Thesis: Failed breakout at 291 sold all day + fresh short buildup in SEP FUT (OI at day high, price -2.6%) + call writing 280-300 and put buying 265/275; IV 27.5% under realised 30-38% makes long premium the cheap way to own it.
+Entry:  6.30 (bid 6.30 / ask 6.40), SEP FUT ref 282.15, spot 280.65
+SL:     4.48 premium backstop (-30%) OR SEP FUT reclaim above 290 (~3.10) — whichever first
+Target: 14.85 (SEP FUT 265). Partial book 9.71 (SEP FUT 273, the 20/50-DMA cluster)
+R:R:    2.56:1 on technical stop / 4.40:1 on backstop
+Lots:   1 lot (1,150) per Rs 1,00,000 risk capital — Rs 7,245 premium, 7.2% of capital
+Horizon: 3-5 trading sessions from 27 Aug 2026
+Tags:   #bearish #failed-breakout #short-buildup #long-vol #metals #vedl #sep-expiry
+Note:   Stock options are PHYSICALLY SETTLED — square off well before 29 Sep.
+</pre>
+  </div>
+</div>
+
+<h2>Alternates</h2>
+<hr class="rule">
+<div class="card">
+  <h3>Nothing else clears the bar</h3>
+  <p>No second or third idea is published here, and that is a result rather than an omission. The two candidates were both rejected on their own numbers:</p>
+  <ul>
+    <li><strong>Short VEDL SEP FUT</strong> — same directional read, but ₹282.15 against a ₹290 stop and a ₹265 target is <span class="num">1.82:1</span>, under the 1:2 floor, with undefined overnight gap risk on a stock that carries live corporate-action headlines.</li>
+    <li><strong>VEDL SEP 280 PE / 265 PE bear put spread</strong> — <span class="num">2.05:1</span> held all the way to expiry, which is the wrong horizon, and structurally wrong while IV sits under realised vol.</li>
+  </ul>
+  <p>A different strike on the same thesis (270PE, 280PE) is the same trade wearing a different hat, not an independent idea, so it is not padded in here as one. The bull case was tested and dropped too: buying calls means paying up into the heaviest call-writing wall on the board (300CE, 5,266 lots, +1,416 today) with the 50-DMA still falling.</p>
+</div>
+
+<h2>What the tape shows</h2>
+<hr class="rule">
+<div class="card">
+  <div class="rows" style="border-top:0">
+    <div class="row"><span class="k">Spot / day range</span><span class="v">₹280.65 <small>&nbsp;O 289.00 · H 291.00 · L 279.20</small></span></div>
+    <div class="row"><span class="k">Prev close</span><span class="v">₹286.50 <small>(26 Aug, +4.2%)</small></span></div>
+    <div class="row"><span class="k">20-DMA / 50-DMA</span><span class="v">₹273.29 / ₹273.40 <small>converged</small></span></div>
+    <div class="row"><span class="k">200-DMA</span><span class="v">🚩 n/a <small>only 83 post-demerger sessions</small></span></div>
+    <div class="row"><span class="k">RSI(14)</span><span class="v">54.7 <small>from 60.9, rolling over</small></span></div>
+    <div class="row"><span class="k">MACD</span><span class="v">+1.34, hist +1.69 <small>flattening</small></span></div>
+    <div class="row"><span class="k">ATR(14)</span><span class="v">₹8.05 <small>2.9% of price</small></span></div>
+    <div class="row"><span class="k">Resistance</span><span class="v dn">291 → 300–306</span></div>
+    <div class="row"><span class="k">Support</span><span class="v up">273.3 → 269 → 261.4 → 249.7</span></div>
+    <div class="row"><span class="k">SEP FUT OI</span><span class="v dn">65.94m, at day high <small>short buildup</small></span></div>
+    <div class="row"><span class="k">Futures premium</span><span class="v">₹1.50 <small>≈5.9% annualised, normal carry</small></span></div>
+    <div class="row"><span class="k">PCR (OI, full chain)</span><span class="v dn">0.76 <small>call-heavy</small></span></div>
+    <div class="row"><span class="k">Max CE OI / Max PE OI</span><span class="v">300 (5,266 lots) / 275 (2,814)</span></div>
+    <div class="row"><span class="k">ATM IV vs realised</span><span class="v up">27.5% vs 30.4–37.6% <small>options cheap</small></span></div>
+    <div class="row"><span class="k">Post-demerger range</span><span class="v">₹249.70 – ₹360.00</span></div>
+  </div>
+  <p class="note"><strong>On IV percentile:</strong> a true percentile against VEDL's own recent IV range needs a historical implied-vol series, which is not reconstructable from the Kite endpoints available here. Rather than invent a percentile, the implied-versus-realised spread above is used as the vol-cheapness proxy — it is computed, not estimated, and it points the same way.</p>
+</div>
+
+<div class="callout warn">
+  <strong>Event caveat — read before sizing.</strong> No VEDL board meeting or earnings date is confirmed inside the 27 Aug – 3 Sep window; Q1 FY27 is already reported. But Vedanta is a serial unscheduled-interim-dividend payer and its board approved a further property-business demerger at the Q1 meeting, so headline risk here is elevated even though scheduled event risk is not. Check NSE corporate announcements on the morning of entry. Also note VEDL stock options are <strong>physically settled</strong> — irrelevant at a 4-session horizon, fatal if you forget and hold into 29 Sep.
+</div>
+
+<h2>Sources</h2>
+<hr class="rule">
+<div class="card">
+  <p class="src">Live spot, futures, full option chain, OI and historical candles — <strong>Zerodha Kite MCP</strong>, authenticated, pulled 14:17–14:25 IST on 27 Aug 2026. Indicators (DMA, RSI, MACD, ATR), realised vol, Black-76 implied vol, deltas and all scenario P&amp;L were computed from that raw data, not taken from a third party.</p>
+  <p class="src">Fundamentals and corporate actions — <a href="https://www.business-standard.com/companies/quarterly-results/hindustan-zinc-q1-results-net-profit-more-than-doubles-to-5-469-crore-126072401112_1.html">Business Standard (HZL Q1 FY27)</a>; <a href="https://www.thehawk.in/news/economy-and-business/vedanta-q1-profit-falls-18-pc-sequentially-board-approves-property-business-demerger">The Hawk (VEDL Q1 FY27, property demerger)</a>; <a href="https://www.businesstoday.in/markets/stocks/story/vedanta-shares-vrl-repays-loans-anil-agarwal-firm-updates-on-encumbrance-551152-2026-08-25">Business Today (encumbrance release)</a>; <a href="https://www.indiatvnews.com/business/markets/vedl-share-price-vedanta-demerger-anil-agarwal-led-company-check-key-details-shareholders-need-to-know-five-companies-2026-04-30-1039410">India TV (ex-demerger pricing)</a>. Screener.in, Tickertape, Groww, Value Research, Moneycontrol and vedantalimited.com were all unreachable from this environment (egress-blocked), which is why the valuation block above is flagged rather than filled.</p>
+</div>
+
+<footer>
+  <p><strong>Disclaimer.</strong> Data-backed technical and sentiment setups for the stated window, not predictions and not a guarantee of any outcome. Options are leveraged, time-decaying instruments, the full premium can be lost. Position sizing, final contract choice, and entry/exit timing are the user's call. Verify all live levels independently before acting.</p>
+  <p style="color:var(--ink-mute)">Generated 27 Aug 2026, 14:25 IST · September expiry (29 Sep 2026) · VEDL</p>
+</footer>
+
+<script>
+(function(){
+  var b=document.getElementById('cp'), p=document.getElementById('lg');
+  if(!b||!p) return;
+  b.addEventListener('click',function(){
+    var t=p.textContent, done=function(){ b.textContent='Copied'; setTimeout(function(){b.textContent='Copy';},1600); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(done,fallback);
+    } else { fallback(); }
+    function fallback(){
+      try{
+        var a=document.createElement('textarea');
+        a.value=t; a.setAttribute('readonly',''); a.style.position='absolute'; a.style.left='-9999px';
+        document.body.appendChild(a); a.select(); a.setSelectionRange(0,t.length);
+        document.execCommand('copy'); document.body.removeChild(a); done();
+      }catch(e){ b.textContent='Select manually'; setTimeout(function(){b.textContent='Copy';},1900); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
