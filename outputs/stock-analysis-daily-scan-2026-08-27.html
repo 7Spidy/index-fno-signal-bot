@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F&amp;O Daily Scan, 27 Aug 2026</title>
+<style>
+:root{
+  --paper:#FAF8F3; --card:#FFFDF8; --ink:#22262E; --ink-soft:#4A515E; --ink-mute:#6E7684;
+  --gold:#B8860B; --gold-lt:#D4AF37; --gold-bg:#F5EEDC; --rule:#E3DACA;
+  --bull:#1B7A54; --bull-bg:#E8F3ED; --bull-br:#BFDDCE;
+  --bear:#8C2F39; --bear-bg:#F6EAEB; --bear-br:#E4C6CA;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:Georgia,"Times New Roman","Noto Serif",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0 auto; max-width:720px; padding:16px; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.6; overflow-x:hidden}
+h1,h2,h3{font-family:var(--serif); font-weight:600; line-height:1.25; margin:0}
+h1{font-size:27px; letter-spacing:-.01em}
+h2{font-size:20px; margin:36px 0 0}
+h3{font-size:17px; margin:0 0 6px}
+p{margin:10px 0}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.rule{height:2px; border:0; margin:7px 0 14px;
+  background:linear-gradient(90deg,var(--gold) 0%,var(--gold-lt) 45%,rgba(184,134,11,0) 100%)}
+header{border-bottom:1px solid var(--rule); padding-bottom:16px}
+.eyebrow{font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin:0 0 6px}
+.meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.chip{font-family:var(--mono); font-size:13px; background:var(--gold-bg); color:#6D5106;
+  border:1px solid #E8DBB8; border-radius:999px; padding:4px 11px; white-space:nowrap}
+.chip.live{background:var(--bull-bg); border-color:var(--bull-br); color:var(--bull)}
+.card{background:var(--card); border:1px solid var(--rule); border-radius:12px; padding:18px; margin:16px 0;
+  box-shadow:0 1px 3px rgba(60,50,20,.06),0 6px 18px rgba(60,50,20,.04)}
+.pick{border:1px solid #E0CB8E; box-shadow:0 0 0 3px #FBF4E2,0 2px 5px rgba(120,95,20,.10),0 10px 26px rgba(120,95,20,.07)}
+.pick::before{content:"₹"; float:right; font-family:var(--serif); font-size:34px; color:#E4D3A2; line-height:1; margin:-2px 0 0 10px}
+.rank{font-family:var(--mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); margin:0 0 6px}
+.tag{display:inline-block; font-family:var(--mono); font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+  padding:3px 9px; border-radius:4px; vertical-align:2px}
+.tag.bull{background:var(--bull-bg); color:var(--bull); border:1px solid var(--bull-br)}
+.tag.bear{background:var(--bear-bg); color:var(--bear); border:1px solid var(--bear-br)}
+.tag.hi{background:var(--gold-bg); color:#6D5106; border:1px solid #E8DBB8}
+.contract{font-family:var(--mono); font-size:19px; font-weight:600; word-break:break-word; margin:8px 0 2px; line-height:1.35}
+.stack{display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 0}
+.stat{flex:1 1 148px; background:#FCFAF4; border:1px solid var(--rule); border-radius:9px; padding:10px 12px}
+.stat .k{display:block; font-size:13px; color:var(--ink-mute)}
+.stat .v{font-family:var(--mono); font-size:19px; display:block; margin-top:1px}
+.rows{margin:14px 0 0; border-top:1px solid var(--rule)}
+.row{display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:space-between; align-items:baseline;
+  padding:9px 0; border-bottom:1px solid #EFE9DC}
+.row .k{color:var(--ink-mute); font-size:14px; flex:0 0 auto}
+.row .v{font-family:var(--mono); text-align:right; flex:1 1 auto; min-width:0; word-break:break-word}
+.row .v small{font-family:var(--sans); color:var(--ink-mute); font-size:13px}
+.up{color:var(--bull)} .dn{color:var(--bear)} .gd{color:var(--gold)}
+.note{font-size:14px; color:var(--ink-soft); margin:12px 0 0}
+ul{margin:8px 0; padding-left:20px} li{margin:5px 0}
+.callout{background:var(--gold-bg); border:1px solid #E8DBB8; border-radius:9px; padding:13px 15px; margin:16px 0; font-size:15px}
+.callout.warn{background:var(--bear-bg); border-color:var(--bear-br)}
+.callout.good{background:var(--bull-bg); border-color:var(--bull-br)}
+.ledger{margin-top:20px; border-top:2px solid var(--rule); padding-top:14px}
+.ledgerhead{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+.ledgerhead span{font-family:var(--mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold)}
+button{font-family:var(--mono); font-size:14px; min-height:44px; min-width:88px; padding:0 18px;
+  background:var(--gold); color:#fff; border:0; border-radius:7px; cursor:pointer}
+button:active{background:#96700A}
+pre{font-family:var(--mono); font-size:13px; line-height:1.65; background:#F4F0E4; border:1px solid var(--rule);
+  border-left:3px solid var(--gold); border-radius:7px; padding:13px; margin:10px 0 0;
+  white-space:pre-wrap; word-break:break-word; overflow-x:auto}
+footer{margin-top:36px; border-top:1px solid var(--rule); padding-top:14px; font-size:13px; color:var(--ink-soft); line-height:1.65}
+.src{font-size:13px; color:var(--ink-mute); word-break:break-word}
+@media (max-width:600px){ h1{font-size:23px} body{padding:16px 14px} .row .v{text-align:left; flex-basis:100%} }
+@media print{
+  body{background:#fff;color:#000;max-width:none}
+  .card,.pick,.stat,pre,.chip,.callout{box-shadow:none!important;background:#fff!important;border-color:#999!important}
+  .pick::before{display:none} button{display:none} .rule{background:#000;height:1px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">NSE F&amp;O Instrument Evaluator</p>
+  <h1>Daily Scan &middot; 27 Aug 2026</h1>
+  <hr class="rule">
+  <div class="meta">
+    <span class="chip live">Kite live &middot; 14:45–14:55 IST</span>
+    <span class="chip">SEP expiry &middot; Tue 29 Sep 2026</span>
+    <span class="chip">33 days &middot; ~22 sessions</span>
+    <span class="chip">6 of 6 published</span>
+  </div>
+  <div class="callout warn" style="margin-top:16px">
+    <strong>Snapshot taken with the market still open</strong> (14:45–14:55 IST). Daily candles are not final and the close can shift the read. These are next-session entries — re-verify every LTP before acting.
+  </div>
+</header>
+
+<h2>Market read</h2>
+<hr class="rule">
+<div class="card">
+<p>The index tape says nothing happened. NIFTY sits at <span class="num">24,152</span>, <span class="num">−0.23%</span>, inside a <span class="num">24,121–24,297</span> range; BANK NIFTY <span class="num">57,591</span>, <span class="num">−0.33%</span>. Underneath, it is one of the widest single-stock dispersion days in weeks — a rotation, not a selloff.</p>
+<p>The dominant pattern is <strong>the failed breakout being sold</strong>. A cluster of names that ran hard into 24–26 Aug reversed sharply today and closed at or near their lows: MUTHOOTFIN <span class="num">−4.0%</span> after tagging a 60-day high, HDFCAMC <span class="num">−3.6%</span>, MANAPPURAM <span class="num">−6.0%</span>, TATAPOWER <span class="num">−3.8%</span>, VEDL <span class="num">−2.4%</span>. Against that, a separate set broke <em>out</em> on expanding volume with fresh long positions: KOTAKBANK <span class="num">+2.3%</span> to a 60-day high, BHEL <span class="num">+3.9%</span>, LICHSGFIN <span class="num">+2.2%</span>, KALYANKJIL <span class="num">+3.4%</span>, DELHIVERY <span class="num">+3.2%</span>.</p>
+<p>Money is moving from the crowded late-August momentum trades into large-cap banks and capex names, and the September series is only two sessions old, so today's open interest is genuinely fresh rather than rollover residue. That is what makes the OI signal readable this week. The book below is deliberately balanced — three long, three short — because the tape is not directional.</p>
+</div>
+
+<h2>How the screen ran</h2>
+<hr class="rule">
+<div class="card">
+<p>All 213 September stock futures were pulled live in one snapshot, then filtered and classified — no third-party screener, no pre-baked list.</p>
+<ul>
+  <li><strong>Liquidity floor:</strong> ≥ <span class="num">₹150 cr</span> of futures notional traded today. That cut 213 → <strong>90 names</strong>. Indices excluded ("stocks", as asked).</li>
+  <li><strong>Buildup classification:</strong> price change vs prior close, cross-referenced against where current OI sits inside its own intraday range. OI pinned at the day's high with price down = short buildup; at the high with price up = long buildup.</li>
+  <li><strong>Then, per finalist:</strong> daily candles for 20/50-DMA, RSI(14), MACD, ATR(14) and realised vol; the full SEP option chain for OI shifts and bid-ask; and Black-76 implied vol and delta solved from live premiums.</li>
+</ul>
+<p class="note"><strong>🚩 200-DMA is not quoted anywhere in this document.</strong> Fetching 200 sessions for every finalist was not feasible inside this run's budget, so the trend reads use 20/50-DMA plus 60-day structure. Where a name's history is short the figure would have been unreliable anyway. Treat every trend call here as short-to-medium term.</p>
+<p class="note"><strong>🚩 IV percentile against each stock's own recent range is also not quoted</strong> — that needs a historical implied-vol series the Kite endpoints don't expose. The <em>implied-versus-realised</em> spread is used instead. It is computed from live premiums and actual candles, and it is the number that decides whether buying premium is the right structure.</p>
+</div>
+
+<h2>The book</h2>
+<hr class="rule">
+<p class="note" style="margin-bottom:0">Ranked by conviction. All six clear the 1:2 floor at their second target; R:R at the first target is shown too, and it is materially worse — that is stated on every card rather than buried.</p>
+
+<!-- 1 -->
+<div class="card pick">
+  <p class="rank">Pick 1 of 6</p>
+  <span class="tag bull">Bullish</span> <span class="tag hi">Conviction: High</span>
+  <p class="contract">KOTAKBANK SEP 430 CE</p>
+  <p class="note" style="margin-top:2px">Long call. Breakout to a 60-day high with the cheapest volatility in the scan.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹7.05</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹4.94</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹18.89</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">426.00 <span class="up">(+2.23%)</span> / 428.10</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">6.95 / 7.05 · 2,000</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v up">15.6% vs 20.6% <small>cheapest in scan</small></span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">+0.47</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹4.94 (−30%) · or FUT &lt; 417 → ₹3.90</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 440 / 448)</span><span class="v">₹12.86 <small>R:R 1.84</small> / ₹18.89 <small class="up">R:R 3.76</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v up">397.38 (+7.2%) / 392.32 (+8.6%) <small>both rising</small></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v">75.6 / +3.03 rising / 7.83 (1.8%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v up">FUT +7.4% long buildup · 430CE +1,423 lots</span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,50,000 · ₹14,100/lot</span></div>
+  </div>
+  <p style="margin-top:18px">Closed at <span class="num">426.00</span>, which <em>is</em> the 60-day high — there is no overhead supply in the recent record to work through. Two consecutive expansion days (<span class="num">20.2m</span> then <span class="num">27.3m</span> shares against a ~10m norm) took it clear of the <span class="num">386–405</span> box that had held since June, and futures OI added <span class="num">7.4%</span> on the move, so this is new money going long rather than shorts being squeezed. It also outperformed its own index by <span class="num">~2.6</span> points today while BANK NIFTY fell.</p>
+  <p>Structure is a long call rather than futures because IV at <span class="num">15.6%</span> is well under the <span class="num">20.6%</span> the stock has actually been realising — you are buying movement below cost, and the defined risk is worth having on a name this extended. A debit spread would cap exactly the tail you are paying so little for.</p>
+  <div class="callout warn"><strong>RSI 75.6 is the reason to size this properly, not to skip it.</strong> Overbought readings persist in genuine breakouts, but they also mean the first sharp down-day will be violent. The <span class="num">₹4.94</span> backstop triggers before the technical level does, which here is a feature.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>KOTAKBANK SEP 430 CE — LONG CALL
+Thesis: Close at 60-day high on 2.7x volume, clear of the Jun-Aug 386-405 box, FUT OI +7.4% long buildup; IV 15.6% vs realised 20.6% makes the call the cheap way to own it.
+Entry:  7.05 (bid 6.95/ask 7.05), SEP FUT ref 428.10, spot 426.00
+SL:     4.94 premium backstop (-30%) OR SEP FUT below 417 (~3.90) — whichever first
+Target: 18.89 (FUT 448). Partial book 12.86 (FUT 440)
+R:R:    3.76:1 at T2 / 1.84:1 at T1
+Lots:   1 lot (2,000) per Rs 1,50,000 risk capital — Rs 14,100 premium
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bullish #breakout #long-buildup #long-vol #banks #kotakbank #sep-expiry
+Risk:   RSI 75.6 overbought. Physically settled — square off before 29 Sep.</pre></div>
+</div>
+
+<!-- 2 -->
+<div class="card pick">
+  <p class="rank">Pick 2 of 6</p>
+  <span class="tag bear">Bearish</span> <span class="tag hi">Conviction: High</span>
+  <p class="contract">HDFCAMC SEP 2500 PE</p>
+  <p class="note" style="margin-top:2px">Long put. Strongest short buildup in the scan, and it closed below its 50-DMA.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹30.40</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹21.28</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹106.03</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">2,571.80 <span class="dn">(−3.60%)</span> / 2,592.80</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">30.10 / 30.40 · 300</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v up">21.9% vs 24.6%</span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">−0.28</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹21.28 (−30%) · or FUT &gt; 2,680 → ₹9.53</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 2500 / 2440)</span><span class="v">₹68.54 <small>R:R 1.83</small> / ₹106.03 <small class="up">R:R 3.62</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v">2,567.82 (+0.2%) / <span class="dn">2,621.55 (−1.9%)</span></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v">48.4 <small>from 59.4</small> / +14.9 <small>rolling</small> / 60.21 (2.3%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v dn">FUT +8.1% short buildup <small>strongest bearish add</small></span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,00,000 · ₹9,120/lot</span></div>
+  </div>
+  <p style="margin-top:18px">The cleanest bearish structure on the board, because unlike the other two shorts it has actually lost a moving average. It rejected <span class="num">2,691</span> — right under the <span class="num">2,698</span> high printed on 25 Aug — and closed at <span class="num">0.09</span> of the day's range, i.e. effectively on the low. That puts it back <strong>below the 50-DMA</strong> at <span class="num">2,621.55</span> after two sessions above it, so the late-August breakout attempt has simply failed.</p>
+  <p>Futures OI added <span class="num">8.1%</span> into that fall, the largest short buildup among the liquid bearish names today. RSI at <span class="num">48.4</span>, down from <span class="num">59.4</span>, has room to run before anything looks stretched — the opposite of the problem TATAPOWER has below. Long put over a spread because IV still sits under realised.</p>
+  <div class="callout warn"><strong>Thin option book.</strong> Lot size is only 300 and the 2500 PE shows 300–1,500 lots at each depth level. The <span class="num">₹0.30</span> bid-ask is fine in percentage terms (<span class="num">1.0%</span>), but this is not a strike to market-order size into. Use limits.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>HDFCAMC SEP 2500 PE — LONG PUT
+Thesis: Failed the 2698 breakout, closed on the low and back below the 50-DMA (2621.55); FUT OI +8.1%, the strongest short buildup in the liquid universe today; RSI 48.4 with room down.
+Entry:  30.40 (bid 30.10/ask 30.40), SEP FUT ref 2592.80, spot 2571.80
+SL:     21.28 premium backstop (-30%) OR SEP FUT above 2680 (~9.53) — whichever first
+Target: 106.03 (FUT 2440). Partial book 68.54 (FUT 2500)
+R:R:    3.62:1 at T2 / 1.83:1 at T1
+Lots:   1 lot (300) per Rs 1,00,000 risk capital — Rs 9,120 premium
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bearish #failed-breakout #short-buildup #amc #hdfcamc #sep-expiry
+Risk:   Thin option book, use limit orders. Physically settled — square off before 29 Sep.</pre></div>
+</div>
+
+<!-- 3 -->
+<div class="card pick">
+  <p class="rank">Pick 3 of 6</p>
+  <span class="tag bull">Bullish</span> <span class="tag hi">Conviction: Medium-High</span>
+  <p class="contract">LICHSGFIN SEP 550 CE</p>
+  <p class="note" style="margin-top:2px">Long call. Biggest single-day OI addition anywhere in the scan.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹9.05</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹6.34</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹23.49</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">535.50 <span class="up">(+2.12%)</span> / 541.40</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">8.90 / 9.05 · 1,000</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v up">19.8% vs 25.8%</span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">+0.40</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹6.34 (−30%) · or FUT &lt; 525 → ₹4.88</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 558 / 570)</span><span class="v">₹15.73 <small>R:R 1.60</small> / ₹23.49 <small class="up">R:R 3.47</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v">507.19 (+5.6%) / 531.68 (+0.7%) <small class="dn">both still sloping down</small></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v">59.9 / +4.36 rising / 12.02 (2.2%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v up">FUT +10.3% long buildup <small>largest add in scan</small></span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,00,000 · ₹9,050/lot</span></div>
+  </div>
+  <p style="margin-top:18px">Three sessions, <span class="num">491.40 → 535.50</span>, roughly <span class="num">+9%</span>, on volume that climbed each day (<span class="num">4.3m → 3.6m → 6.5m → 6.9m</span>). Futures OI added <span class="num">10.3%</span> today, the biggest single-day build in the entire 90-name liquid set, and it came with price up — unambiguous long buildup. That lifts it out of the <span class="num">485–510</span> floor it had been grinding along since early August. IV at <span class="num">19.8%</span> against <span class="num">25.8%</span> realised makes the call the efficient expression.</p>
+  <div class="callout warn"><strong>This is the earliest of the three longs, and the honest caveat is the moving averages.</strong> Price is above both, but the 20-DMA slope is <span class="num">−8.82</span> over five days and the 50-DMA slope <span class="num">−8.53</span> over ten — the averages are still falling and price has only just crossed back over the 50-DMA (<span class="num">+0.7%</span>). This is a trend <em>turning</em>, not a trend in place. That is exactly why it is Medium-High and not High, despite having the best OI signal on the page.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>LICHSGFIN SEP 550 CE — LONG CALL
+Thesis: +9% in three sessions out of the 485-510 base on rising volume, with FUT OI +10.3% — the largest single-day long buildup in the liquid universe; IV 19.8% vs realised 25.8%.
+Entry:  9.05 (bid 8.90/ask 9.05), SEP FUT ref 541.40, spot 535.50
+SL:     6.34 premium backstop (-30%) OR SEP FUT below 525 (~4.88) — whichever first
+Target: 23.49 (FUT 570). Partial book 15.73 (FUT 558)
+R:R:    3.47:1 at T2 / 1.60:1 at T1
+Lots:   1 lot (1,000) per Rs 1,00,000 risk capital — Rs 9,050 premium
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bullish #base-breakout #long-buildup #housing-finance #lichsgfin #sep-expiry
+Risk:   20/50-DMA still sloping down — trend turning, not established. Physically settled.</pre></div>
+</div>
+
+<!-- 4 -->
+<div class="card pick">
+  <p class="rank">Pick 4 of 6</p>
+  <span class="tag bull">Bullish</span> <span class="tag hi">Conviction: Medium-High</span>
+  <p class="contract">BHEL SEP 440 CE</p>
+  <p class="note" style="margin-top:2px">Long call. Fresh MACD crossover on the heaviest futures turnover in the scan.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹13.25</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹9.28</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹25.60</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">432.95 <span class="up">(+4.20%)</span> / 436.20</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">13.10 / 13.25 · 2,625</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v">28.8% vs 27.9% <small>roughly fair</small></span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">+0.47</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹9.28 (−30%) · or FUT &lt; 420 → ₹7.75</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 447 / 460)</span><span class="v">₹17.55 <small class="dn">R:R 0.78</small> / ₹25.60 <small class="up">R:R 2.25</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v up">415.68 (+4.2%) / 409.78 (+5.7%) <small>both rising</small></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v">61.4 <small>from 51.6</small> / +0.39 <small>fresh cross</small> / 11.59 (2.7%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v up">FUT +2.9% long buildup · ₹993 cr turnover</span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹3,50,000 · ₹34,781/lot</span></div>
+  </div>
+  <p style="margin-top:18px">A <span class="num">+4.2%</span> day on <span class="num">18.2m</span> shares against a recent norm nearer <span class="num">5m</span>, clearing the <span class="num">435.95</span> high from 17 Aug and closing at <span class="num">0.76</span> of the range. MACD histogram flipped positive today (<span class="num">+0.39</span> from <span class="num">−0.69</span>) — a fresh crossover rather than an extended one — with RSI at <span class="num">61.4</span>, leaving room before overbought. Futures turnover of <span class="num">₹993 cr</span> was the heaviest in the long-buildup group.</p>
+  <div class="callout warn"><strong>Two things hold this at fourth rather than first.</strong> R:R at the first target is only <span class="num">0.78:1</span> — the 60-day high at <span class="num">446.50</span> sits just <span class="num">0.93</span> ATR away, so the trade genuinely needs the second leg to <span class="num">460</span> to pay, and <span class="num">2.25:1</span> is the thinnest margin over the floor on this page. And unlike the other five, IV here is <em>not</em> cheap — <span class="num">28.8%</span> against <span class="num">27.9%</span> realised means you are paying roughly fair value, so there is no volatility tailwind. Also the largest per-lot outlay in the book at <span class="num">₹34,781</span>.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>BHEL SEP 440 CE — LONG CALL
+Thesis: +4.2% on 3.6x volume clearing the 17-Aug 435.95 high, fresh MACD crossover, RSI 61.4 with room, FUT OI +2.9% long buildup on Rs 993 cr turnover — heaviest in the group.
+Entry:  13.25 (bid 13.10/ask 13.25), SEP FUT ref 436.20, spot 432.95
+SL:     9.28 premium backstop (-30%) OR SEP FUT below 420 (~7.75) — whichever first
+Target: 25.60 (FUT 460). T1 447 pays only 0.78:1 — this trade needs the second leg.
+R:R:    2.25:1 at T2 — thinnest margin over the 1:2 floor in this book
+Lots:   1 lot (2,625) per Rs 3,50,000 risk capital — Rs 34,781 premium
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bullish #breakout #macd-cross #long-buildup #capex #bhel #sep-expiry
+Risk:   IV 28.8% ~ realised 27.9%, no vol edge. 60d high 446.50 is close overhead.</pre></div>
+</div>
+
+<!-- 5 -->
+<div class="card pick">
+  <p class="rank">Pick 5 of 6</p>
+  <span class="tag bear">Bearish</span> <span class="tag hi">Conviction: Medium</span>
+  <p class="contract">MUTHOOTFIN SEP 3000 PE</p>
+  <p class="note" style="margin-top:2px">Long put. Outside-day reversal off a 60-day high — but the trend is not broken.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹61.20</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹42.84</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹159.94</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">3,079.00 <span class="dn">(−3.99%)</span> / 3,092.20</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">60.60 / 61.20 · 275</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v up">27.7% vs 37.9%</span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">−0.34</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹42.84 (−30%) · or FUT &gt; 3,210 → ₹25.41</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 2980 / 2900)</span><span class="v">₹109.49 <small>R:R 1.35</small> / ₹159.94 <small class="up">R:R 2.76</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v dn">2,965.11 (+3.8%) / 3,016.20 (+2.1%) <small>price still above both</small></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v">55.1 <small>from 66.9</small> / +36.6 <small>rolling</small> / 92.94 (3.0%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v dn">FUT +2.8% short buildup</span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,70,000 · ₹16,830/lot</span></div>
+  </div>
+  <p style="margin-top:18px">A textbook exhaustion print: opened <span class="num">3,198.70</span>, spiked to <span class="num">3,246.50</span> — a 60-day high — then collapsed to close <span class="num">3,079</span>, at <span class="num">0.11</span> of the range, wiping out a <span class="num">12%</span> four-session run. Futures OI added <span class="num">2.8%</span> on the way down. The sector context matters: MANAPPURAM fell <span class="num">6.0%</span> the same day on <span class="num">₹477 cr</span> of futures turnover with OI up <span class="num">3.8%</span>, so both gold financiers were hit together.</p>
+  <div class="callout warn"><strong>Two reasons this sits at Medium.</strong> First, price is still <em>above</em> both moving averages (<span class="num">+3.8%</span> and <span class="num">+2.1%</span>) and MACD histogram is still firmly positive at <span class="num">+36.6</span> — this is a rejection at a high, not a broken trend, and the 20-DMA is rising at <span class="num">+33</span>/5 sessions. Second, realised vol is <span class="num">37.9%</span> on 30 days and <span class="num">44.6%</span> on 10; on 3 Aug this stock gapped from a <span class="num">3,119.60</span> close to a <span class="num">2,671</span> low intraday. A <span class="num">₹92.94</span> ATR and demonstrated gap risk mean the stop can be jumped rather than filled.</div>
+  <div class="callout"><strong>🚩 Driver not confirmed.</strong> Searches did not surface a dated 27 Aug 2026 catalyst for the gold-financier fall. The historical pattern for simultaneous MUTHOOTFIN/MANAPPURAM drops is either an RBI gold-loan regulatory headline or a slide in gold prices, but <em>neither is verified for today</em>. Check the news before entering — an unattributed 4–6% sector move is a reason for caution, not confidence.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>MUTHOOTFIN SEP 3000 PE — LONG PUT
+Thesis: Outside-day reversal off a 60-day high (3246.50 -> close 3079, at 0.11 of range), erasing a 12% four-day run, FUT OI +2.8%; sector-wide with MANAPPURAM -6.0%. IV 27.7% vs realised 37.9%.
+Entry:  61.20 (bid 60.60/ask 61.20), SEP FUT ref 3092.20, spot 3079.00
+SL:     42.84 premium backstop (-30%) OR SEP FUT above 3210 (~25.41) — whichever first
+Target: 159.94 (FUT 2900). Partial book 109.49 (FUT 2980)
+R:R:    2.76:1 at T2 / 1.35:1 at T1
+Lots:   1 lot (275) per Rs 1,70,000 risk capital — Rs 16,830 premium
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bearish #exhaustion-reversal #short-buildup #gold-finance #muthootfin #sep-expiry
+Risk:   Still above 20/50-DMA. Gap risk real — gapped 3119->2671 intraday on 3 Aug. Driver for today's fall UNCONFIRMED, verify news first.</pre></div>
+</div>
+
+<!-- 6 -->
+<div class="card pick">
+  <p class="rank">Pick 6 of 6</p>
+  <span class="tag bear">Bearish</span> <span class="tag hi">Conviction: Medium-Low</span>
+  <p class="contract">TATAPOWER SEP 345 PE</p>
+  <p class="note" style="margin-top:2px">Long put. The only trend-aligned short here — and the most extended entry.</p>
+  <div class="stack">
+    <div class="stat"><span class="k">Entry</span><span class="v">₹4.30</span></div>
+    <div class="stat"><span class="k">Stop</span><span class="v dn">₹3.01</span></div>
+    <div class="stat"><span class="k">Target</span><span class="v up">₹13.88</span></div>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="k">Spot / SEP FUT</span><span class="v">352.20 <span class="dn">(−3.24%)</span> / 353.40</span></div>
+    <div class="row"><span class="k">Bid / Ask · lot</span><span class="v">4.20 / 4.30 · 1,450</span></div>
+    <div class="row"><span class="k">IV vs realised (30d)</span><span class="v dn">18.7% vs 16.4% <small>only idea paying above realised</small></span></div>
+    <div class="row"><span class="k">Delta</span><span class="v">−0.32</span></div>
+    <div class="row"><span class="k">Stop — backstop first</span><span class="v dn">₹3.01 (−30%) · or FUT &gt; 364 → ₹1.30</span></div>
+    <div class="row"><span class="k">T1 / T2 (FUT 344 / 336)</span><span class="v">₹8.56 <small>R:R 1.42</small> / ₹13.88 <small class="up">R:R 3.20</small></span></div>
+    <div class="row"><span class="k">20 / 50-DMA</span><span class="v dn">377.12 (−6.6%) / 380.08 (−7.3%) <small>both falling</small></span></div>
+    <div class="row"><span class="k">RSI / MACD hist / ATR</span><span class="v"><span class="dn">21.5</span> <small>from 29.0</small> / −2.23 / 7.06 (2.0%)</span></div>
+    <div class="row"><span class="k">OI</span><span class="v dn">FUT +7.4% · 350PE 952k→2.87m · 345PE 133k→1.20m</span></div>
+    <div class="row"><span class="k">Size</span><span class="v">1 lot per ₹1,00,000 · ₹6,235/lot</span></div>
+  </div>
+  <p style="margin-top:18px">The only short in the book whose trend already agrees with it. Price is <span class="num">6.6%</span> below a falling 20-DMA and <span class="num">7.3%</span> below a falling 50-DMA, in a clean decline from <span class="num">390.40</span> on 14 Aug. Today it opened at <span class="num">359.20</span>, which <em>was</em> the day's high, and never traded above it — a gap down that found no bid, on <span class="num">14.4m</span> shares against a ~4m norm. The option flow is emphatic: the 350 PE went from <span class="num">952,650</span> to <span class="num">2,872,450</span> in open interest with premium up from <span class="num">2.00</span> to <span class="num">6.05</span>, and the 345 PE from <span class="num">133,400</span> to <span class="num">1,199,150</span> — a ninefold build. Rising OI with rising premium is buying, not writing.</p>
+  <div class="callout warn"><strong>This is last for two concrete reasons, and both argue for restraint.</strong> RSI is <span class="num">21.5</span> — deeply oversold. Every other idea here enters with momentum room; this one chases a move already four sessions old, and mean-reversion bounces from RSI 21 are sharp. And it is the <em>only</em> idea in the book where implied vol (<span class="num">18.7%</span>) sits <em>above</em> realised (<span class="num">16.4%</span>), so you are overpaying for movement in a low-volatility name. The <span class="num">3.20:1</span> printed R:R is real arithmetic but assumes an oversold stock keeps falling without a bounce. Take it small, or wait for a retest of <span class="num">360–364</span> to enter at a better price.</div>
+  <div class="ledger"><div class="ledgerhead"><span>Ledger-ready</span><button type="button" class="cp">Copy</button></div>
+<pre>TATAPOWER SEP 345 PE — LONG PUT
+Thesis: Only trend-aligned short in the book — 6.6% below a falling 20-DMA, opened at the day high 359.20 and never traded higher on 3.6x volume; FUT OI +7.4% and massive fresh put buying (345PE OI 133k -> 1.20m).
+Entry:  4.30 (bid 4.20/ask 4.30), SEP FUT ref 353.40, spot 352.20
+SL:     3.01 premium backstop (-30%) OR SEP FUT above 364 (~1.30) — whichever first
+Target: 13.88 (FUT 336). Partial book 8.56 (FUT 344)
+R:R:    3.20:1 at T2 / 1.42:1 at T1
+Lots:   1 lot (1,450) per Rs 1,00,000 risk capital — Rs 6,235 premium — SIZE SMALL
+Horizon: 3-5 sessions from 27 Aug 2026
+Tags:   #bearish #trend-continuation #short-buildup #power #tatapower #sep-expiry
+Risk:   RSI 21.5 deeply oversold, chasing. Only idea where IV (18.7%) > realised (16.4%). Consider waiting for a 360-364 retest.</pre></div>
+</div>
+
+<h2>What didn't make it</h2>
+<hr class="rule">
+<div class="card">
+<p>Four names screened well and were then dropped on inspection, which is worth recording so the book isn't mistaken for the whole opportunity set:</p>
+<ul>
+  <li><strong>MANAPPURAM</strong> (<span class="num">−6.03%</span>, OI <span class="num">+3.8%</span>, closed at <span class="num">0.01</span> of range) — the single strongest bearish tape in the scan, but it is the same trade as MUTHOOTFIN. Both are gold financiers that fell together on the same unconfirmed driver; publishing both would be one position dressed as two, doubling the sector risk while appearing diversified.</li>
+  <li><strong>AUBANK</strong> (<span class="num">−2.19%</span>, closed at <span class="num">0.02</span> of range) — closed dead on its low, which looks compelling, but it sits above a 20-DMA rising at <span class="num">+18.8</span> and a 50-DMA rising at <span class="num">+21.2</span>. That is a pullback inside a strong uptrend, and the OI add was only <span class="num">+1.2%</span>. Fighting it needs better evidence than one red day.</li>
+  <li><strong>HINDALCO</strong> (<span class="num">−2.70%</span>) — a genuine fresh MACD bearish crossover and a close below the 20-DMA, but OI added just <span class="num">+1.1%</span>, the weakest confirmation in the bearish group. The tape moved without positions following it.</li>
+  <li><strong>ADANIPOWER, KALYANKJIL, DELHIVERY</strong> — all strong long buildups on the screen. They were cut for scan budget, not on merit; with three longs already published, a fourth would have added correlation rather than information. Worth a look on their own.</li>
+</ul>
+</div>
+
+<h2>Sizing, correlation and events</h2>
+<hr class="rule">
+<div class="card">
+<div class="callout"><strong>The per-idea 10% cap does not survive taking all six.</strong> Each size above caps that single idea at ~10% of the stated capital. One lot of each is <span class="num">₹90,116</span> of premium — that is <span class="num">90%</span> of a <span class="num">₹1 lakh</span> account. To run the whole book with each leg inside its own cap you need roughly <span class="num">₹3,50,000</span> of risk capital, at which point all six together commit about <span class="num">26%</span>. These are six independent candidates to choose among, not a portfolio to buy wholesale.</div>
+<p><strong>Correlation to watch:</strong> KOTAKBANK and LICHSGFIN are both lenders and will trade together on a rate or credit headline. BHEL and the dropped ADANIPOWER are the same capex theme. MUTHOOTFIN carries the MANAPPURAM correlation described above. Three long and three short is a deliberate balance against a flat index, not a hedge — the shorts will not protect the longs if the whole tape turns.</p>
+<p><strong>Events:</strong> Q1 FY27 results are done across this set — the reporting season ran through early August — and no scheduled earnings fall inside the 3–5 session window for any of the six. That said, no per-name corporate-action calendar was independently verified in this run, and unscheduled board meetings and dividend announcements are common. <strong>Check NSE corporate announcements for your chosen name on the morning of entry.</strong></p>
+<p><strong>Settlement:</strong> all six are NSE stock options and therefore <strong>physically settled</strong>. At a 3–5 session horizon this is irrelevant, but any position carried toward 29 Sep must be squared off — taking delivery on a 2,625-share BHEL lot or a 275-share MUTHOOTFIN lot is not a theoretical risk.</p>
+<p><strong>Expiry:</strong> September is the front month with <span class="num">33</span> calendar days and roughly <span class="num">22</span> trading sessions left, comfortably clear of the 7-session floor. August expired on 25 Aug, so no roll is needed and the OI readings above are clean.</p>
+</div>
+
+<h2>Sources</h2>
+<hr class="rule">
+<div class="card">
+<p class="src">All price, futures, option-chain, open-interest and historical candle data — <strong>Zerodha Kite MCP</strong>, authenticated, pulled 14:45–14:55 IST on 27 Aug 2026. Every derived figure on this page (20/50-DMA, RSI, MACD, ATR, realised volatility, Black-76 implied volatility, deltas, and all scenario P&amp;L and R:R) was computed from that raw data in this session — none of it is quoted from a third-party screener.</p>
+<p class="src">The gold-financier news check was inconclusive and is flagged as such on the MUTHOOTFIN card rather than filled with a plausible-sounding cause. Screener.in, Tickertape, Groww, Value Research, Moneycontrol and Investing.com are all egress-blocked from this environment, so no third-party fundamental or IV-percentile data was available.</p>
+</div>
+
+<footer>
+  <p><strong>Disclaimer.</strong> Data-backed technical and sentiment setups for the stated window, not predictions and not a guarantee of any outcome. Options are leveraged, time-decaying instruments, the full premium can be lost. Position sizing, final contract choice, and entry/exit timing are the user's call. Verify all live levels independently before acting.</p>
+  <p style="color:var(--ink-mute)">Generated 27 Aug 2026, 14:55 IST · September expiry (29 Sep 2026) · 6 ideas from 213 screened</p>
+</footer>
+
+<script>
+(function(){
+  document.querySelectorAll('.cp').forEach(function(b){
+    b.addEventListener('click',function(){
+      var pre=b.closest('.ledger').querySelector('pre'); if(!pre) return;
+      var t=pre.textContent;
+      var ok=function(){ b.textContent='Copied'; setTimeout(function(){b.textContent='Copy';},1600); };
+      var fb=function(){
+        try{
+          var a=document.createElement('textarea');
+          a.value=t; a.setAttribute('readonly',''); a.style.position='absolute'; a.style.left='-9999px';
+          document.body.appendChild(a); a.select(); a.setSelectionRange(0,t.length);
+          document.execCommand('copy'); document.body.removeChild(a); ok();
+        }catch(e){ b.textContent='Select manually'; setTimeout(function(){b.textContent='Copy';},1900); }
+      };
+      if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,fb); } else { fb(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>
