@@ -131,11 +131,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-08-28",
+      "valid_for_date": "2026-08-31",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "LICHSGFIN",
-      "loser_name": "TATAPOWER"
+      "gainer_name": "ATHERENERG",
+      "loser_name": "HDFCAMC"
     }
   }
 }
