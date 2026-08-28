@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F&amp;O Monthly Basket, Sep 2026</title>
+<style>
+  :root{
+    --bg:#FAF8F3; --paper:#FFFFFF; --ink:#2B2A28; --ink-soft:#5A574F;
+    --gold:#B8860B; --gold-light:#D4AF37; --gold-dim:#B8860B22;
+    --border:#E6DFC8; --green:#1E7A46; --green-bg:#1E7A4614;
+    --red:#8C2F2F; --red-bg:#8C2F2F14; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Times New Roman", "Noto Serif", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.5;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:16px;}
+  header.hdr{
+    background:var(--paper); border:1px solid var(--border); border-radius:12px;
+    padding:20px 18px; margin-bottom:16px; box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    position:relative;
+  }
+  header.hdr::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:4px;
+    background:linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius:12px 12px 0 0;
+  }
+  h1{
+    font-family:var(--serif); font-size:1.55rem; margin:6px 0 4px; color:var(--ink);
+  }
+  .rupee-glyph{color:var(--gold); font-weight:700;}
+  .hdr-grid{display:grid; grid-template-columns:1fr; gap:6px; margin-top:12px; font-size:0.95rem;}
+  .hdr-row{display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding:4px 0;}
+  .hdr-row span:first-child{color:var(--ink-soft);}
+  .hdr-row span:last-child{font-family:var(--mono); font-weight:600;}
+  .stamp{
+    display:inline-block; margin-top:10px; font-size:0.82rem; background:var(--gold-dim);
+    color:var(--gold); border:1px solid var(--gold-light); padding:4px 10px; border-radius:20px;
+  }
+  section{
+    background:var(--paper); border:1px solid var(--border); border-radius:12px;
+    padding:18px; margin-bottom:16px; box-shadow:0 2px 10px rgba(0,0,0,0.03);
+  }
+  h2{
+    font-family:var(--serif); font-size:1.2rem; margin:0 0 4px; padding-bottom:8px;
+    border-bottom:2px solid var(--gold-light); color:var(--ink);
+  }
+  h3{font-family:var(--serif); font-size:1.05rem; margin:0 0 6px;}
+  p{margin:8px 0;}
+  .muted{color:var(--ink-soft); font-size:0.9rem;}
+  .mono{font-family:var(--mono);}
+  .bull{color:var(--green); font-weight:700;}
+  .bear{color:var(--red); font-weight:700;}
+  .tag{
+    display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px;
+    border-radius:5px; margin-left:6px; letter-spacing:0.02em;
+  }
+  .tag.high{background:var(--green-bg); color:var(--green); border:1px solid var(--green);}
+  .tag.medium{background:var(--gold-dim); color:var(--gold); border:1px solid var(--gold-light);}
+
+  /* Basket summary - stacked-first, table on wide screens */
+  .basket-table{width:100%; border-collapse:collapse; margin-top:8px;}
+  .basket-table caption{text-align:left; font-size:0.85rem; color:var(--ink-soft); margin-bottom:8px;}
+  .basket-table thead{display:none;}
+  .basket-table tr{
+    display:block; border:1px solid var(--border); border-radius:10px; margin-bottom:10px; padding:10px 12px;
+  }
+  .basket-table tr.totals{background:var(--gold-dim); border:1px solid var(--gold-light);}
+  .basket-table td{
+    display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed var(--border);
+    font-size:0.92rem;
+  }
+  .basket-table td:last-child{border-bottom:none;}
+  .basket-table td::before{
+    content:attr(data-label); color:var(--ink-soft); font-weight:600; padding-right:10px;
+  }
+  .basket-table td span{font-family:var(--mono); font-weight:600; text-align:right;}
+  @media (min-width:600px){
+    .basket-table thead{display:table-header-group;}
+    .basket-table tr{display:table-row; border:none; margin:0; padding:0;}
+    .basket-table tr.totals{border-top:2px solid var(--gold);}
+    .basket-table td{display:table-cell; border-bottom:1px solid var(--border); padding:8px 6px; font-size:0.86rem;}
+    .basket-table td::before{content:none;}
+    .basket-table th{
+      text-align:left; padding:8px 6px; font-size:0.78rem; text-transform:uppercase;
+      letter-spacing:0.03em; color:var(--ink-soft); border-bottom:2px solid var(--gold-light);
+    }
+    .basket-table td span{text-align:left;}
+  }
+
+  .risk-grid{display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;}
+  .risk-item{border:1px solid var(--border); border-radius:8px; padding:10px 12px;}
+  .risk-item .label{font-size:0.78rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em;}
+  .risk-item .value{font-family:var(--mono); font-size:0.98rem; margin-top:2px;}
+
+  .leg-card{border:1px solid var(--border); border-radius:10px; padding:14px; margin-top:14px;}
+  .leg-card.primary{border:1.5px solid var(--gold-light); background:linear-gradient(180deg, #FFFDF5, #FFFFFF);}
+  .leg-head{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;}
+  .leg-name{font-family:var(--serif); font-size:1.1rem;}
+  .levels{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+  .levels div{background:#FBF9F2; border:1px solid var(--border); border-radius:6px; padding:8px;}
+  .levels .l{font-size:0.72rem; color:var(--ink-soft); text-transform:uppercase;}
+  .levels .v{font-family:var(--mono); font-size:0.95rem; margin-top:2px;}
+
+  pre.ledger{
+    background:#F3F0E4; border:1px solid var(--border); border-radius:8px; padding:12px;
+    font-family:var(--mono); font-size:0.85rem; white-space:pre-wrap; word-break:break-word;
+    margin-top:8px; line-height:1.6;
+  }
+  button.copy-btn{
+    font-family:var(--sans); font-size:0.85rem; font-weight:600; color:var(--gold);
+    background:var(--paper); border:1px solid var(--gold-light); border-radius:6px;
+    padding:10px 14px; min-height:44px; min-width:44px; cursor:pointer; margin-top:10px;
+  }
+  button.copy-btn:active{background:var(--gold-dim);}
+  .rule{height:2px; background:linear-gradient(90deg, var(--gold-light), transparent); border:none; margin:14px 0;}
+  ul.exit-list{padding-left:20px; margin:8px 0;}
+  ul.exit-list li{margin-bottom:8px;}
+  .dropped{font-size:0.85rem; color:var(--ink-soft); margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+  footer.disclaimer{
+    font-size:0.82rem; color:var(--ink-soft); background:var(--paper); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px; margin-top:8px; margin-bottom:24px;
+  }
+  footer.disclaimer h2{font-size:0.95rem;}
+
+  @media print{
+    body{background:#fff;}
+    section, header.hdr, footer.disclaimer{box-shadow:none; border:1px solid #999;}
+    .stamp, .tag{border:1px solid #999; background:none; color:#000;}
+    button.copy-btn{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <div class="muted">F&amp;O MONTHLY BASKET <span class="rupee-glyph">&#8377;</span></div>
+    <h1>September 2026 Cycle</h1>
+    <div class="hdr-grid">
+      <div class="hdr-row"><span>Expiry traded</span><span>29 Sep 2026 (Tue)</span></div>
+      <div class="hdr-row"><span>Budget in use</span><span>&#8377;1,00,000</span></div>
+      <div class="hdr-row"><span>Capital deployed</span><span>37.3% of budget</span></div>
+      <div class="hdr-row"><span>Generated</span><span>28 Aug 2026, 07:15 PM IST</span></div>
+    </div>
+    <div class="stamp">Partial data &mdash; technicals &amp; live premiums via Kite; fundamentals (P/E, ROE, D/E) and earnings calendar not pulled this cycle, verify at screener.in / NSE before entry</div>
+  </header>
+
+  <section>
+    <h2>Basket Summary</h2>
+    <table class="basket-table">
+      <caption>Deployed capital = net debit paid per spread (this is also the leg's max loss, since every leg is a defined-risk debit spread).</caption>
+      <thead>
+        <tr><th>Instrument</th><th>Structure</th><th>Lots</th><th>Deployed</th><th>Max Loss</th><th>SL</th><th>Target</th><th>R:R</th><th>Conviction</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="Instrument">ICICIBANK</td>
+          <td data-label="Structure">Call debit spread<br><span class="mono" style="font-size:0.8rem">1440/1490 CE</span></td>
+          <td data-label="Lots"><span>1 (700)</span></td>
+          <td data-label="Deployed"><span>&#8377;11,200</span></td>
+          <td data-label="Max Loss"><span>&#8377;11,200</span></td>
+          <td data-label="SL"><span>&#8377;5.5 premium (~65% of debit)</span></td>
+          <td data-label="Target"><span>&#8377;25 premium</span></td>
+          <td data-label="R:R"><span>1 : 2.1</span></td>
+          <td data-label="Conviction">High</td>
+        </tr>
+        <tr>
+          <td data-label="Instrument">TATASTEEL</td>
+          <td data-label="Structure">Put debit spread<br><span class="mono" style="font-size:0.8rem">185/170 PE</span></td>
+          <td data-label="Lots"><span>2 (2750 ea)</span></td>
+          <td data-label="Deployed"><span>&#8377;15,565</span></td>
+          <td data-label="Max Loss"><span>&#8377;15,565</span></td>
+          <td data-label="SL"><span>&#8377;1.4 premium (~50% of debit)</span></td>
+          <td data-label="Target"><span>&#8377;10 premium</span></td>
+          <td data-label="R:R"><span>1 : 4.3</span></td>
+          <td data-label="Conviction">High</td>
+        </tr>
+        <tr>
+          <td data-label="Instrument">ITC</td>
+          <td data-label="Structure">Put debit spread<br><span class="mono" style="font-size:0.8rem">265/245 PE</span></td>
+          <td data-label="Lots"><span>2 (1725 ea)</span></td>
+          <td data-label="Deployed"><span>&#8377;10,522</span></td>
+          <td data-label="Max Loss"><span>&#8377;10,522</span></td>
+          <td data-label="SL"><span>&#8377;1.5 premium (~50% of debit)</span></td>
+          <td data-label="Target"><span>&#8377;12 premium</span></td>
+          <td data-label="R:R"><span>1 : 5.6</span></td>
+          <td data-label="Conviction">Medium</td>
+        </tr>
+        <tr class="totals">
+          <td data-label="Instrument"><strong>TOTAL</strong></td>
+          <td data-label="Structure">&mdash;</td>
+          <td data-label="Lots">&mdash;</td>
+          <td data-label="Deployed"><span>&#8377;37,287 (37.3%)</span></td>
+          <td data-label="Max Loss"><span>&#8377;37,287 (37.3%)</span></td>
+          <td data-label="SL">&mdash;</td>
+          <td data-label="Target">Residual: <span>&#8377;62,713 (62.7%)</span></td>
+          <td data-label="R:R">&mdash;</td>
+          <td data-label="Conviction">&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:10px;">
+      <strong>Why the basket is short of 95&ndash;100% deployment:</strong> every leg here is a defined-risk debit spread,
+      where deployed capital and max loss are the same number. The 40% aggregate loss cap (&#8377;40,000) therefore caps
+      deployment directly &mdash; the next available whole lot on any leg would push aggregate max loss past &#8377;40,000
+      (₹8m short of that only by ₹2,713), so per the loss-cap-outranks-deployment rule, the basket stops at 37.3% rather
+      than force a breach. Reaching 95&ndash;100% would require naked long premium or futures, which M2's capital-preservation
+      bias argues against at this budget and this month's mixed conviction set.
+    </p>
+    <p class="dropped">
+      <strong>Dropped on screening:</strong> SBIN (Medium bullish, but a second financials leg alongside ICICIBANK would
+      have breached the 50%-of-deployed-capital sector cap) &middot; TCS (today's session shows a sharp, unexplained
+      +4% intraday spike after a choppy 60-day range &mdash; event-risk elevated, catalyst unverified, skipped rather than
+      guessed) &middot; MARUTI, HDFCBANK, BHARTIARTL (below both 20/50-day averages but no clean, sustained directional
+      read this cycle) &middot; NIFTY / BANKNIFTY / FINNIFTY (all three indices are trading within ~1% of their own
+      20/50/200-day averages this week &mdash; genuinely rangebound, no High or Medium conviction direction to publish).
+    </p>
+  </section>
+
+  <section>
+    <h2>Portfolio Risk Block</h2>
+    <div class="risk-grid">
+      <div class="risk-item">
+        <div class="label">Net directional bias</div>
+        <div class="value">Moderately net <span class="bear">bearish</span> &mdash; 69.9% of deployed capital (TATASTEEL + ITC puts) vs 30.1% bullish (ICICIBANK calls). Under the 70% single-direction threshold, so no hedge leg is added, but it is close enough to flag: a broad market rally would hurt two of three legs.</div>
+      </div>
+      <div class="risk-item">
+        <div class="label">Sector concentration</div>
+        <div class="value">Financials 1 leg / 30.1% deployed (ICICIBANK) &middot; Metals 1 leg / 41.7% deployed (TATASTEEL) &middot; FMCG 1 leg / 28.2% deployed (ITC). No sector exceeds the 2-legs / 50%-of-deployed cap.</div>
+      </div>
+      <div class="risk-item">
+        <div class="label">Correlation note</div>
+        <div class="value">Three distinct drivers &mdash; private-bank credit growth (ICICIBANK), global steel/commodity demand (TATASTEEL), domestic cigarette-volume &amp; tax overhang (ITC). No duplicated thesis; a broad NIFTY move is the only common thread, sized at 69.9% one direction as noted above.</div>
+      </div>
+      <div class="risk-item">
+        <div class="label">Single largest loss contributor</div>
+        <div class="value">TATASTEEL put spread &mdash; &#8377;15,565 max loss (41.7% of the basket's total risk).</div>
+      </div>
+      <div class="risk-item">
+        <div class="label">Event calendar inside the cycle</div>
+        <div class="value">No scheduled earnings identified for ICICIBANK, TATASTEEL, or ITC between 28 Aug and 29 Sep 2026 &mdash; Q2 FY27 results for all three typically land mid-to-late October, after this cycle's expiry. <strong>Not independently verified against each company's IR calendar &mdash; confirm before entry.</strong> No RBI MPC or Union Budget event falls in this window from available data; verify against the RBI and PIB calendars.</div>
+      </div>
+      <div class="risk-item">
+        <div class="label">Physical settlement note</div>
+        <div class="value">All three legs are stock options &mdash; physically settled if held ITM to expiry. Notional deliverable exposure if fully ITM and not squared off: ICICIBANK &#8776;&#8377;10.1L (700 sh &times; &#8377;1440), TATASTEEL &#8776;&#8377;10.2L (2 &times; 2750 sh &times; &#8377;185), ITC &#8776;&#8377;9.1L (2 &times; 1725 sh &times; &#8377;265). Close every leg before expiry week &mdash; see Exit-by date below.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="leg-card primary">
+    <div class="leg-head">
+      <div class="leg-name">ICICIBANK <span class="tag high">HIGH</span></div>
+      <div class="bull">BULLISH</div>
+    </div>
+    <p><strong>Brief:</strong> Trending index heavyweight &mdash; up ~15% over the last 60 sessions (1,240 &rarr; 1,425), holding above its 50-day average (&#8776;1,416) after stalling just under its recent high (&#8776;1,460). Pullbacks over the last two months have been shallow and bought. Fundamentals not pulled this cycle &mdash; verify P/E vs sector and asset-quality trend before entry.</p>
+    <p><strong>Structure rationale:</strong> Debit call spread rather than a naked call &mdash; caps theta bleed over a full ~22-session hold and keeps the trade capital-efficient at this budget without needing an IV-percentile read we don't have.</p>
+    <div class="levels">
+      <div><div class="l">Entry (net debit)</div><div class="v">&#8377;16.00/sh (Buy 1440 CE &#8377;21.60, Sell 1490 CE &#8377;5.60)</div></div>
+      <div><div class="l">Spot / Futures ref</div><div class="v">&#8377;1,425.20</div></div>
+      <div><div class="l">SL</div><div class="v">Technical: close below &#8377;1,390 (recent swing low) OR spread premium &lt;&#8377;5.5 (65% backstop) &mdash; whichever first</div></div>
+      <div><div class="l">Target</div><div class="v">Spread &#8776;&#8377;25 (spot approaching 1,490) &mdash; min 1:2 clears at &#8776;&#8377;22.8</div></div>
+    </div>
+    <pre class="ledger" id="ledger-icici">THESIS: ICICIBANK monthly uptrend intact, above 50DMA, buying spread not naked call for theta control
+SL: close &lt;1390 on spot OR spread premium &lt;5.5 (whichever first)
+TARGET: spread premium ~25 (spot ~1490)
+LOTS: 1 (700 qty) -- Buy ICICIBANK SEP 1440 CE, Sell ICICIBANK SEP 1490 CE
+TAGS: #monthly-basket #sep2026 #icicibank #bullish #debit-spread #high-conviction</pre>
+    <button class="copy-btn" onclick="copyLedger('ledger-icici', this)">Copy</button>
+  </section>
+
+  <section class="leg-card">
+    <div class="leg-head">
+      <div class="leg-name">TATASTEEL <span class="tag high">HIGH</span></div>
+      <div class="bear">BEARISH</div>
+    </div>
+    <p><strong>Brief:</strong> Clean sustained downtrend &mdash; down ~12% over 60 sessions, price (&#8377;186) below both its 20-day (&#8776;187) and 50-day (&#8776;188) averages, no bounce has reclaimed either line since mid-July. Fundamentals not pulled this cycle &mdash; verify steel-realisation and China-demand commentary before entry.</p>
+    <p><strong>Structure rationale:</strong> Put debit spread over a naked put &mdash; TATASTEEL options carry meaningfully wider bid-ask on far strikes, and the spread locks in a defined, cheap cost (&#8377;2.83/sh) with a 4.3:1 payoff at a lot size (2,750) that would make a naked put's premium outlay disproportionate to the rest of the basket.</p>
+    <div class="levels">
+      <div><div class="l">Entry (net debit)</div><div class="v">&#8377;2.83/sh (Buy 185 PE &#8377;3.16, Sell 170 PE &#8377;0.33)</div></div>
+      <div><div class="l">Spot / Futures ref</div><div class="v">&#8377;186.05</div></div>
+      <div><div class="l">SL</div><div class="v">Technical: close above &#8377;192 (reclaims 20DMA with room) OR spread premium &lt;&#8377;1.4 (50% backstop) &mdash; whichever first</div></div>
+      <div><div class="l">Target</div><div class="v">Spread &#8776;&#8377;10 (spot approaching 170) &mdash; min 1:2 clears at &#8776;&#8377;8.5</div></div>
+    </div>
+    <pre class="ledger" id="ledger-tata">THESIS: TATASTEEL sustained downtrend, below 20/50DMA, spread caps cost on a large lot size
+SL: close &gt;192 on spot OR spread premium &lt;1.4 (whichever first)
+TARGET: spread premium ~10 (spot ~170)
+LOTS: 2 (2750 qty each) -- Buy TATASTEEL SEP 185 PE, Sell TATASTEEL SEP 170 PE
+TAGS: #monthly-basket #sep2026 #tatasteel #bearish #debit-spread #high-conviction</pre>
+    <button class="copy-btn" onclick="copyLedger('ledger-tata', this)">Copy</button>
+  </section>
+
+  <section class="leg-card">
+    <div class="leg-head">
+      <div class="leg-name">ITC <span class="tag medium">MEDIUM</span></div>
+      <div class="bear">BEARISH</div>
+    </div>
+    <p><strong>Brief:</strong> Steady grind lower &mdash; down ~5% over 60 sessions, below both 20-day (&#8776;276) and 50-day (&#8776;281) averages, no single sharp leg down but a persistent series of lower highs since June. Fundamentals not pulled this cycle &mdash; verify cigarette-volume trend and any tax/GST overhang before entry.</p>
+    <p><strong>Structure rationale:</strong> Put debit spread &mdash; the trend is real but slow-moving (no single catalyst identified), so a defined-risk spread is preferred over a naked put to avoid paying for optionality the setup doesn't clearly need; also keeps this Medium-conviction leg's capital small relative to the two High-conviction legs.</p>
+    <div class="levels">
+      <div><div class="l">Entry (net debit)</div><div class="v">&#8377;3.05/sh (Buy 265 PE &#8377;3.25, Sell 245 PE &#8377;0.20)</div></div>
+      <div><div class="l">Spot / Futures ref</div><div class="v">&#8377;265.50</div></div>
+      <div><div class="l">SL</div><div class="v">Technical: close above &#8377;272 (reclaims 20DMA) OR spread premium &lt;&#8377;1.5 (50% backstop) &mdash; whichever first</div></div>
+      <div><div class="l">Target</div><div class="v">Spread &#8776;&#8377;12 (spot approaching 245) &mdash; min 1:2 clears at &#8776;&#8377;9.15</div></div>
+    </div>
+    <pre class="ledger" id="ledger-itc">THESIS: ITC steady downtrend below 20/50DMA, spread over naked put given no single catalyst
+SL: close &gt;272 on spot OR spread premium &lt;1.5 (whichever first)
+TARGET: spread premium ~12 (spot ~245)
+LOTS: 2 (1725 qty each) -- Buy ITC SEP 265 PE, Sell ITC SEP 245 PE
+TAGS: #monthly-basket #sep2026 #itc #bearish #debit-spread #medium-conviction</pre>
+    <button class="copy-btn" onclick="copyLedger('ledger-itc', this)">Copy</button>
+  </section>
+
+  <section>
+    <h2>Exit &amp; Review Rules</h2>
+    <ul class="exit-list">
+      <li><strong>Per-leg SL/target:</strong> as stated on each card above &mdash; technical level or premium backstop, whichever triggers first.</li>
+      <li><strong>Basket-level stop:</strong> if aggregate open loss across all three legs reaches <strong>&#8377;25,000 (25% of budget)</strong>, review the entire basket rather than any single leg. Never average down into a losing leg using the &#8377;62,713 residual cash.</li>
+      <li><strong>Mid-cycle checkpoint: 14 Sep 2026 (Mon).</strong> Legs that are flat but whose thesis is intact (trend/DMA structure unbroken) stay. Any leg whose technical invalidation level has already broken exits at this checkpoint even if the premium stop hasn't printed yet.</li>
+      <li><strong>Exit-by date: 25 Sep 2026 (Fri).</strong> All three legs are physically-settled stock options &mdash; nothing carries into expiry week (28&ndash;29 Sep). Square off fully by this date regardless of P&amp;L.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Basket Ledger (all legs)</h2>
+    <pre class="ledger" id="ledger-all">MONTHLY BASKET -- SEPTEMBER 2026 EXPIRY (29 Sep 2026) -- BUDGET Rs 1,00,000
+Deployed: Rs 37,287 (37.3%) | Max loss: Rs 37,287 (37.3%) | Residual: Rs 62,713 (62.7%)
+
+1) ICICIBANK -- BULLISH -- HIGH -- 1 lot (700)
+   Buy ICICIBANK SEP 1440 CE @ 21.60, Sell ICICIBANK SEP 1490 CE @ 5.60 (net debit 16.00/sh)
+   SL: spot close <1390 OR premium <5.5 | Target: premium ~25 | Deployed Rs 11,200
+
+2) TATASTEEL -- BEARISH -- HIGH -- 2 lots (2750 ea)
+   Buy TATASTEEL SEP 185 PE @ 3.16, Sell TATASTEEL SEP 170 PE @ 0.33 (net debit 2.83/sh)
+   SL: spot close >192 OR premium <1.4 | Target: premium ~10 | Deployed Rs 15,565
+
+3) ITC -- BEARISH -- MEDIUM -- 2 lots (1725 ea)
+   Buy ITC SEP 265 PE @ 3.25, Sell ITC SEP 245 PE @ 0.20 (net debit 3.05/sh)
+   SL: spot close >272 OR premium <1.5 | Target: premium ~12 | Deployed Rs 10,522
+
+Basket stop: review all legs if aggregate open loss hits Rs 25,000 (25% of budget)
+Mid-cycle checkpoint: 14 Sep 2026 | Exit-by (before settlement week): 25 Sep 2026
+TAGS: #monthly-basket #sep2026 #icicibank #tatasteel #itc #debit-spreads</pre>
+    <button class="copy-btn" onclick="copyLedger('ledger-all', this)">Copy Full Basket</button>
+  </section>
+
+  <hr class="rule">
+
+  <footer class="disclaimer">
+    <h2>Disclaimer</h2>
+    <p>Data-backed technical and sentiment setups for the stated window, not predictions and not a guarantee of any
+    outcome. Options are leveraged, time-decaying instruments; the full premium can be lost. A basket of correlated
+    derivative positions can lose on every leg at once &mdash; diversification across legs is not protection. Position
+    sizing, final contract choice, and entry/exit timing are the user's call. Verify all live levels independently
+    before acting.</p>
+  </footer>
+
+</div>
+<script>
+function copyLedger(id, btn){
+  var text = document.getElementById(id).innerText;
+  var done = function(){
+    var orig = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(function(){ btn.innerText = orig; }, 1500);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done){
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand("copy"); done(); } catch(e){}
+  document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>
