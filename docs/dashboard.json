@@ -124,10 +124,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "MANAPPURAM",
-      "entry_time": "2026-08-27T15:04:48.526106+05:30",
-      "entry_spot": 346.9,
-      "target_pts": 2.24,
+      "name": "CROMPTON",
+      "entry_time": "2026-08-28T15:04:46.286677+05:30",
+      "entry_spot": 231.8,
+      "target_pts": 1.28,
       "target_source": "atr"
     },
     "dynamic_universe": {
