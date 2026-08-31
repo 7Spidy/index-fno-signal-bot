@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F&amp;O Monthly Picks, Sep 2026</title>
+<style>
+:root{
+  --paper:#FAF8F3; --card:#FFFDF8; --ink:#2B2F3A; --ink-soft:#555C6B; --ink-faint:#7A8290;
+  --gold:#B8860B; --gold-lt:#D4AF37; --gold-pale:#EFE3C2;
+  --bull:#1B7A5A; --bull-bg:#EAF5F0; --bear:#8C2F39; --bear-bg:#F8EDEE;
+  --rule:#E3DCCB;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --serif:Georgia,"Times New Roman","Noto Serif",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto}
+h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.25;margin:0}
+h1{font-size:27px;letter-spacing:-.01em}
+h2{font-size:20px;margin:34px 0 4px;padding-bottom:7px;border-bottom:2px solid var(--gold)}
+h3{font-size:18px}
+p{margin:10px 0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+small{font-size:13px}
+
+header.masthead{border-top:3px double var(--gold);border-bottom:3px double var(--gold);
+  padding:18px 0 16px;margin-bottom:6px;text-align:center}
+.kicker{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:8px}
+.masthead .meta{font-size:14px;color:var(--ink-soft);margin-top:10px}
+.masthead .meta b{color:var(--ink)}
+.expiry-pill{display:inline-block;margin-top:12px;padding:7px 14px;border:1px solid var(--gold);
+  border-radius:999px;background:var(--gold-pale);font-family:var(--mono);font-size:14px;color:#6B4E06}
+
+.note{background:#FFF9E8;border-left:4px solid var(--gold-lt);padding:12px 14px;
+  border-radius:0 8px 8px 0;font-size:14px;color:var(--ink-soft);margin:16px 0}
+.note b{color:var(--ink)}
+
+/* ---- summary table: stacked first, real table on wide screens ---- */
+.summary{margin-top:14px}
+.srow{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px;
+  margin-bottom:12px;box-shadow:0 1px 3px rgba(43,47,58,.06)}
+.srow.top{border:1px solid var(--gold);box-shadow:0 2px 8px rgba(184,134,11,.14)}
+.srow .rank{font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:4px}
+.srow .instr{font-family:var(--serif);font-size:17px;font-weight:600;word-break:break-word}
+.srow .struct{font-size:14px;color:var(--ink-soft);margin-bottom:9px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:3px 0;
+  border-top:1px dotted var(--rule);font-size:14px}
+.kv span:first-child{color:var(--ink-faint)}
+.kv span:last-child{font-family:var(--mono);text-align:right}
+table.wide{display:none}
+
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:13px;
+  font-family:var(--mono);white-space:nowrap}
+.t-bull{background:var(--bull-bg);color:var(--bull);border:1px solid #BFE0D2}
+.t-bear{background:var(--bear-bg);color:var(--bear);border:1px solid #E7C7CA}
+.t-high{background:var(--gold-pale);color:#6B4E06;border:1px solid var(--gold-lt)}
+.t-med{background:#F0EEE8;color:var(--ink-soft);border:1px solid var(--rule)}
+
+/* ---- recommendation cards ---- */
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:18px;
+  margin:18px 0;box-shadow:0 1px 4px rgba(43,47,58,.07)}
+.card.primary{border:1px solid var(--gold);box-shadow:0 3px 14px rgba(184,134,11,.16);position:relative}
+.card.primary::before{content:"\20B9";position:absolute;top:12px;right:16px;font-family:var(--serif);
+  font-size:30px;color:var(--gold-pale)}
+.card h3{margin-bottom:2px}
+.card .rankline{font-family:var(--mono);font-size:13px;color:var(--gold);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.tags{margin:9px 0 12px;display:flex;flex-wrap:wrap;gap:6px}
+.legs{background:#FBF7EC;border:1px dashed var(--gold-lt);border-radius:8px;padding:11px 13px;margin:12px 0}
+.legs div{font-family:var(--mono);font-size:14px;padding:2px 0}
+.lbl{font-family:var(--mono);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold);margin:16px 0 5px}
+.levels{border-top:1px solid var(--rule)}
+.levels .kv{font-size:14.5px}
+.bull-txt{color:var(--bull);font-weight:600}
+.bear-txt{color:var(--bear);font-weight:600}
+ul{margin:8px 0;padding-left:20px}
+li{margin:5px 0}
+.stat{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--mono);font-size:13.5px;
+  color:var(--ink-soft);margin:8px 0 2px}
+.empty{background:#FBF7EC;border:1px dashed var(--gold-lt);border-radius:12px;padding:18px;margin:18px 0}
+.disc{background:#F3F0E7;border:1px solid var(--rule);border-radius:12px;padding:18px;
+  margin:30px 0 10px;font-size:14px;color:var(--ink-soft)}
+.disc h2{margin-top:0;border-color:var(--ink-faint)}
+footer{text-align:center;font-size:13px;color:var(--ink-faint);padding:18px 0 6px;
+  border-top:1px solid var(--rule);margin-top:26px}
+a{color:var(--gold);min-height:44px;display:inline-block;line-height:44px}
+
+@media (min-width:600px){
+  body{padding:24px 16px}
+  h1{font-size:33px}
+  .summary .srow{display:none}
+  table.wide{display:table;width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+  table.wide th{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--gold);text-align:left;padding:9px 7px;border-bottom:2px solid var(--gold)}
+  table.wide td{padding:10px 7px;border-bottom:1px solid var(--rule);vertical-align:top}
+  table.wide td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.wide tr.top td{background:#FFFBEF}
+}
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .card,.srow,.note,.disc,.empty{box-shadow:none!important;background:#fff!important;
+    border:1px solid #999!important}
+  .card.primary::before{display:none}
+  h2{border-bottom:1px solid #000}
+  .tag{border:1px solid #666!important;background:#fff!important;color:#000!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="kicker">Monthly Scan &middot; NSE F&amp;O</div>
+  <h1>F&amp;O Monthly Picks</h1>
+  <div class="kicker" style="margin:6px 0 0;color:var(--ink-faint);letter-spacing:.1em">September 2026 cycle</div>
+  <div class="expiry-pill">Expiry &middot; Tue 29 Sep 2026 &middot; ~21 sessions</div>
+  <div class="meta">
+    <b>5 of the liquid universe cleared the gate.</b><br>
+    Generated 31 Aug 2026, 14:47 IST &middot; Kite MCP session live (IZ3912)<br>
+    Quotes captured 14:36&ndash;14:41 IST with the market open.
+  </div>
+</header>
+
+<div class="note">
+  <b>How this run was built.</b> ~215 F&amp;O underlyings plus NIFTY, BANKNIFTY, FINNIFTY,
+  MIDCPNIFTY and SENSEX were screened on live Kite prices; candidates clearing the first pass
+  were taken to full daily-series work. All prices, OI and option premiums below are live Kite
+  quotes from this session. <b>Two honest gaps:</b> Kite serves no IV history, so
+  <i>IV percentile</i> is replaced everywhere by computed Black-76 implied vol set against each
+  underlying's own 20- and 60-day realised volatility &mdash; a proxy, labelled as one. And
+  ex-dividend / corporate-action dates could not be verified in this session; check NSE corporate
+  actions per counter before entry.
+</div>
+
+<h2>Summary</h2>
+<div class="summary">
+
+  <div class="srow top">
+    <div class="rank">Rank 1</div>
+    <div class="instr">HDFCBANK SEP 700 PE / SEP 660 PE</div>
+    <div class="struct">Bear put spread (debit)</div>
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;7.90</span></div>
+    <div class="kv"><span>SL</span><span>&#8377;5.15 or spot &gt; 730</span></div>
+    <div class="kv"><span>Target</span><span>&#8377;40.00 (spot &le; 660)</span></div>
+    <div class="kv"><span>R:R</span><span>4.06 : 1</span></div>
+    <div class="kv"><span>Conviction</span><span><span class="tag t-high">High</span> <span class="tag t-bear">Bearish</span></span></div>
+  </div>
+
+  <div class="srow">
+    <div class="rank">Rank 2</div>
+    <div class="instr">AUROPHARMA SEP 1700 CE / SEP 1800 CE</div>
+    <div class="struct">Bull call spread (debit)</div>
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;28.40</span></div>
+    <div class="kv"><span>SL</span><span>&#8377;18.45 or spot &lt; 1,605</span></div>
+    <div class="kv"><span>Target</span><span>&#8377;100.00 (spot &ge; 1,800)</span></div>
+    <div class="kv"><span>R:R</span><span>2.52 : 1</span></div>
+    <div class="kv"><span>Conviction</span><span><span class="tag t-high">High</span> <span class="tag t-bull">Bullish</span></span></div>
+  </div>
+
+  <div class="srow">
+    <div class="rank">Rank 3</div>
+    <div class="instr">NIFTY SEP 24000 PE / SEP 23500 PE</div>
+    <div class="struct">Bear put spread (debit)</div>
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;109.90</span></div>
+    <div class="kv"><span>SL</span><span>&#8377;71.45 or index &gt; 24,430</span></div>
+    <div class="kv"><span>Target</span><span>&#8377;500.00 (index &le; 23,500)</span></div>
+    <div class="kv"><span>R:R</span><span>3.55 : 1</span></div>
+    <div class="kv"><span>Conviction</span><span><span class="tag t-med">Medium</span> <span class="tag t-bear">Bearish</span></span></div>
+  </div>
+
+  <div class="srow">
+    <div class="rank">Rank 4</div>
+    <div class="instr">ICICIBANK SEP 1450 CE / SEP 1520 CE</div>
+    <div class="struct">Bull call spread (debit)</div>
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;21.95</span></div>
+    <div class="kv"><span>SL</span><span>&#8377;14.25 or spot &lt; 1,406</span></div>
+    <div class="kv"><span>Target</span><span>&#8377;70.00 (spot &ge; 1,520)</span></div>
+    <div class="kv"><span>R:R</span><span>2.19 : 1</span></div>
+    <div class="kv"><span>Conviction</span><span><span class="tag t-med">Medium</span> <span class="tag t-bull">Bullish</span></span></div>
+  </div>
+
+  <div class="srow">
+    <div class="rank">Rank 5</div>
+    <div class="instr">PAYTM SEP 1700 CE / SEP 1800 CE</div>
+    <div class="struct">Bull call spread (debit)</div>
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;30.50</span></div>
+    <div class="kv"><span>SL</span><span>&#8377;19.80 or spot &lt; 1,600</span></div>
+    <div class="kv"><span>Target</span><span>&#8377;100.00 (spot &ge; 1,800)</span></div>
+    <div class="kv"><span>R:R</span><span>2.28 : 1</span></div>
+    <div class="kv"><span>Conviction</span><span><span class="tag t-med">Medium</span> <span class="tag t-bull">Bullish</span></span></div>
+  </div>
+
+  <table class="wide">
+    <thead><tr>
+      <th>#</th><th>Instrument</th><th>Structure</th><th>Entry</th><th>SL</th><th>Target</th><th>R:R</th><th>Conviction</th>
+    </tr></thead>
+    <tbody>
+      <tr class="top">
+        <td class="n">1</td>
+        <td>HDFCBANK SEP 700 PE<br>/ SEP 660 PE</td>
+        <td>Bear put spread</td>
+        <td class="n">7.90</td><td class="n">5.15<br>or &gt;730</td><td class="n">40.00<br>(&le;660)</td>
+        <td class="n">4.06:1</td><td><span class="tag t-high">High</span></td>
+      </tr>
+      <tr>
+        <td class="n">2</td>
+        <td>AUROPHARMA SEP 1700 CE<br>/ SEP 1800 CE</td>
+        <td>Bull call spread</td>
+        <td class="n">28.40</td><td class="n">18.45<br>or &lt;1,605</td><td class="n">100.00<br>(&ge;1,800)</td>
+        <td class="n">2.52:1</td><td><span class="tag t-high">High</span></td>
+      </tr>
+      <tr>
+        <td class="n">3</td>
+        <td>NIFTY SEP 24000 PE<br>/ SEP 23500 PE</td>
+        <td>Bear put spread</td>
+        <td class="n">109.90</td><td class="n">71.45<br>or &gt;24,430</td><td class="n">500.00<br>(&le;23,500)</td>
+        <td class="n">3.55:1</td><td><span class="tag t-med">Medium</span></td>
+      </tr>
+      <tr>
+        <td class="n">4</td>
+        <td>ICICIBANK SEP 1450 CE<br>/ SEP 1520 CE</td>
+        <td>Bull call spread</td>
+        <td class="n">21.95</td><td class="n">14.25<br>or &lt;1,406</td><td class="n">70.00<br>(&ge;1,520)</td>
+        <td class="n">2.19:1</td><td><span class="tag t-med">Medium</span></td>
+      </tr>
+      <tr>
+        <td class="n">5</td>
+        <td>PAYTM SEP 1700 CE<br>/ SEP 1800 CE</td>
+        <td>Bull call spread</td>
+        <td class="n">30.50</td><td class="n">19.80<br>or &lt;1,600</td><td class="n">100.00<br>(&ge;1,800)</td>
+        <td class="n">2.28:1</td><td><span class="tag t-med">Medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p><small>Entry = net debit paid, taken at executable prices (buy at ask, sell at bid) from the
+  live book. SL states both the technical invalidation on the underlying and a 35% premium
+  backstop &mdash; whichever triggers first. Target = spread value at the technical target held to
+  expiry; reaching that level earlier in the cycle pays less, because time value remains in the
+  short leg.</small></p>
+</div>
+
+<h2>Cycle context</h2>
+
+<p><b>Where the tape stands.</b> NIFTY 24,026.95, down 0.61% today and below both its
+20-DMA (24,338) and 50-DMA (24,208), with MACD through its signal line to the downside
+(&minus;26.6 vs +16.6) and RSI at 42.3. The index has printed four consecutive lower highs since
+the 3 Aug peak of 24,774. India VIX sits at 11.18 &mdash; deep complacency, which is precisely why
+every idea below is a <i>debit</i> structure: option premium is cheap in absolute terms, so
+buying defined-risk spreads costs little and short-premium structures are poorly paid for the
+risk they carry.</p>
+
+<p><b>One quirk worth pricing in:</b> NIFTY Sep futures trade at 24,246.5 against spot 24,026.95
+&mdash; a 219.6-point (0.91%) premium over 29 days, rich versus normal carry. Index options are
+priced off that future, which makes the September puts cheaper measured against spot than they
+look. The put-spread breakeven below is stated on the index level at expiry, where the premium
+has fully decayed.</p>
+
+<p><b>Event dates inside the cycle:</b></p>
+<ul>
+  <li><b>Wed 16 Sep 2026</b> &mdash; FOMC decision, 2:00pm ET, with the dot plot (Sep 15&ndash;16
+  meeting). Lands overnight into Thu 17 Sep IST. The only scheduled macro event of size in the window.</li>
+  <li><b>Tue 29 Sep 2026</b> &mdash; NSE index reconstitution effective after the close (i.e. from
+  30 Sep). BSE replaces WIPRO in the Nifty 50; INDHOTEL, LODHA, RECLTD, SHREECEM and UNITDSPR exit
+  the Nifty 100. Passive flow typically clusters into the last few sessions &mdash; another reason
+  not to be holding stock options into that week.</li>
+  <li><b>Outside the cycle:</b> RBI MPC meets 5&ndash;7 Oct with the announcement on 7 Oct, after
+  expiry. Q2 FY27 earnings season begins mid-October, after expiry &mdash; so no scheduled results
+  fall inside the holding window for any of the five names. Ex-dividend dates were not verifiable
+  in this session; verify per counter before entry.</li>
+</ul>
+
+<p><b>Physical settlement.</b> Four of the five are stock options (HDFCBANK, AUROPHARMA,
+ICICIBANK, PAYTM) and are physically settled. In a spread where both legs finish ITM the delivery
+obligations offset, but if only the long leg finishes ITM you are left with a real delivery
+obligation on the full lot. Every stock idea below therefore carries an exit-by date of
+<b>Thu 24 Sep 2026</b>, well clear of settlement week. Only the NIFTY spread is cash-settled.</p>
+
+<p><b>Overlap disclosure</b> &mdash; information, not a constraint; none of these ideas was dropped
+for resembling another, and each stands on its own:</p>
+<ul>
+  <li><b>#1 and #3 share a driver.</b> HDFC Bank is the single largest NIFTY constituent, so the
+  HDFCBANK put spread and the NIFTY put spread will tend to win together and lose together.
+  Taking both doubles the same bet.</li>
+  <li><b>#1 and #4 are opposite sides of one sector.</b> Short HDFCBANK against long ICICIBANK is
+  a divergence trade inside private banks, backed by divergent fundamentals (below). It is not a
+  hedge: a sector-wide re-rating in either direction can drag both legs the wrong way.</li>
+  <li><b>Direction is skewed long.</b> Three of five are bullish. #5 PAYTM carries the highest
+  index sensitivity in the list (60-session beta 1.71) and works directly against #3.</li>
+  <li><b>#2 is the only index-independent idea here</b> &mdash; AUROPHARMA's 60-session beta to
+  NIFTY is &minus;0.39, i.e. it has been moving counter to the index.</li>
+</ul>
+
+<h2>Recommendations</h2>
+
+<!-- ================= 1 ================= -->
+<div class="card primary">
+  <div class="rankline">Rank 1 &middot; Highest conviction</div>
+  <h3>HDFCBANK SEP 700 PE / SEP 660 PE</h3>
+  <div class="tags">
+    <span class="tag t-bear">Bearish</span>
+    <span class="tag t-high">High conviction</span>
+    <span class="tag t-med">Beta 1.41</span>
+    <span class="tag t-med">Physically settled</span>
+  </div>
+
+  <div class="lbl">Brief</div>
+  <p>India's largest private bank, and the heaviest single weight in the index. Spot
+  <span class="num">706.65</span> today printed a fresh 52-week low, undercutting the
+  <span class="num">707</span> low of 19 Aug; the stock is down roughly 27% in CY2026 against an
+  8% fall in the Sensex, and sits about 30% below its 52-week high of
+  <span class="num">1,020.5</span>. The fundamental backdrop fits the derating rather than fighting
+  it: ROE ~13.8%, NIM guided down to ~3.50% for FY26 from 3.67% in FY25 and reported under pressure
+  from rate cuts, an elevated post-merger loan-to-deposit ratio capping credit growth, and FY26
+  revenue growth of just ~3.8% &mdash; yet the stock still trades at ~15.8&ndash;16.8x earnings,
+  a wide premium to a peer median nearer 10x. Cheap on its own history (~1.4x adjusted book),
+  not yet cheap against peers.</p>
+
+  <div class="stat">
+    <span>Spot 706.65</span><span>Sep fut 712.10</span><span>20-DMA 726.45</span>
+    <span>50-DMA 762.25</span><span>RSI 33.0</span><span>ATR14 12.26</span>
+  </div>
+  <div class="stat">
+    <span>MACD &minus;11.37 / sig &minus;11.58</span><span>RV20 13.5%</span><span>RV60 22.2%</span>
+    <span>Leg IV 20.0% / 22.9%</span>
+  </div>
+
+  <div class="lbl">Why this structure</div>
+  <p>Futures OI rose to 362.4M from a day low of 351.3M while price fell 1.7% &mdash; textbook
+  <b>short buildup</b>, not long unwinding. Price is below both moving averages with the 20 under
+  the 50, and today's session was an outside-day reversal from 739.75 to a 704.15 low on 58.8M
+  shares, the heaviest volume in months. Leg IV at 20&ndash;23% sits above 20-day realised vol of
+  13.5%, so selling the 660 strike against the long 700 put is worth doing: it funds roughly a
+  quarter of the position and caps a month of theta. A naked put would pay for vol that is already
+  above what the stock has actually been delivering. RSI at 33 is the one caution &mdash; weak, but
+  not yet washed out.</p>
+
+  <div class="legs">
+    <div>BUY&nbsp; HDFCBANK SEP 700 PE @ 10.50</div>
+    <div>SELL HDFCBANK SEP 660 PE @ &nbsp;2.60</div>
+    <div>Net debit &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 7.90</div>
+  </div>
+
+  <div class="lbl">Levels</div>
+  <div class="levels">
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;7.90</span></div>
+    <div class="kv"><span>Breakeven at expiry</span><span>spot 692.10</span></div>
+    <div class="kv"><span>SL &mdash; technical</span><span>daily close &gt; 730</span></div>
+    <div class="kv"><span>SL &mdash; premium backstop</span><span>spread &le; &#8377;5.15 (&minus;35%)</span></div>
+    <div class="kv"><span>Target</span><span class="bear-txt">spot 660 &rarr; spread &#8377;40.00</span></div>
+    <div class="kv"><span>Reward : Risk</span><span>4.06 : 1</span></div>
+    <div class="kv"><span>Mid-cycle checkpoint</span><span>Tue 15 Sep 2026</span></div>
+    <div class="kv"><span>Exit by</span><span>Thu 24 Sep 2026</span></div>
+  </div>
+  <p><small>730 is the floor of the three-week 710&ndash;735 range that broke today, and sits just
+  above the 20-DMA; a daily close back over it says the breakdown failed. The 660 target is the
+  measured move from that range (710 &minus; 50).</small></p>
+</div>
+
+<!-- ================= 2 ================= -->
+<div class="card">
+  <div class="rankline">Rank 2</div>
+  <h3>AUROPHARMA SEP 1700 CE / SEP 1800 CE</h3>
+  <div class="tags">
+    <span class="tag t-bull">Bullish</span>
+    <span class="tag t-high">High conviction</span>
+    <span class="tag t-med">Beta &minus;0.39</span>
+    <span class="tag t-med">Physically settled</span>
+  </div>
+
+  <div class="lbl">Brief</div>
+  <p>Generic pharma major with a clean balance sheet: FY26 revenue &#8377;33,653 cr (+6% YoY),
+  EBITDA &#8377;6,856 cr at a 20.4% margin, gross margin up to 59.9% from 58.9%, debt-to-equity
+  0.2x and a net cash position. The weak spot is returns &mdash; ROE ~10.5%, at the low end of the
+  pharma peer group, with FY26 margin pressure a recurring theme in results commentary. The stock
+  has still outperformed hard: +14% in CY2026 against an ~11% fall in the index, and today it took
+  out its 52-week high of <span class="num">1,682.4</span> with a print at
+  <span class="num">1,703</span>, closing at <span class="num">1,676.30</span>, up 1.9% on a day
+  the index fell 0.6%.</p>
+
+  <div class="stat">
+    <span>Spot 1,676.30</span><span>Sep fut 1,687.90</span><span>20-DMA 1,631.90</span>
+    <span>50-DMA 1,587.21</span><span>RSI 63.8</span><span>ATR14 36.86</span>
+  </div>
+  <div class="stat">
+    <span>MACD +18.70 / sig +18.64</span><span>RV20 23.6%</span><span>RV60 25.8%</span>
+    <span>Leg IV 23.9% / 24.3%</span>
+  </div>
+
+  <div class="lbl">Why this structure</div>
+  <p>Futures OI climbed to 10.89M &mdash; its high for the day, from a low of 10.38M &mdash; while
+  price rose 1.5%: <b>long buildup</b> confirming the breakout rather than a short-covering pop.
+  Price sits above both averages in bullish alignment, RSI 63.8 is strong without being stretched,
+  and MACD has just crossed back above its signal. Leg IV at ~24% is almost exactly the stock's own
+  realised vol (23.6% over 20 days, 25.8% over 60), so premium is fairly priced, not cheap &mdash;
+  over twenty sessions that makes a naked call a decay tax with no vol edge to offset it. Selling
+  the 1800 strike against the 1700 recovers 28% of the cost and defines the risk. The honest
+  counter-argument: sell-side targets sit <i>below</i> the current price &mdash; a 7 Aug HOLD with a
+  &#8377;1,600 target, and a 28-analyst consensus near &#8377;1,519. This is a momentum and
+  relative-strength trade running ahead of fundamental targets, and it is sized as a defined-risk
+  spread for exactly that reason.</p>
+
+  <div class="legs">
+    <div>BUY&nbsp; AUROPHARMA SEP 1700 CE @ 39.50</div>
+    <div>SELL AUROPHARMA SEP 1800 CE @ 11.10</div>
+    <div>Net debit &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 28.40</div>
+  </div>
+
+  <div class="lbl">Levels</div>
+  <div class="levels">
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;28.40</span></div>
+    <div class="kv"><span>Breakeven at expiry</span><span>spot 1,728.40</span></div>
+    <div class="kv"><span>SL &mdash; technical</span><span>daily close &lt; 1,605</span></div>
+    <div class="kv"><span>SL &mdash; premium backstop</span><span>spread &le; &#8377;18.45 (&minus;35%)</span></div>
+    <div class="kv"><span>Target</span><span class="bull-txt">spot 1,800 &rarr; spread &#8377;100.00</span></div>
+    <div class="kv"><span>Reward : Risk</span><span>2.52 : 1</span></div>
+    <div class="kv"><span>Mid-cycle checkpoint</span><span>Tue 15 Sep 2026</span></div>
+    <div class="kv"><span>Exit by</span><span>Thu 24 Sep 2026</span></div>
+  </div>
+  <p><small>1,605 is the floor of the August consolidation (1,598&ndash;1,605 pivot lows); a close
+  under it means the breakout was a false one. The 1,800 target is roughly the height of that
+  consolidation projected off the breakout, and 3.4 ATRs away over 21 sessions.</small></p>
+</div>
+
+<!-- ================= 3 ================= -->
+<div class="card">
+  <div class="rankline">Rank 3</div>
+  <h3>NIFTY SEP 24000 PE / SEP 23500 PE</h3>
+  <div class="tags">
+    <span class="tag t-bear">Bearish</span>
+    <span class="tag t-med">Medium conviction</span>
+    <span class="tag t-bull">Cash settled</span>
+  </div>
+
+  <div class="lbl">Brief</div>
+  <p>No fundamentals for an index &mdash; the read is trend and flow. NIFTY has rolled over from
+  24,774 on 3 Aug through four successive lower highs to <span class="num">24,026.95</span>, closing
+  today below the 20-DMA (24,338) and the 50-DMA (24,208) with MACD cut through its signal line and
+  RSI at 42.3. Today's low of 23,993.6 is the first sub-24,000 print since 19 Aug. The backdrop is
+  a market that spent March&ndash;August recovering from a 22,283 low and has now stalled, with
+  India VIX at 11.18 signalling that almost nobody is paying up for protection.</p>
+
+  <div class="stat">
+    <span>Spot 24,026.95</span><span>Sep fut 24,246.50</span><span>20-DMA 24,337.95</span>
+    <span>50-DMA 24,208.47</span><span>RSI 42.3</span><span>ATR14 174.43</span>
+  </div>
+  <div class="stat">
+    <span>India VIX 11.18</span><span>RV20 5.7%</span><span>RV60 10.7%</span>
+    <span>Leg IV 10.5% / 11.4%</span>
+  </div>
+
+  <div class="lbl">Why this structure</div>
+  <p>With VIX at 11 and leg IV near 10&ndash;11%, September puts are close to the cheapest they get
+  &mdash; and a long put alone would still bleed for twenty sessions if the index simply drifts.
+  The 23500 leg sold against it cuts the cost by 38% and turns a decay problem into a defined
+  500-point payoff. Futures OI of 15.50M against a day low of 15.36M with price down is mildly
+  supportive of the short case. <b>The genuine conflict:</b> partial put-call ratio across the
+  24000/24200/24400 strikes is 1.30 &mdash; put-heavy, with 6.12M of OI parked at the 24000 put.
+  That reads as positioning defending 24,000 rather than expecting it to break, which is why this
+  is Medium and not High. The trend read and the option pricing are what carry it.</p>
+
+  <div class="legs">
+    <div>BUY&nbsp; NIFTY SEP 24000 PE @ 176.35</div>
+    <div>SELL NIFTY SEP 23500 PE @ &nbsp;66.45</div>
+    <div>Net debit &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 109.90</div>
+  </div>
+
+  <div class="lbl">Levels</div>
+  <div class="levels">
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;109.90</span></div>
+    <div class="kv"><span>Breakeven at expiry</span><span>index 23,890.10</span></div>
+    <div class="kv"><span>SL &mdash; technical</span><span>daily close &gt; 24,430</span></div>
+    <div class="kv"><span>SL &mdash; premium backstop</span><span>spread &le; &#8377;71.45 (&minus;35%)</span></div>
+    <div class="kv"><span>Target</span><span class="bear-txt">index 23,500 &rarr; spread &#8377;500.00</span></div>
+    <div class="kv"><span>Reward : Risk</span><span>3.55 : 1</span></div>
+    <div class="kv"><span>Mid-cycle checkpoint</span><span>Tue 15 Sep 2026</span></div>
+    <div class="kv"><span>Exit by</span><span>Mon 28 Sep 2026</span></div>
+  </div>
+  <p><small>24,430 clears both the 11 Aug lower-high pivot (24,429) and the 20-DMA &mdash; a close
+  above it breaks the sequence of lower highs. 23,500 sits just under the 29 May low of 23,547 and
+  is 3.0 ATRs below spot over 21 sessions. Cash settled, so the exit-by date can run later than
+  the stock ideas.</small></p>
+</div>
+
+<!-- ================= 4 ================= -->
+<div class="card">
+  <div class="rankline">Rank 4</div>
+  <h3>ICICIBANK SEP 1450 CE / SEP 1520 CE</h3>
+  <div class="tags">
+    <span class="tag t-bull">Bullish</span>
+    <span class="tag t-med">Medium conviction</span>
+    <span class="tag t-med">Beta 0.84</span>
+    <span class="tag t-med">Physically settled</span>
+  </div>
+
+  <div class="lbl">Brief</div>
+  <p>The operating mirror image of Rank 1. Q1 FY27 (quarter to June 2026) PAT rose 14% YoY to
+  &#8377;15,440 cr on NII up 12%, NIM <i>expanded</i> to 4.36% from 4.34%, advances grew 19.6% YoY,
+  and gross NPA improved to 1.38% from 1.67%. ROE stands at 17.1% against HDFC Bank's ~13.8%. The
+  stock has behaved accordingly: <span class="num">1,443.10</span>, up 1.4% on a day the index fell
+  0.6%, holding above both averages and coiled beneath its 52-week high of
+  <span class="num">1,480</span>. Watch-points: management flagged that the 4.36% NIM was flattered
+  by tax-refund interest and guided FY27 margin range-bound; at ~2.5x book the quality is not
+  unrecognised.</p>
+
+  <div class="stat">
+    <span>Spot 1,443.10</span><span>Sep fut 1,453.50</span><span>20-DMA 1,426.89</span>
+    <span>50-DMA 1,418.38</span><span>RSI 57.3</span><span>ATR14 21.14</span>
+  </div>
+  <div class="stat">
+    <span>MACD +4.01 / sig +3.54</span><span>RV20 15.4%</span><span>RV60 16.7%</span>
+    <span>Leg IV 15.1% / 14.7%</span>
+  </div>
+
+  <div class="lbl">Why this structure</div>
+  <p>Leg IV of 14.7&ndash;15.1% is <i>below</i> the stock's own realised vol (15.4% over 20 days,
+  16.7% over 60), so premium here is genuinely cheap &mdash; on IV grounds alone a naked 1450 call
+  would be defensible. It is not taken, because the conviction is Medium rather than High: the
+  advance since April is intact but August was a sideways 1,391&ndash;1,480 range, and buying a
+  naked call to sit through twenty more sessions of that range is how a correct directional view
+  still loses money. The 1520 strike sold against it converts range-bound time into a much smaller
+  cost. Futures OI at 94.72M is up only marginally on the day with price up &mdash; mild long
+  buildup, supportive but not emphatic.</p>
+
+  <div class="legs">
+    <div>BUY&nbsp; ICICIBANK SEP 1450 CE @ 26.35</div>
+    <div>SELL ICICIBANK SEP 1520 CE @ &nbsp;4.40</div>
+    <div>Net debit &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 21.95</div>
+  </div>
+
+  <div class="lbl">Levels</div>
+  <div class="levels">
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;21.95</span></div>
+    <div class="kv"><span>Breakeven at expiry</span><span>spot 1,471.95</span></div>
+    <div class="kv"><span>SL &mdash; technical</span><span>daily close &lt; 1,406</span></div>
+    <div class="kv"><span>SL &mdash; premium backstop</span><span>spread &le; &#8377;14.25 (&minus;35%)</span></div>
+    <div class="kv"><span>Target</span><span class="bull-txt">spot 1,520 &rarr; spread &#8377;70.00</span></div>
+    <div class="kv"><span>Reward : Risk</span><span>2.19 : 1</span></div>
+    <div class="kv"><span>Mid-cycle checkpoint</span><span>Tue 15 Sep 2026</span></div>
+    <div class="kv"><span>Exit by</span><span>Thu 24 Sep 2026</span></div>
+  </div>
+  <p><small>1,406 is the last higher low (13 Aug) and sits under both averages; below it the
+  April-onward uptrend is broken. The 1,520 target requires a break of the 1,480 52-week high and
+  is 3.6 ATRs above spot &mdash; the most demanding target in this list relative to volatility,
+  which is why it ranks fourth despite the cleanest fundamentals.</small></p>
+</div>
+
+<!-- ================= 5 ================= -->
+<div class="card">
+  <div class="rankline">Rank 5</div>
+  <h3>PAYTM SEP 1700 CE / SEP 1800 CE</h3>
+  <div class="tags">
+    <span class="tag t-bull">Bullish</span>
+    <span class="tag t-med">Medium conviction</span>
+    <span class="tag t-med">Beta 1.71</span>
+    <span class="tag t-med">Physically settled</span>
+  </div>
+
+  <div class="lbl">Brief</div>
+  <p>The strongest pure momentum name to clear the screen: <span class="num">1,671.00</span>, up
+  from 1,031 in early June &mdash; a 62% run in twelve weeks, built on a sequence of higher highs
+  (1,584 &rarr; 1,718 &rarr; 1,732) and higher lows (1,546 &rarr; 1,612 &rarr; 1,622). Price is far
+  above the 20-DMA (1,588) and 50-DMA (1,393), and it closed up 1.2% today against a falling index.
+  <b>Stated limitation:</b> unlike the other four, no verified fundamental snapshot for this
+  counter was obtained in this session &mdash; this is published as a technical and flow read only,
+  and it is ranked last for that reason as much as any other. Verify the earnings and valuation
+  picture independently before acting.</p>
+
+  <div class="stat">
+    <span>Spot 1,671.00</span><span>Sep fut 1,679.40</span><span>20-DMA 1,587.85</span>
+    <span>50-DMA 1,393.29</span><span>RSI 67.1</span><span>ATR14 51.87</span>
+  </div>
+  <div class="stat">
+    <span>MACD +86.46 / sig +89.07</span><span>RV20 45.2%</span><span>RV60 40.4%</span>
+    <span>Leg IV 31.3% / 31.4%</span>
+  </div>
+
+  <div class="lbl">Why this structure</div>
+  <p>Leg IV of ~31% against 45% realised vol over the last twenty sessions is the widest gap in this
+  list &mdash; the options are underpricing how much this stock actually moves. That is the whole
+  case for paying premium here rather than trading the future, where a 1.71 beta and a 52-point ATR
+  would make any sensible stop a very wide one. The spread caps the cost of a name whose absolute
+  IV is still the highest of the five. <b>The conflict, stated plainly:</b> the MACD histogram has
+  just turned negative (+86.46 against a +89.07 signal) and RSI at 67.1 is extended after a 62%
+  run; futures OI is flat, drifting off its intraday high, so the flow confirmation present in
+  Ranks 1 and 2 is absent here. Trend agrees, momentum is decelerating, OI is neutral. That is a
+  Medium, and it publishes only because the R:R and the vol pricing are clean.</p>
+
+  <div class="legs">
+    <div>BUY&nbsp; PAYTM SEP 1700 CE @ 49.40</div>
+    <div>SELL PAYTM SEP 1800 CE @ 18.90</div>
+    <div>Net debit &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 30.50</div>
+  </div>
+
+  <div class="lbl">Levels</div>
+  <div class="levels">
+    <div class="kv"><span>Entry (net debit)</span><span>&#8377;30.50</span></div>
+    <div class="kv"><span>Breakeven at expiry</span><span>spot 1,730.50</span></div>
+    <div class="kv"><span>SL &mdash; technical</span><span>daily close &lt; 1,600</span></div>
+    <div class="kv"><span>SL &mdash; premium backstop</span><span>spread &le; &#8377;19.80 (&minus;35%)</span></div>
+    <div class="kv"><span>Target</span><span class="bull-txt">spot 1,800 &rarr; spread &#8377;100.00</span></div>
+    <div class="kv"><span>Reward : Risk</span><span>2.28 : 1</span></div>
+    <div class="kv"><span>Mid-cycle checkpoint</span><span>Tue 15 Sep 2026</span></div>
+    <div class="kv"><span>Exit by</span><span>Thu 24 Sep 2026</span></div>
+  </div>
+  <p><small>1,600 sits below the last higher low (1,612 on 25 Aug) and under the 20-DMA; a close
+  there ends the higher-high/higher-low sequence. The 1,800 target is only 2.5 ATRs away &mdash;
+  modest for this name &mdash; but the decelerating momentum is the reason it is not ranked
+  higher.</small></p>
+</div>
+
+<h2>Exit and review rules</h2>
+<div class="card">
+  <p><b>Mid-cycle checkpoint &mdash; Tue 15 Sep 2026</b> (deliberately set the day before the FOMC
+  decision). At that checkpoint, for each position independently:</p>
+  <ul>
+    <li>Flat or modestly down, but the technical thesis intact &mdash; <b>stays on</b>. Twenty-one
+    sessions is the horizon; ten of them proving nothing is not a signal.</li>
+    <li>The technical invalidation level has already broken on a daily close &mdash; <b>exit</b>,
+    even if the 35% premium backstop has not yet printed. The level is the thesis; the premium is
+    only the accounting.</li>
+    <li>Target already reached &mdash; take it. A debit spread near its maximum value has almost
+    no upside left and full downside remaining.</li>
+  </ul>
+  <p><b>Exit-by dates.</b> HDFCBANK, AUROPHARMA, ICICIBANK and PAYTM: <b>Thu 24 Sep 2026</b>,
+  without exception &mdash; these are physically settled stock options and nothing carries into
+  settlement week. NIFTY, cash settled: <b>Mon 28 Sep 2026</b>.</p>
+  <p><b>Whichever triggers first.</b> Every stop above is stated twice, as a level on the underlying
+  and as a 35% premium backstop, and the first of the two to trigger is the one that governs. On a
+  gap through the level, the level wins.</p>
+</div>
+
+<h2>Five, not six</h2>
+<div class="empty">
+  <p>Six was available; five is what earned it. The sixth slot was held for a second bearish
+  non-financial and the candidates did not clear the conviction gate:</p>
+  <ul>
+    <li><b>ADANIENT</b> &mdash; a genuine failed-breakout reversal today (opened 3,165, closed
+    3,010, &minus;5.0% on the heaviest volume since May), but the setup is one session old against
+    an uptrend that ran from 2,400 to 3,212 since May. Trend and today's candle conflict outright.
+    Per the gate, a conflicted read is explained, not published.</li>
+    <li><b>MARUTI</b> &mdash; August was a sequence of lower highs into 13,421, but across four
+    months the stock is mid-range between 12,841 and 14,598, not trending. A 13400/12800 put spread
+    prices at 2.7:1, so the R:R was never the problem; the read was.</li>
+    <li><b>The IT pack and the metals complex</b> both sold off hard today (PERSISTENT &minus;4.1%,
+    KPITTECH &minus;3.7%, HINDZINC &minus;4.0%, NATIONALUM &minus;3.9%). One red session is a daily
+    scan's signal, not a monthly one, and neither INFY nor the metals names showed the clean
+    multi-week structure the cycle horizon needs.</li>
+  </ul>
+  <p>Names absent from this document were looked at and failed the gate &mdash; not overlooked.</p>
+</div>
+
+<div class="disc">
+  <h2>Disclaimer</h2>
+  <p>Data-backed technical and sentiment setups for the stated window, not predictions and not a
+  guarantee of any outcome. Options are leveraged, time-decaying instruments, the full premium can
+  be lost. These are independent recommendations, not a portfolio: if you act on several that share
+  a driver, sector or direction, they can lose together, and managing that overlap is your call.
+  Position sizing, lot count, final contract choice, and entry/exit timing are the user's call.
+  Verify all live levels independently before acting.</p>
+</div>
+
+<footer>
+  F&amp;O Monthly Picks &middot; September 2026 cycle &middot; expiry Tue 29 Sep 2026<br>
+  Generated 31 Aug 2026, 14:47 IST from a live Zerodha Kite session.
+</footer>
+
+</div>
+</body>
+</html>
