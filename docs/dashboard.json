@@ -179,6 +179,12 @@
       "target_pts": 1.28,
       "target_source": "atr"
     },
-    "dynamic_universe": null
+    "dynamic_universe": {
+      "valid_for_date": "2026-09-01",
+      "gainer_found": true,
+      "loser_found": true,
+      "gainer_name": "ATHERENERG",
+      "loser_name": "KAYNES"
+    }
   }
 }
