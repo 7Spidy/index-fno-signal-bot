@@ -214,11 +214,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-09-01",
+      "valid_for_date": "2026-09-02",
       "gainer_found": true,
       "loser_found": true,
       "gainer_name": "ATHERENERG",
-      "loser_name": "KAYNES"
+      "loser_name": "ADANIENSOL"
     }
   }
 }
