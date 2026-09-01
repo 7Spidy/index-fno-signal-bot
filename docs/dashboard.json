@@ -208,9 +208,9 @@
   "strategy_modules": {
     "worst_faller": {
       "name": "ADANIENSOL",
-      "entry_time": "2026-08-31T15:04:48.718117+05:30",
-      "entry_spot": 1458.6,
-      "target_pts": 11.3,
+      "entry_time": "2026-09-01T15:04:52.542972+05:30",
+      "entry_spot": 1381.3,
+      "target_pts": 11.96,
       "target_source": "atr"
     },
     "dynamic_universe": {
