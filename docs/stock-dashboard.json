@@ -1,59 +1,8 @@
 {
-  "date": "2026-09-01",
-  "last_run": "2026-09-01T15:25:35.170755+05:30",
+  "date": "2026-09-02",
+  "last_run": "2026-09-02T09:31:06.996915+05:30",
   "token_valid": true,
   "instruments": [],
   "active_signals": [],
-  "history": [
-    {
-      "time": "11:31",
-      "candle_time": "11:25 IST",
-      "instrument": "HINDALCO",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 62.89782287005402,
-      "pdi": 34.673396625054814,
-      "ndi": 14.943954511053134,
-      "price": 1029.2
-    },
-    {
-      "time": "10:05",
-      "candle_time": "10:00 IST",
-      "instrument": "MARUTI",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 50.54890542289687,
-      "pdi": 24.801664447793737,
-      "ndi": 8.237926289834244,
-      "price": 13419.0
-    }
-  ]
+  "history": []
 }
