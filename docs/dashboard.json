@@ -93,11 +93,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-09-03",
+      "valid_for_date": "2026-09-04",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "COALINDIA",
-      "loser_name": "ADANIENSOL"
+      "gainer_name": "RBLBANK",
+      "loser_name": "KEI"
     }
   }
 }
