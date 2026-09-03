@@ -86,10 +86,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "HEROMOTOCO",
-      "entry_time": "2026-09-02T15:04:52.198125+05:30",
-      "entry_spot": 5256.5,
-      "target_pts": 25.74,
+      "name": "APLAPOLLO",
+      "entry_time": "2026-09-03T15:04:52.007017+05:30",
+      "entry_spot": 2142.0,
+      "target_pts": 10.12,
       "target_source": "atr"
     },
     "dynamic_universe": {
