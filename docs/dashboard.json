@@ -130,6 +130,12 @@
       "target_pts": 12.88,
       "target_source": "atr"
     },
-    "dynamic_universe": null
+    "dynamic_universe": {
+      "valid_for_date": "2026-09-08",
+      "gainer_found": true,
+      "loser_found": true,
+      "gainer_name": "ANGELONE",
+      "loser_name": "KEI"
+    }
   }
 }
