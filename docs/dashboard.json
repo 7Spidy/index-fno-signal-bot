@@ -119,7 +119,37 @@
       "live_atr": 40.55405835491103
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "NIFTY",
+      "direction": "PE",
+      "candle_time": "11:50 IST",
+      "futures_price": 23609.0,
+      "spot_ltp": 23499.35,
+      "fut_spot_spread": 109.7,
+      "tradingsymbol": "NIFTY2691523500PE",
+      "strike": 23500,
+      "expiry": "2026-09-15",
+      "fetch_time": "11:55:48 IST",
+      "atm_ltp": 100.2,
+      "opt_target": 116.05,
+      "opt_sl": 89.63,
+      "spot_tgt": 23460.3,
+      "spot_sl": 23525.4,
+      "raw_risk": 26.0,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 37.87137732888705,
+      "pdi": 17.045821612382124,
+      "ndi": 26.712455346104033,
+      "vwap": 23622.788764060642,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "10:40",
