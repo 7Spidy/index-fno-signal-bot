@@ -119,7 +119,37 @@
       "live_atr": 38.254916694216206
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "12:30 IST",
+      "futures_price": 75599.0,
+      "spot_ltp": 75189.47,
+      "fut_spot_spread": 409.5,
+      "tradingsymbol": "SENSEX2691775200CE",
+      "strike": 75200,
+      "expiry": "2026-09-17",
+      "fetch_time": "12:36:09 IST",
+      "atm_ltp": 635.3,
+      "opt_target": 703.15,
+      "opt_sl": 590.07,
+      "spot_tgt": 75302.0,
+      "spot_sl": 75114.5,
+      "raw_risk": 75.0,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 56.68751038539043,
+      "pdi": 37.661826125705666,
+      "ndi": 31.722336579045315,
+      "vwap": 75535.47194092828,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "11:55",
