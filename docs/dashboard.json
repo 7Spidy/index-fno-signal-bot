@@ -245,10 +245,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "ICICIPRULI",
-      "entry_time": "2026-09-08T15:04:45.517957+05:30",
-      "entry_spot": 466.9,
-      "target_pts": 2.8,
+      "name": "INFY",
+      "entry_time": "2026-09-09T15:04:51.811472+05:30",
+      "entry_spot": 1029.7,
+      "target_pts": 5.79,
       "target_source": "atr"
     },
     "dynamic_universe": {
