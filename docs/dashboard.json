@@ -119,7 +119,37 @@
       "live_atr": 41.95850326735528
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "PE",
+      "candle_time": "12:55 IST",
+      "futures_price": 56712.0,
+      "spot_ltp": 56369.55,
+      "fut_spot_spread": 342.4,
+      "tradingsymbol": "BANKNIFTY26SEP56400PE",
+      "strike": 56400,
+      "expiry": "2026-09-29",
+      "fetch_time": "13:01:04 IST",
+      "atm_ltp": 515.15,
+      "opt_target": 550.67,
+      "opt_sl": 491.47,
+      "spot_tgt": 56279.6,
+      "spot_sl": 56429.5,
+      "raw_risk": 60.0,
+      "conviction": "Moderate",
+      "rr": 1.5,
+      "rsi": 38.2524355429073,
+      "pdi": 15.831857452699577,
+      "ndi": 26.927915935101474,
+      "vwap": 56781.294444444444,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "10:01",
