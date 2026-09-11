@@ -131,11 +131,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-09-11",
+      "valid_for_date": "2026-09-14",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "BANDHANBNK",
-      "loser_name": "HCLTECH"
+      "gainer_name": "PAYTM",
+      "loser_name": "COCHINSHIP"
     }
   }
 }
