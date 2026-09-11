@@ -124,10 +124,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "IDEA",
-      "entry_time": "2026-09-10T15:04:47.532297+05:30",
-      "entry_spot": 14.85,
-      "target_pts": 1.0,
+      "name": "COCHINSHIP",
+      "entry_time": "2026-09-11T15:04:45.354902+05:30",
+      "entry_spot": 1381.0,
+      "target_pts": 8.82,
       "target_source": "atr"
     },
     "dynamic_universe": {
