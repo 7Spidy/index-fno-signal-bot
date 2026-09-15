@@ -85,7 +85,13 @@
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
-    "worst_faller": null,
+    "worst_faller": {
+      "name": "SOLARINDS",
+      "entry_time": "2026-09-15T15:05:32.752145+05:30",
+      "entry_spot": 19150.0,
+      "target_pts": 149.34,
+      "target_source": "atr"
+    },
     "dynamic_universe": {
       "valid_for_date": "2026-09-16",
       "gainer_found": true,
