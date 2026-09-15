@@ -87,10 +87,10 @@
   "strategy_modules": {
     "worst_faller": null,
     "dynamic_universe": {
-      "valid_for_date": "2026-09-15",
+      "valid_for_date": "2026-09-16",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "PAYTM",
+      "gainer_name": "TECHM",
       "loser_name": "COCHINSHIP"
     }
   }
