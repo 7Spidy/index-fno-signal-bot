@@ -119,7 +119,37 @@
       "live_atr": 96.93896206272035
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "09:50 IST",
+      "futures_price": 74530.0,
+      "spot_ltp": 74323.61,
+      "fut_spot_spread": 206.4,
+      "tradingsymbol": "SENSEX26SEP74300CE",
+      "strike": 74300,
+      "expiry": "2026-09-24",
+      "fetch_time": "09:55:44 IST",
+      "atm_ltp": 734.85,
+      "opt_target": 877.68,
+      "opt_sl": 639.63,
+      "spot_tgt": 74566.9,
+      "spot_sl": 74161.4,
+      "raw_risk": 162.2,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 56.673637033220466,
+      "pdi": 29.6942528783657,
+      "ndi": 27.651827220534507,
+      "vwap": 74421.78219544847,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [],
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
