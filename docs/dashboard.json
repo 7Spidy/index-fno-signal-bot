@@ -131,11 +131,11 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-09-18",
+      "valid_for_date": "2026-09-21",
       "gainer_found": true,
       "loser_found": true,
       "gainer_name": "MFSL",
-      "loser_name": "SOLARINDS"
+      "loser_name": "TCS"
     }
   }
 }
