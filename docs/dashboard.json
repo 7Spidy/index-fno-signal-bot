@@ -159,10 +159,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "OFSS",
-      "entry_time": "2026-09-21T15:04:46.046062+05:30",
-      "entry_spot": 10925.0,
-      "target_pts": 74.69,
+      "name": "CONCOR",
+      "entry_time": "2026-09-22T15:04:48.129170+05:30",
+      "entry_spot": 468.3,
+      "target_pts": 2.54,
       "target_source": "atr"
     },
     "dynamic_universe": {
