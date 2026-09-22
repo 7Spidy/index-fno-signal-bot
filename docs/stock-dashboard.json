@@ -1,59 +1,8 @@
 {
-  "date": "2026-09-21",
-  "last_run": "2026-09-21T15:25:46.263560+05:30",
+  "date": "2026-09-22",
+  "last_run": "2026-09-22T09:31:21.371224+05:30",
   "token_valid": true,
   "instruments": [],
   "active_signals": [],
-  "history": [
-    {
-      "time": "12:01",
-      "candle_time": "11:55 IST",
-      "instrument": "RELIANCE",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 71.33888173423799,
-      "pdi": 36.443563839425494,
-      "ndi": 18.45647915485976,
-      "price": 1242.6
-    },
-    {
-      "time": "12:01",
-      "candle_time": "11:55 IST",
-      "instrument": "SBIN",
-      "ce_conditions": [
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "pe_conditions": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "ce_signal": true,
-      "pe_signal": false,
-      "rsi": 54.34192073653368,
-      "pdi": 23.014380481707523,
-      "ndi": 19.064002855087335,
-      "price": 992.0
-    }
-  ]
+  "history": []
 }
