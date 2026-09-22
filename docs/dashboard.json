@@ -81,7 +81,37 @@
       "live_atr": 29.61841140786733
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "BANKNIFTY",
+      "direction": "CE",
+      "candle_time": "14:10 IST",
+      "futures_price": 56510.0,
+      "spot_ltp": 56333.2,
+      "fut_spot_spread": 176.8,
+      "tradingsymbol": "BANKNIFTY26SEP56300CE",
+      "strike": 56300,
+      "expiry": "2026-09-29",
+      "fetch_time": "14:15:52 IST",
+      "atm_ltp": 491.2,
+      "opt_target": 575.94,
+      "opt_sl": 434.71,
+      "spot_tgt": 56465.6,
+      "spot_sl": 56244.9,
+      "raw_risk": 88.3,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 65.37533936172863,
+      "pdi": 29.97051727345163,
+      "ndi": 29.33852795298177,
+      "vwap": 56496.315210117566,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "10:10",
