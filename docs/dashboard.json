@@ -48,10 +48,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "ATHERENERG",
-      "entry_time": "2026-09-23T15:05:08.022364+05:30",
-      "entry_spot": 1491.7,
-      "target_pts": 13.14,
+      "name": "POLICYBZR",
+      "entry_time": "2026-09-24T15:04:47.263465+05:30",
+      "entry_spot": 1244.5,
+      "target_pts": 22.02,
       "target_source": "atr"
     },
     "dynamic_universe": {
