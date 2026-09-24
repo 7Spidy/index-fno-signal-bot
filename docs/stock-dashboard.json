@@ -1,85 +1,8 @@
 {
   "date": "2026-09-24",
-  "last_run": "2026-09-24T14:25:45.686297+05:30",
+  "last_run": "2026-09-24T14:31:20.507762+05:30",
   "token_valid": true,
-  "instruments": [
-    {
-      "name": "PATANJALI",
-      "sector": null,
-      "lot_size": 1075,
-      "ce": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "c5": false,
-        "signal": false
-      },
-      "pe": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "c5": true,
-        "signal": false
-      },
-      "futures_price": 404.05,
-      "candle_high": 405.35,
-      "candle_low": 404.0,
-      "prev_candle_high": 405.25,
-      "prev_candle_low": 404.6,
-      "candle_time": "14:20 IST",
-      "vwap": 406.2830778589452,
-      "rsi": 36.628908889189326,
-      "pdi": 16.44371919617959,
-      "ndi": 27.554683206323975,
-      "live_price": 404.05,
-      "live_vwap": 406.5,
-      "live_rsi": 36.628908889189326,
-      "live_pdi": 16.44371919617959,
-      "live_ndi": 27.554683206323972,
-      "atm_strike": 405.0,
-      "strike_step": 5.0
-    },
-    {
-      "name": "OFSS",
-      "sector": null,
-      "lot_size": 100,
-      "ce": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": false,
-        "c5": false,
-        "signal": false
-      },
-      "pe": {
-        "c1": false,
-        "c2": false,
-        "c3": false,
-        "c4": true,
-        "c5": true,
-        "signal": false
-      },
-      "futures_price": 10880.0,
-      "candle_high": 10887.0,
-      "candle_low": 10870.0,
-      "prev_candle_high": 10911.0,
-      "prev_candle_low": 10878.0,
-      "candle_time": "14:20 IST",
-      "vwap": 10899.949473579562,
-      "rsi": 37.229344825131655,
-      "pdi": 11.607984237088523,
-      "ndi": 29.46855655062362,
-      "live_price": 10880.0,
-      "live_vwap": 10901.98,
-      "live_rsi": 37.229344825131655,
-      "live_pdi": 11.607984237088523,
-      "live_ndi": 29.468556550623628,
-      "atm_strike": 10900.0,
-      "strike_step": 100.0
-    }
-  ],
+  "instruments": [],
   "active_signals": [],
   "history": [
     {
