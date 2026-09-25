@@ -204,10 +204,10 @@
       "target_source": "atr"
     },
     "dynamic_universe": {
-      "valid_for_date": "2026-09-25",
+      "valid_for_date": "2026-09-28",
       "gainer_found": true,
       "loser_found": true,
-      "gainer_name": "MCX",
+      "gainer_name": "SAIL",
       "loser_name": "POLICYBZR"
     }
   }
