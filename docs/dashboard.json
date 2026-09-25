@@ -119,7 +119,37 @@
       "live_atr": 29.54969771076986
     }
   ],
-  "active_signals": [],
+  "active_signals": [
+    {
+      "instrument": "SENSEX",
+      "direction": "CE",
+      "candle_time": "13:55 IST",
+      "futures_price": 74372.6,
+      "spot_ltp": 73737.13,
+      "fut_spot_spread": 635.5,
+      "tradingsymbol": "SENSEX26O0173700CE",
+      "strike": 73700,
+      "expiry": "2026-10-01",
+      "fetch_time": "14:01:04 IST",
+      "atm_ltp": 581.4,
+      "opt_target": 635.27,
+      "opt_sl": 545.48,
+      "spot_tgt": 73825.9,
+      "spot_sl": 73678.0,
+      "raw_risk": 59.2,
+      "conviction": "Building",
+      "rr": 1.5,
+      "rsi": 52.71671392124732,
+      "pdi": 32.50433897302698,
+      "ndi": 35.36931717594475,
+      "vwap": 74388.25021881836,
+      "c1": true,
+      "c2": true,
+      "c3": true,
+      "c4": true,
+      "c5": true
+    }
+  ],
   "history": [
     {
       "time": "12:45",
