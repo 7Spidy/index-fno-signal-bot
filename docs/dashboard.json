@@ -197,10 +197,10 @@
   "_meta": "Seed file. Will be overwritten by morning-login.yml on first run.",
   "strategy_modules": {
     "worst_faller": {
-      "name": "POLICYBZR",
-      "entry_time": "2026-09-24T15:04:47.263465+05:30",
-      "entry_spot": 1244.5,
-      "target_pts": 22.02,
+      "name": "PAYTM",
+      "entry_time": "2026-09-25T15:05:02.694881+05:30",
+      "entry_spot": 1667.1,
+      "target_pts": 13.53,
       "target_source": "atr"
     },
     "dynamic_universe": {
